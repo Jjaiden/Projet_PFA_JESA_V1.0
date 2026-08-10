@@ -1,0 +1,868 @@
+/* ==========================================================================
+   JESA DMAT — Component Styles
+   Reusable visual component styles for cards, metrics, buttons, badges,
+   alerts, tables, panels, forms, empty states, and status indicators.
+   Relies on design tokens from main.css; complements utilities.css.
+   ========================================================================== */
+
+/* ==========================================================================
+   1. CARDS
+   ========================================================================== */
+
+/*
+   Base card styles live in main.css (.dmat-card, .dmat-card-title,
+   .dmat-card-value, .dmat-card-subtitle).  The following classes extend
+   the card system with sub-elements and variants.
+*/
+
+.dmat-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+}
+
+.dmat-card__body {
+  flex: 1 1 auto;
+}
+
+.dmat-card__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--dmat-border);
+  font-size: 0.875rem;
+  color: var(--dmat-muted);
+}
+
+.dmat-card--highlighted {
+  border-color: var(--dmat-primary);
+  box-shadow: 0 0 0 1px var(--dmat-primary), var(--dmat-shadow-md);
+}
+
+.dmat-card--compact {
+  padding: 0.875rem 1rem;
+}
+
+.dmat-card--chart {
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.dmat-card--chart .dmat-card__body {
+  min-height: 0;
+  flex: 1 1 auto;
+}
+
+/* NEW: Icon class for cards */
+.dmat-card__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  margin-right: 0.5rem;
+  color: var(--dmat-primary);
+  font-size: 1.25rem;
+}
+
+/* ==========================================================================
+   2. METRIC CARDS
+   ========================================================================== */
+
+.dmat-metric {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.dmat-metric__label {
+  color: var(--dmat-muted);
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.dmat-metric__value {
+  color: var(--dmat-title);
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+}
+
+.dmat-metric__unit {
+  color: var(--dmat-muted);
+  font-size: 0.875rem;
+  font-weight: 400;
+  margin-left: 0.25rem;
+}
+
+.dmat-metric__delta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.dmat-metric__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: var(--dmat-radius-md);
+  background-color: rgba(37, 99, 235, 0.08);
+  color: var(--dmat-primary);
+  flex-shrink: 0;
+}
+
+/* Metric variants */
+.dmat-metric--positive .dmat-metric__delta {
+  color: var(--dmat-success);
+}
+
+.dmat-metric--positive .dmat-metric__icon {
+  background-color: rgba(16, 185, 129, 0.08);
+  color: var(--dmat-success);
+}
+
+.dmat-metric--negative .dmat-metric__delta {
+  color: var(--dmat-danger);
+}
+
+.dmat-metric--negative .dmat-metric__icon {
+  background-color: rgba(239, 68, 68, 0.08);
+  color: var(--dmat-danger);
+}
+
+.dmat-metric--warning .dmat-metric__delta {
+  color: var(--dmat-warning);
+}
+
+.dmat-metric--warning .dmat-metric__icon {
+  background-color: rgba(245, 158, 11, 0.08);
+  color: var(--dmat-warning);
+}
+
+.dmat-metric--neutral .dmat-metric__delta {
+  color: var(--dmat-muted);
+}
+
+.dmat-metric--neutral .dmat-metric__icon {
+  background-color: rgba(100, 116, 139, 0.08);
+  color: var(--dmat-muted);
+}
+
+/* ==========================================================================
+   3. BUTTONS
+   ========================================================================== */
+
+.dmat-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1.25rem;
+  font-family: var(--dmat-font);
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.5;
+  text-decoration: none;
+  border: 1px solid transparent;
+  border-radius: var(--dmat-radius-sm);
+  cursor: pointer;
+  transition: background-color 0.15s ease, box-shadow 0.15s ease,
+              border-color 0.15s ease, transform 0.15s ease;
+  box-shadow: var(--dmat-shadow-sm);
+  white-space: nowrap;
+}
+
+.dmat-button:hover {
+  box-shadow: var(--dmat-shadow-md);
+}
+
+.dmat-button:focus-visible {
+  outline: 2px solid var(--dmat-secondary);
+  outline-offset: 2px;
+}
+
+.dmat-button:active {
+  transform: translateY(1px);
+}
+
+.dmat-button:disabled,
+.dmat-button[aria-disabled="true"] {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* Variants */
+.dmat-button--primary {
+  background-color: var(--dmat-primary);
+  color: #FFFFFF;
+  border-color: var(--dmat-primary);
+}
+
+.dmat-button--primary:hover:not(:disabled) {
+  background-color: var(--dmat-primary-hover);
+  border-color: var(--dmat-primary-hover);
+}
+
+.dmat-button--secondary {
+  background-color: var(--dmat-secondary);
+  color: #FFFFFF;
+  border-color: var(--dmat-secondary);
+}
+
+.dmat-button--secondary:hover:not(:disabled) {
+  background-color: var(--dmat-primary);
+  border-color: var(--dmat-primary);
+}
+
+.dmat-button--success {
+  background-color: var(--dmat-success);
+  color: #FFFFFF;
+  border-color: var(--dmat-success);
+}
+
+.dmat-button--success:hover:not(:disabled) {
+  filter: brightness(0.92);
+}
+
+.dmat-button--warning {
+  background-color: var(--dmat-warning);
+  color: #FFFFFF;
+  border-color: var(--dmat-warning);
+}
+
+.dmat-button--warning:hover:not(:disabled) {
+  filter: brightness(0.92);
+}
+
+.dmat-button--danger {
+  background-color: var(--dmat-danger);
+  color: #FFFFFF;
+  border-color: var(--dmat-danger);
+}
+
+.dmat-button--danger:hover:not(:disabled) {
+  filter: brightness(0.92);
+}
+
+.dmat-button--ghost {
+  background-color: transparent;
+  color: var(--dmat-primary);
+  border-color: var(--dmat-border);
+}
+
+.dmat-button--ghost:hover:not(:disabled) {
+  background-color: rgba(37, 99, 235, 0.06);
+  border-color: var(--dmat-primary);
+}
+
+/* Sizes */
+.dmat-button--sm {
+  padding: 0.375rem 0.875rem;
+  font-size: 0.8125rem;
+}
+
+.dmat-button--lg {
+  padding: 0.625rem 1.5rem;
+  font-size: 1rem;
+}
+
+/* Icon slot */
+.dmat-button__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 1rem;
+  height: 1rem;
+}
+
+/* ==========================================================================
+   4. BADGES
+   ========================================================================== */
+
+/*
+   Base badge and semantic variants (success, warning, danger, primary)
+   are defined in main.css.  The following extends the system.
+*/
+
+.dmat-badge--info {
+  background: rgba(59, 130, 246, 0.12);
+  color: var(--dmat-secondary);
+}
+
+.dmat-badge--neutral {
+  background: rgba(100, 116, 139, 0.12);
+  color: var(--dmat-muted);
+}
+
+/* ==========================================================================
+   5. ALERTS
+   ========================================================================== */
+
+.dmat-alert {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 1rem 1.25rem;
+  border: 1px solid transparent;
+  border-radius: var(--dmat-radius-md);
+  font-size: 0.875rem;
+  line-height: 1.6;
+}
+
+.dmat-alert__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 1.25rem;
+  height: 1.25rem;
+  margin-top: 0.125rem;
+}
+
+.dmat-alert__content {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.dmat-alert__title {
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+  color: inherit;
+}
+
+.dmat-alert__text {
+  color: inherit;
+  opacity: 0.9;
+}
+
+/* Variants */
+.dmat-alert--info {
+  background-color: rgba(37, 99, 235, 0.06);
+  border-color: rgba(37, 99, 235, 0.18);
+  color: var(--dmat-primary);
+}
+
+.dmat-alert--success {
+  background-color: rgba(16, 185, 129, 0.06);
+  border-color: rgba(16, 185, 129, 0.18);
+  color: var(--dmat-success);
+}
+
+.dmat-alert--warning {
+  background-color: rgba(245, 158, 11, 0.06);
+  border-color: rgba(245, 158, 11, 0.18);
+  color: var(--dmat-warning);
+}
+
+.dmat-alert--danger {
+  background-color: rgba(239, 68, 68, 0.06);
+  border-color: rgba(239, 68, 68, 0.18);
+  color: var(--dmat-danger);
+}
+
+/* ==========================================================================
+   6. TABLES
+   ========================================================================== */
+
+.dmat-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--dmat-text);
+}
+
+.dmat-table__header {
+  background-color: var(--dmat-bg);
+  border-bottom: 1px solid var(--dmat-border);
+}
+
+.dmat-table__header th {
+  padding: 0.75rem 1rem;
+  text-align: left;
+  font-weight: 600;
+  font-size: 0.8125rem;
+  color: var(--dmat-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.dmat-table__row {
+  border-bottom: 1px solid var(--dmat-border);
+  transition: background-color 0.12s ease;
+}
+
+.dmat-table__row:hover {
+  background-color: rgba(37, 99, 235, 0.03);
+}
+
+.dmat-table__cell {
+  padding: 0.875rem 1rem;
+  vertical-align: middle;
+}
+
+.dmat-table--striped .dmat-table__row:nth-child(even) {
+  background-color: var(--dmat-bg);
+}
+
+.dmat-table--striped .dmat-table__row:nth-child(even):hover {
+  background-color: rgba(37, 99, 235, 0.03);
+}
+
+.dmat-table--compact .dmat-table__header th,
+.dmat-table--compact .dmat-table__cell {
+  padding: 0.5rem 0.75rem;
+}
+
+/* ==========================================================================
+   7. PANELS
+   ========================================================================== */
+
+.dmat-panel {
+  background: var(--dmat-surface);
+  border: 1px solid var(--dmat-border);
+  border-radius: var(--dmat-radius-md);
+  box-shadow: var(--dmat-shadow-sm);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.dmat-panel__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--dmat-border);
+  background-color: var(--dmat-bg);
+}
+
+.dmat-panel__title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--dmat-title);
+  margin: 0;
+}
+
+.dmat-panel__body {
+  padding: 1.25rem;
+  flex: 1 1 auto;
+}
+
+.dmat-panel--highlighted {
+  border-color: var(--dmat-primary);
+  box-shadow: 0 0 0 1px var(--dmat-primary), var(--dmat-shadow-md);
+}
+
+/* ==========================================================================
+   8. FORMS
+   ========================================================================== */
+
+.dmat-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.dmat-form__group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.dmat-form__label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--dmat-text);
+}
+
+.dmat-form__help {
+  font-size: 0.8125rem;
+  color: var(--dmat-muted);
+  line-height: 1.5;
+}
+
+.dmat-form__error {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--dmat-danger);
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+/* ==========================================================================
+   9. EMPTY STATES
+   ========================================================================== */
+
+.dmat-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 3rem 1.5rem;
+  color: var(--dmat-muted);
+}
+
+.dmat-empty-state__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: var(--dmat-radius-lg);
+  background-color: var(--dmat-bg);
+  color: var(--dmat-muted);
+  margin-bottom: 1rem;
+}
+
+.dmat-empty-state__title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--dmat-title);
+  margin-bottom: 0.5rem;
+}
+
+.dmat-empty-state__text {
+  font-size: 0.875rem;
+  color: var(--dmat-muted);
+  max-width: 28rem;
+  line-height: 1.6;
+}
+
+/* ==========================================================================
+   10. LOADING / SPINNER
+   ========================================================================== */
+
+.dmat-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 2rem;
+  color: var(--dmat-muted);
+  font-size: 0.875rem;
+}
+
+.dmat-spinner {
+  width: 2rem;
+  height: 2rem;
+  border: 2px solid var(--dmat-border);
+  border-top-color: var(--dmat-primary);
+  border-radius: 50%;
+  animation: dmat-spin 0.75s linear infinite;
+}
+
+@keyframes dmat-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ==========================================================================
+   11. STATUS INDICATORS
+   ========================================================================== */
+
+.dmat-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.dmat-status::before {
+  content: "";
+  display: inline-block;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.dmat-status--success {
+  color: var(--dmat-success);
+}
+
+.dmat-status--success::before {
+  background-color: var(--dmat-success);
+}
+
+.dmat-status--warning {
+  color: var(--dmat-warning);
+}
+
+.dmat-status--warning::before {
+  background-color: var(--dmat-warning);
+}
+
+.dmat-status--danger {
+  color: var(--dmat-danger);
+}
+
+.dmat-status--danger::before {
+  background-color: var(--dmat-danger);
+}
+
+.dmat-status--neutral {
+  color: var(--dmat-muted);
+}
+
+.dmat-status--neutral::before {
+  background-color: var(--dmat-muted);
+}
+
+/* ==========================================================================
+   12. HEADER COMPONENT
+   ========================================================================== */
+
+.dmat-header {
+  margin-bottom: 2rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--dmat-border);
+}
+
+.dmat-header--compact {
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+}
+
+.dmat-header__eyebrow {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--dmat-muted);
+  margin-bottom: 0.25rem;
+}
+
+.dmat-header__title-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.dmat-header__icon {
+  font-size: 1.5rem;
+  line-height: 1;
+  color: var(--dmat-primary);
+}
+
+.dmat-header__title {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--dmat-title);
+  margin: 0;
+  letter-spacing: -0.02em;
+}
+
+.dmat-header__subtitle {
+  margin-top: 0.25rem;
+  color: var(--dmat-muted);
+  font-size: 1rem;
+}
+
+.dmat-header__status {
+  margin-top: 0.5rem;
+}
+
+/* ==========================================================================
+   13. SIDEBAR COMPONENT
+   ========================================================================== */
+
+.dmat-sidebar__brand {
+  padding: 1rem 0.5rem 1.5rem 0.5rem;
+  text-align: center;
+}
+
+.dmat-sidebar__title {
+  color: #FFFFFF;
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin: 0;
+  letter-spacing: -0.02em;
+}
+
+.dmat-sidebar__subtitle {
+  color: var(--dmat-sidebar-muted);
+  font-size: 0.8125rem;
+  margin-top: 0.25rem;
+}
+
+.dmat-sidebar__assessment {
+  padding: 0.75rem 0.5rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  margin-bottom: 0.5rem;
+}
+
+.dmat-sidebar__assessment-name {
+  color: var(--dmat-sidebar-text);
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.dmat-sidebar__assessment-status {
+  color: var(--dmat-sidebar-muted);
+  font-size: 0.8125rem;
+  margin-top: 0.25rem;
+}
+
+.dmat-sidebar__footer {
+  padding: 1rem 0.5rem 0.5rem 0.5rem;
+  text-align: center;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  margin-top: 1rem;
+}
+
+.dmat-sidebar__footer-text {
+  color: var(--dmat-sidebar-muted);
+  font-size: 0.75rem;
+  font-weight: 400;
+}
+
+.dmat-sidebar__footer-version {
+  color: var(--dmat-sidebar-muted);
+  font-size: 0.75rem;
+  font-weight: 400;
+  margin-left: 0.25rem;
+}
+
+/* ==========================================================================
+   14. FOOTER COMPONENT
+   ========================================================================== */
+
+.dmat-footer {
+  text-align: center;
+  color: var(--dmat-muted);
+  font-size: 0.75rem;
+  padding: 2rem 0 1rem;
+  border-top: 1px solid var(--dmat-border);
+  margin-top: 2rem;
+}
+
+.dmat-footer__content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.dmat-footer__brand {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.dmat-footer__product {
+  font-weight: 600;
+  color: var(--dmat-title);
+}
+
+.dmat-footer__version {
+  color: var(--dmat-muted);
+  font-size: 0.75rem;
+}
+
+.dmat-footer__tagline {
+  color: var(--dmat-muted);
+  font-size: 0.75rem;
+}
+
+.dmat-footer__copyright {
+  color: var(--dmat-muted);
+  font-size: 0.75rem;
+}
+
+.dmat-footer__links {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-top: 0.25rem;
+}
+
+.dmat-footer__link {
+  color: var(--dmat-primary);
+  text-decoration: none;
+  font-size: 0.75rem;
+  transition: color 0.15s ease;
+}
+
+.dmat-footer__link:hover {
+  color: var(--dmat-primary-hover);
+  text-decoration: underline;
+}
+
+/* ==========================================================================
+   15. RESPONSIVE COMPONENT BEHAVIOR
+   ========================================================================== */
+
+@media (max-width: 768px) {
+  .dmat-card--chart {
+    padding: 0.75rem;
+  }
+
+  .dmat-metric__value {
+    font-size: 1.5rem;
+  }
+
+  .dmat-panel__header,
+  .dmat-panel__body {
+    padding: 0.875rem 1rem;
+  }
+
+  .dmat-table__header th,
+  .dmat-table__cell {
+    padding: 0.625rem 0.75rem;
+  }
+
+  .dmat-button {
+    width: 100%;
+  }
+
+  .dmat-empty-state {
+    padding: 2rem 1rem;
+  }
+
+  .dmat-header__title {
+    font-size: 1.5rem;
+  }
+
+  .dmat-footer__links {
+    gap: 0.75rem;
+  }
+}
+
+/* ==========================================================================
+   16. REDUCED MOTION
+   ========================================================================== */
+
+@media (prefers-reduced-motion: reduce) {
+  .dmat-button,
+  .dmat-table__row,
+  .dmat-button__icon {
+    transition: none;
+  }
+
+  .dmat-spinner {
+    animation: none;
+    border-top-color: var(--dmat-border);
+    opacity: 0.5;
+  }
+}

@@ -1,0 +1,31 @@
+# JESA DMAT - Configuration Streamlit
+# Outil d'evaluation de maturite
+
+[global]
+developmentMode = false
+
+[server]
+headless = true
+enableCORS = false
+enableXsrfProtection = true
+maxUploadSize = 50
+
+[browser]
+gatherUsageStats = false
+serverAddress = "localhost"
+
+[runner]
+fastReruns = true
+magicEnabled = false
+
+[client]
+showErrorDetails = true
+toolbarMode = "minimal"
+
+[theme]
+base = "light"
+primaryColor = "#2563EB"
+backgroundColor = "#F5F7FA"
+secondaryBackgroundColor = "#FFFFFF"
+textColor = "#334155"
+font = "sans serif"

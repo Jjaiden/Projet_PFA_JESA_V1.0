@@ -1,0 +1,638 @@
+/* ==========================================================================
+   JESA DMAT — Digital Maturity Assessment Tool
+   Design System CSS (v2.0 – Industrial Grade)
+   ========================================================================== */
+
+/* ---------- Font ---------- */
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
+
+/* ==========================================================================
+   1. DESIGN TOKENS (Custom Properties)
+   ========================================================================== */
+:root {
+  /* Palette */
+  --dmat-bg: #F5F7FA;
+  --dmat-surface: #FFFFFF;
+  --dmat-sidebar: #1E293B;
+  --dmat-sidebar-hover: #334155;
+  --dmat-sidebar-text: #E2E8F0;
+  --dmat-sidebar-muted: #94A3B8;
+  --dmat-primary: #2563EB;
+  --dmat-primary-hover: #1D4ED8;
+  --dmat-secondary: #3B82F6;
+  --dmat-border: #E2E8F0;
+  --dmat-divider: #CBD5E1;
+  --dmat-title: #0F172A;
+  --dmat-text: #334155;
+  --dmat-muted: #64748B;
+  --dmat-success: #10B981;
+  --dmat-warning: #F59E0B;
+  --dmat-danger: #EF4444;
+
+  /* Piliers */
+  --dmat-pillar-1: #2563EB;
+  --dmat-pillar-2: #3B82F6;
+  --dmat-pillar-3: #60A5FA;
+  --dmat-pillar-4: #93C5FD;
+  --dmat-pillar-5: #BFDBFE;
+
+  /* Typography */
+  --dmat-font: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+
+  /* Radii */
+  --dmat-radius-sm: 6px;
+  --dmat-radius-md: 10px;
+  --dmat-radius-lg: 16px;
+
+  /* Shadows */
+  --dmat-shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.05);
+  --dmat-shadow-md: 0 4px 12px rgba(15, 23, 42, 0.08);
+  --dmat-shadow-lg: 0 10px 24px rgba(15, 23, 42, 0.12);
+}
+
+/* ==========================================================================
+   2. RESET & BASE
+   ========================================================================== */
+/* Box-sizing only – no margin/padding reset to preserve Streamlit layout */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+/* Apply font globally via stable selectors */
+html,
+body,
+[data-testid="stAppViewContainer"] {
+  font-family: var(--dmat-font);
+}
+
+/* Background and default text color */
+body,
+.stApp {
+  background-color: var(--dmat-bg);
+  color: var(--dmat-text);
+}
+
+/* ==========================================================================
+   3. TYPOGRAPHY
+   ========================================================================== */
+h1, h2, h3, h4, h5, h6,
+[data-testid="stMarkdownContainer"] h1,
+[data-testid="stMarkdownContainer"] h2,
+[data-testid="stMarkdownContainer"] h3 {
+  color: var(--dmat-title) !important;
+  font-weight: 600 !important;
+  letter-spacing: -0.02em;
+}
+
+h1 { font-size: 2rem !important; }
+h2 { font-size: 1.5rem !important; }
+h3 { font-size: 1.25rem !important; }
+
+p, li, label,
+[data-testid="stMarkdownContainer"] p {
+  color: var(--dmat-text);
+  line-height: 1.6;
+}
+
+/* Utility class for muted text */
+.text-muted {
+  color: var(--dmat-muted) !important;
+}
+
+/* ==========================================================================
+   4. LAYOUT
+   ========================================================================== */
+/* Main container max-width for professional look */
+.block-container {
+  max-width: 1400px;
+  padding: 2rem 2rem;
+}
+
+/* ==========================================================================
+   5. SIDEBAR
+   ========================================================================== */
+[data-testid="stSidebar"] {
+  background-color: var(--dmat-sidebar) !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+/* Sidebar text elements (labels, markdown, radio buttons) */
+[data-testid="stSidebar"] label,
+[data-testid="stSidebar"] .stMarkdown p,
+[data-testid="stSidebar"] .stMarkdown li,
+[data-testid="stSidebar"] span,
+[data-testid="stSidebar"] .stRadio label {
+  color: var(--dmat-sidebar-text) !important;
+}
+
+/* Sidebar headings */
+[data-testid="stSidebar"] h1,
+[data-testid="stSidebar"] h2,
+[data-testid="stSidebar"] h3 {
+  color: #FFFFFF !important;
+}
+
+/* Navigation */
+[data-testid="stSidebarNav"] {
+  background-color: transparent !important;
+}
+
+[data-testid="stSidebarNav"] ul {
+  padding-top: 0.5rem;
+}
+
+[data-testid="stSidebarNav"] li a {
+  color: var(--dmat-sidebar-text) !important;
+  border-radius: var(--dmat-radius-sm);
+  padding: 0.5rem 0.75rem !important;
+  font-weight: 500;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+[data-testid="stSidebarNav"] li a:hover {
+  background-color: var(--dmat-sidebar-hover) !important;
+  color: #FFFFFF !important;
+}
+
+[data-testid="stSidebarNav"] li a[aria-current="page"] {
+  background-color: var(--dmat-primary) !important;
+  color: #FFFFFF !important;
+  font-weight: 600;
+}
+
+/* Hide Streamlit header */
+[data-testid="stHeader"] {
+  background-color: transparent !important;
+}
+
+/* ==========================================================================
+   6. CARDS (Custom JESA Cards)
+   ========================================================================== */
+.dmat-card {
+  background: var(--dmat-surface);
+  border: 1px solid var(--dmat-border);
+  border-radius: var(--dmat-radius-md);
+  box-shadow: var(--dmat-shadow-sm);
+  padding: 1.25rem 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.dmat-card-title {
+  color: var(--dmat-title);
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.dmat-card-value {
+  color: var(--dmat-primary);
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.dmat-card-subtitle {
+  color: var(--dmat-muted);
+  font-size: 0.875rem;
+  margin-top: 0.25rem;
+}
+
+/* ==========================================================================
+   7. METRICS
+   ========================================================================== */
+[data-testid="stMetric"] {
+  background: var(--dmat-surface);
+  border: 1px solid var(--dmat-border);
+  border-radius: var(--dmat-radius-md);
+  padding: 1rem 1.25rem;
+  box-shadow: var(--dmat-shadow-sm);
+}
+
+[data-testid="stMetricLabel"] {
+  color: var(--dmat-muted) !important;
+  font-size: 0.875rem !important;
+  font-weight: 500 !important;
+}
+
+[data-testid="stMetricValue"] {
+  color: var(--dmat-title) !important;
+  font-weight: 700 !important;
+}
+
+/* ==========================================================================
+   8. BUTTONS
+   ========================================================================== */
+.stButton > button {
+  background-color: var(--dmat-primary) !important;
+  color: #FFFFFF !important;
+  border: none !important;
+  border-radius: var(--dmat-radius-sm) !important;
+  font-weight: 600 !important;
+  padding: 0.5rem 1.25rem !important;
+  transition: background-color 0.15s ease, box-shadow 0.15s ease;
+  box-shadow: var(--dmat-shadow-sm);
+}
+
+.stButton > button:hover {
+  background-color: var(--dmat-primary-hover) !important;
+  box-shadow: var(--dmat-shadow-md);
+}
+
+.stButton > button:focus {
+  outline: 2px solid var(--dmat-secondary) !important;
+  outline-offset: 2px;
+}
+
+/* ==========================================================================
+   9. FORMS (Inputs, Selects, Sliders)
+   ========================================================================== */
+/* Inputs and textareas */
+.stTextInput > div > div > input,
+.stNumberInput > div > div > input,
+.stTextArea > div > div > textarea,
+.stSelectbox > div > div,
+.stMultiSelect > div > div {
+  background-color: var(--dmat-surface) !important;
+  border: 1px solid var(--dmat-border) !important;
+  border-radius: var(--dmat-radius-sm) !important;
+  color: var(--dmat-text) !important;
+}
+
+.stTextInput > div > div > input:focus,
+.stNumberInput > div > div > input:focus,
+.stTextArea > div > div > textarea:focus {
+  border-color: var(--dmat-primary) !important;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15) !important;
+}
+
+/* Labels */
+.stTextInput label,
+.stNumberInput label,
+.stSelectbox label,
+.stMultiSelect label,
+.stTextArea label,
+.stSlider label,
+.stRadio label {
+  color: var(--dmat-text) !important;
+  font-weight: 500 !important;
+  font-size: 0.875rem !important;
+}
+
+/* Slider handle */
+.stSlider [data-baseweb="slider"] div[role="slider"] {
+  background-color: var(--dmat-primary) !important;
+}
+
+/* ==========================================================================
+   10. TABS
+   ========================================================================== */
+.stTabs [data-baseweb="tab-list"] {
+  gap: 0.5rem;
+  border-bottom: 1px solid var(--dmat-border);
+}
+
+.stTabs [data-baseweb="tab"] {
+  color: var(--dmat-muted) !important;
+  font-weight: 500;
+  border-radius: var(--dmat-radius-sm) var(--dmat-radius-sm) 0 0;
+}
+
+.stTabs [aria-selected="true"] {
+  color: var(--dmat-primary) !important;
+  border-bottom: 2px solid var(--dmat-primary) !important;
+}
+
+/* ==========================================================================
+   11. DATA DISPLAY (Tables, DataFrames)
+   ========================================================================== */
+[data-testid="stDataFrame"] {
+  border: 1px solid var(--dmat-border);
+  border-radius: var(--dmat-radius-md);
+  overflow: hidden;
+}
+
+/* ==========================================================================
+   12. ALERTS & BADGES
+   ========================================================================== */
+/* Badges */
+.dmat-badge {
+  display: inline-block;
+  padding: 0.2rem 0.65rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.dmat-badge-success { background: rgba(16, 185, 129, 0.12); color: var(--dmat-success); }
+.dmat-badge-warning { background: rgba(245, 158, 11, 0.12); color: var(--dmat-warning); }
+.dmat-badge-danger  { background: rgba(239, 68, 68, 0.12); color: var(--dmat-danger); }
+.dmat-badge-primary { background: rgba(37, 99, 235, 0.12); color: var(--dmat-primary); }
+
+/* ==========================================================================
+   13. DIVIDERS & PROGRESS
+   ========================================================================== */
+hr,
+[data-testid="stDivider"] {
+  border: none;
+  border-top: 1px solid var(--dmat-divider);
+  margin: 1.5rem 0;
+}
+
+.stProgress > div > div > div {
+  background-color: var(--dmat-primary) !important;
+}
+.stProgress > div > div {
+  background-color: var(--dmat-border) !important;
+}
+
+/* ==========================================================================
+   14. FOOTER
+   ========================================================================== */
+.dmat-footer {
+  text-align: center;
+  color: var(--dmat-muted);
+  font-size: 0.75rem;
+  padding: 2rem 0 1rem;
+  border-top: 1px solid var(--dmat-border);
+  margin-top: 2rem;
+}
+
+/* ==========================================================================
+   15. RESPONSIVE
+   ========================================================================== */
+@media (max-width: 768px) {
+  h1 { font-size: 1.5rem !important; }
+  h2 { font-size: 1.25rem !important; }
+  .dmat-card { padding: 1rem; }
+  [data-testid="stMetric"] { padding: 0.75rem 1rem; }
+}
+
+/* ==========================================================================
+   HOME PAGE — INDUSTRIAL DIGITAL NETWORK
+   ========================================================================== */
+
+.home-background {
+    position: relative;
+    overflow: hidden;
+    min-height: 80vh;
+    padding: 2rem 1rem;
+
+    background:
+        radial-gradient(
+            circle at 15% 20%,
+            rgba(37, 99, 235, 0.08) 0%,
+            transparent 40%
+        ),
+        radial-gradient(
+            circle at 85% 70%,
+            rgba(59, 130, 246, 0.06) 0%,
+            transparent 30%
+        ),
+        radial-gradient(
+            circle at 50% 50%,
+            rgba(16, 185, 129, 0.04) 0%,
+            transparent 60%
+        ),
+        var(--dmat-bg);
+}
+
+.home-background::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+
+    background:
+        repeating-linear-gradient(
+            45deg,
+            transparent 0px,
+            transparent 40px,
+            rgba(37, 99, 235, 0.06) 40px,
+            rgba(37, 99, 235, 0.06) 41px
+        ),
+        repeating-linear-gradient(
+            -45deg,
+            transparent 0px,
+            transparent 40px,
+            rgba(59, 130, 246, 0.05) 40px,
+            rgba(59, 130, 246, 0.05) 41px
+        );
+
+    opacity: 0.8;
+    animation: slowNetworkShift 40s ease-in-out infinite alternate;
+}
+
+@keyframes slowNetworkShift {
+    0% {
+        transform: translate(0, 0);
+    }
+
+    100% {
+        transform: translate(-15px, 20px);
+    }
+}
+
+/* ==========================================================================
+   LOGOS
+   ========================================================================== */
+
+.logo-caption {
+    text-align: center;
+    color: var(--dmat-muted);
+    font-size: 0.875rem;
+    margin-top: 0.25rem;
+}
+
+/* ==========================================================================
+   DESCRIPTION
+   ========================================================================== */
+
+.home-description {
+    max-width: 720px;
+    margin: 0 auto;
+
+    color: var(--dmat-text);
+
+    font-size: 1.05rem;
+    line-height: 1.6;
+
+    text-align: center;
+}
+
+/* ==========================================================================
+   CTA – HOME PAGE
+   ========================================================================== */
+
+.st-key-cta_button button {
+    background: var(--dmat-primary);
+    color: #ffffff;
+
+    border: none;
+    border-radius: var(--dmat-radius-sm);
+
+    font-size: 1.125rem;
+    font-weight: 700;
+
+    padding: 0.75rem 2rem;
+
+    box-shadow: var(--dmat-shadow-md);
+
+    transition:
+        background 0.2s ease,
+        box-shadow 0.2s ease,
+        transform 0.1s ease;
+
+    letter-spacing: 0.02em;
+}
+
+.st-key-cta_button button:hover {
+    background: var(--dmat-primary-hover);
+    color: #ffffff;
+
+    box-shadow: var(--dmat-shadow-lg);
+
+    transform: translateY(-2px);
+}
+
+.st-key-cta_button button:active {
+    transform: translateY(0);
+
+    box-shadow: var(--dmat-shadow-sm);
+}
+
+/* ==========================================================================
+   CTA – NEW ASSESSMENT PAGE
+   ========================================================================== */
+
+.st-key-start_assessment_button button {
+    background: var(--dmat-primary);
+    color: #ffffff;
+    border: none;
+    border-radius: var(--dmat-radius-sm);
+    font-size: 1.125rem;
+    font-weight: 700;
+    padding: 0.75rem 2rem;
+    box-shadow: var(--dmat-shadow-md);
+    transition:
+        background 0.2s ease,
+        box-shadow 0.2s ease,
+        transform 0.1s ease;
+    letter-spacing: 0.02em;
+}
+.st-key-start_assessment_button button:hover {
+    background: var(--dmat-primary-hover);
+    color: #ffffff;
+    box-shadow: var(--dmat-shadow-lg);
+    transform: translateY(-2px);
+}
+.st-key-start_assessment_button button:active {
+    transform: translateY(0);
+    box-shadow: var(--dmat-shadow-sm);
+}
+
+/* ==========================================================================
+   PROCESS FLOW
+   ========================================================================== */
+
+.process-flow {
+    max-width: 700px;
+
+    margin: 1.5rem auto;
+
+    text-align: center;
+
+    color: var(--dmat-text);
+
+    font-size: 1rem;
+    line-height: 1.6;
+}
+
+.process-flow .step {
+    display: block;
+
+    font-weight: 500;
+
+    padding: 0.25rem 0;
+}
+
+.process-flow .arrow-down {
+    display: block;
+
+    color: var(--dmat-primary);
+
+    font-size: 1.5rem;
+    line-height: 1;
+
+    margin: 0.2rem 0;
+}
+
+/* ==========================================================================
+   STRATEGIC FLOW
+   ========================================================================== */
+
+.concept-line {
+    text-align: center;
+
+    color: var(--dmat-muted);
+
+    font-size: 1.125rem;
+
+    letter-spacing: 0.05em;
+
+    margin-top: 2.5rem;
+
+    padding: 0.5rem 0;
+}
+
+.concept-line .arrow {
+    color: var(--dmat-primary);
+
+    font-weight: 300;
+
+    margin: 0 0.4rem;
+}
+
+/* ==========================================================================
+   TEAM
+   ========================================================================== */
+
+.team-attribution {
+    text-align: center;
+
+    color: var(--dmat-muted);
+
+    font-size: 0.875rem;
+
+    margin-top: 1.5rem;
+}
+
+/* ==========================================================================
+   RESPONSIVE
+   ========================================================================== */
+
+@media (max-width: 768px) {
+
+    .logo-caption {
+        font-size: 0.75rem;
+    }
+
+    .home-description {
+        font-size: 1rem;
+    }
+
+    .concept-line {
+        font-size: 0.875rem;
+    }
+
+    .st-key-cta_button button {
+        font-size: 1rem;
+        padding: 0.6rem 1.5rem;
+    }
+
+    .st-key-start_assessment_button button {
+        font-size: 1rem;
+        padding: 0.6rem 1.5rem;
+    }
+}

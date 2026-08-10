@@ -1,0 +1,251 @@
+/* ==========================================================================
+   JESA DMAT — Utility Classes
+   Small, reusable, atomic helpers for layout, spacing, typography,
+   color, and visibility.  These classes compose with component styles
+   defined in components.css and rely on design tokens from main.css.
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   1. DISPLAY
+   -------------------------------------------------------------------------- */
+.u-hidden        { display: none !important; }
+.u-block         { display: block; }
+.u-inline        { display: inline; }
+.u-inline-block  { display: inline-block; }
+.u-flex          { display: flex; }
+.u-grid          { display: grid; }
+
+/* --------------------------------------------------------------------------
+   2. FLEXBOX
+   -------------------------------------------------------------------------- */
+.u-flex-row      { flex-direction: row; }
+.u-flex-column   { flex-direction: column; }
+.u-items-start   { align-items: flex-start; }
+.u-items-center  { align-items: center; }
+.u-items-end     { align-items: flex-end; }
+.u-justify-start { justify-content: flex-start; }
+.u-justify-center { justify-content: center; }
+.u-justify-between { justify-content: space-between; }
+.u-justify-end   { justify-content: flex-end; }
+.u-flex-wrap     { flex-wrap: wrap; }
+.u-flex-nowrap   { flex-wrap: nowrap; }
+.u-flex-1        { flex: 1 1 0%; }
+.u-flex-grow     { flex-grow: 1; }
+.u-flex-shrink-0 { flex-shrink: 0; }
+
+/* --------------------------------------------------------------------------
+   3. GRID
+   -------------------------------------------------------------------------- */
+.u-grid-cols-2   { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.u-grid-cols-3   { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.u-grid-cols-4   { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.u-grid-cols-5   { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.u-grid-cols-6   { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+
+/* --------------------------------------------------------------------------
+   4. SPACING — Gap
+   -------------------------------------------------------------------------- */
+.u-gap-xs  { gap: 0.25rem; }
+.u-gap-sm  { gap: 0.5rem; }
+.u-gap-md  { gap: 1rem; }
+.u-gap-lg  { gap: 1.5rem; }
+.u-gap-xl  { gap: 2rem; }
+
+/* --------------------------------------------------------------------------
+   5. SPACING — Margin
+   -------------------------------------------------------------------------- */
+.u-mt-sm  { margin-top: 0.5rem; }
+.u-mt-md  { margin-top: 1rem; }
+.u-mt-lg  { margin-top: 1.5rem; }
+.u-mt-xl  { margin-top: 2rem; }
+
+.u-mb-sm  { margin-bottom: 0.5rem; }
+.u-mb-md  { margin-bottom: 1rem; }
+.u-mb-lg  { margin-bottom: 1.5rem; }
+.u-mb-xl  { margin-bottom: 2rem; }
+
+.u-ml-sm  { margin-left: 0.5rem; }
+.u-ml-md  { margin-left: 1rem; }
+.u-ml-lg  { margin-left: 1.5rem; }
+
+.u-mr-sm  { margin-right: 0.5rem; }
+.u-mr-md  { margin-right: 1rem; }
+.u-mr-lg  { margin-right: 1.5rem; }
+
+.u-mx-auto { margin-left: auto; margin-right: auto; }
+.u-my-sm   { margin-top: 0.5rem; margin-bottom: 0.5rem; }
+.u-my-md   { margin-top: 1rem; margin-bottom: 1rem; }
+
+/* --------------------------------------------------------------------------
+   6. SPACING — Padding
+   -------------------------------------------------------------------------- */
+.u-p-sm   { padding: 0.5rem; }
+.u-p-md   { padding: 1rem; }
+.u-p-lg   { padding: 1.5rem; }
+.u-p-xl   { padding: 2rem; }
+
+.u-px-sm  { padding-left: 0.5rem; padding-right: 0.5rem; }
+.u-px-md  { padding-left: 1rem; padding-right: 1rem; }
+.u-px-lg  { padding-left: 1.5rem; padding-right: 1.5rem; }
+
+.u-py-sm  { padding-top: 0.5rem; padding-bottom: 0.5rem; }
+.u-py-md  { padding-top: 1rem; padding-bottom: 1rem; }
+.u-py-lg  { padding-top: 1.5rem; padding-bottom: 1.5rem; }
+
+/* --------------------------------------------------------------------------
+   7. ALIGNMENT
+   -------------------------------------------------------------------------- */
+.u-text-left    { text-align: left; }
+.u-text-center  { text-align: center; }
+.u-text-right   { text-align: right; }
+.u-text-justify { text-align: justify; }
+
+/* --------------------------------------------------------------------------
+   8. TYPOGRAPHY
+   -------------------------------------------------------------------------- */
+.u-text-sm  { font-size: 0.875rem; }
+.u-text-md  { font-size: 1rem; }
+.u-text-lg  { font-size: 1.125rem; }
+.u-text-xl  { font-size: 1.25rem; }
+
+.u-font-normal   { font-weight: 400; }
+.u-font-medium   { font-weight: 500; }
+.u-font-semibold { font-weight: 600; }
+.u-font-bold     { font-weight: 700; }
+
+.u-uppercase  { text-transform: uppercase; }
+.u-lowercase  { text-transform: lowercase; }
+.u-capitalize { text-transform: capitalize; }
+
+.u-nowrap     { white-space: nowrap; }
+.u-truncate   {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.u-line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+    line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.u-line-clamp-3 {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+    line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* --------------------------------------------------------------------------
+   9. COLORS — Text
+   -------------------------------------------------------------------------- */
+.u-text-primary   { color: var(--dmat-primary); }
+.u-text-secondary { color: var(--dmat-secondary); }
+.u-text-muted     { color: var(--dmat-muted); }
+.u-text-success   { color: var(--dmat-success); }
+.u-text-warning   { color: var(--dmat-warning); }
+.u-text-danger    { color: var(--dmat-danger); }
+.u-text-title     { color: var(--dmat-title); }
+.u-text-white     { color: #FFFFFF; }
+
+/* --------------------------------------------------------------------------
+   10. COLORS — Background
+   -------------------------------------------------------------------------- */
+.u-bg-surface    { background-color: var(--dmat-surface); }
+.u-bg-background { background-color: var(--dmat-bg); }
+.u-bg-primary    { background-color: var(--dmat-primary); }
+.u-bg-muted      { background-color: var(--dmat-sidebar-muted); }
+.u-bg-success    { background-color: var(--dmat-success); }
+.u-bg-warning    { background-color: var(--dmat-warning); }
+.u-bg-danger     { background-color: var(--dmat-danger); }
+
+/* --------------------------------------------------------------------------
+   11. BORDERS
+   -------------------------------------------------------------------------- */
+.u-border         { border: 1px solid var(--dmat-border); }
+.u-border-none    { border: none; }
+.u-border-top     { border-top: 1px solid var(--dmat-border); }
+.u-border-bottom  { border-bottom: 1px solid var(--dmat-border); }
+
+/* --------------------------------------------------------------------------
+   12. RADIUS
+   -------------------------------------------------------------------------- */
+.u-rounded-sm   { border-radius: var(--dmat-radius-sm); }
+.u-rounded-md   { border-radius: var(--dmat-radius-md); }
+.u-rounded-lg   { border-radius: var(--dmat-radius-lg); }
+.u-rounded-full { border-radius: 9999px; }
+.u-rounded-none { border-radius: 0; }
+
+/* --------------------------------------------------------------------------
+   13. SHADOWS
+   -------------------------------------------------------------------------- */
+.u-shadow-sm   { box-shadow: var(--dmat-shadow-sm); }
+.u-shadow-md   { box-shadow: var(--dmat-shadow-md); }
+.u-shadow-lg   { box-shadow: var(--dmat-shadow-lg); }
+.u-shadow-none { box-shadow: none; }
+
+/* --------------------------------------------------------------------------
+   14. SIZING
+   -------------------------------------------------------------------------- */
+.u-w-full     { width: 100%; }
+.u-h-full     { height: 100%; }
+.u-min-w-0    { min-width: 0; }
+.u-max-w-full { max-width: 100%; }
+
+/* --------------------------------------------------------------------------
+   15. VISIBILITY
+   -------------------------------------------------------------------------- */
+.u-visible { visibility: visible; }
+
+/* --------------------------------------------------------------------------
+   16. ACCESSIBILITY — Screen-reader only
+   -------------------------------------------------------------------------- */
+.u-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* --------------------------------------------------------------------------
+   17. FOCUS UTILITIES
+   -------------------------------------------------------------------------- */
+.u-focus-ring:focus-visible {
+  outline: 2px solid var(--dmat-primary);
+  outline-offset: 2px;
+}
+
+/* --------------------------------------------------------------------------
+   18. RESPONSIVE UTILITIES
+   -------------------------------------------------------------------------- */
+@media (max-width: 768px) {
+  .u-hidden-sm { display: none !important; }
+  .u-text-center-sm { text-align: center; }
+  .u-flex-column-sm { flex-direction: column; }
+  .u-grid-cols-2-sm { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .u-grid-cols-1-sm { grid-template-columns: repeat(1, minmax(0, 1fr)); }
+}
+
+@media (min-width: 769px) {
+  .u-hidden-lg { display: none !important; }
+}
+
+/* --------------------------------------------------------------------------
+   19. REDUCED MOTION
+   -------------------------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

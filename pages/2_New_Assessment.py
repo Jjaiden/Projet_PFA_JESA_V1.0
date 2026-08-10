@@ -1,0 +1,239 @@
+# pages/2_New_Assessment.py
+"""
+New Assessment page for JESA DMAT – Digital Maturity Assessment Tool.
+"""
+
+from __future__ import annotations
+
+import re
+from datetime import date
+
+import streamlit as st
+
+from components import render_footer, render_header
+
+# ------------------------------------------------------------------------------
+# PAGE SPECIFIC CSS (to be added to main.css)
+# ------------------------------------------------------------------------------
+# Add the following classes to assets/styles/main.css:
+#
+# .st-key-start_assessment_button button {
+#     background: var(--dmat-primary);
+#     color: #ffffff;
+#     border: none;
+#     border-radius: var(--dmat-radius-sm);
+#     font-size: 1.125rem;
+#     font-weight: 700;
+#     padding: 0.75rem 2rem;
+#     box-shadow: var(--dmat-shadow-md);
+#     transition: background 0.2s ease, box-shadow 0.2s ease, transform 0.1s ease;
+#     letter-spacing: 0.02em;
+# }
+# .st-key-start_assessment_button button:hover {
+#     background: var(--dmat-primary-hover);
+#     color: #ffffff;
+#     box-shadow: var(--dmat-shadow-lg);
+#     transform: translateY(-2px);
+# }
+# .st-key-start_assessment_button button:active {
+#     transform: translateY(0);
+#     box-shadow: var(--dmat-shadow-sm);
+# }
+
+
+# ------------------------------------------------------------------------------
+# HELPERS
+# ------------------------------------------------------------------------------
+
+def _validate_email(email: str) -> bool:
+    """Basic email format validation."""
+    if not email:
+        return True
+
+    pattern = r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
+    return bool(re.match(pattern, email))
+
+
+# ------------------------------------------------------------------------------
+# PAGE CONTENT
+# ------------------------------------------------------------------------------
+
+# Page header
+render_header(
+    title="New Assessment",
+    subtitle="Define, upload, and launch a new digital maturity assessment.",
+    align="center",
+    compact=False,
+)
+
+# ------------------------------------------------------------------------------
+# 01 — Assessment Identity
+# ------------------------------------------------------------------------------
+
+st.markdown("### 01 — Assessment Identity")
+
+# Use a two‑column layout for identity fields
+col1, col2 = st.columns(2)
+
+with col1:
+    assessment_name = st.text_input(
+        "Assessment Name / Reference",
+        placeholder="e.g. JESA Plant Digital Maturity Assessment",
+        key="assessment_name",
+    )
+    company = st.text_input(
+        "Company / Business Unit",
+        placeholder="e.g. JESA",
+        key="company",
+    )
+    assessor_name = st.text_input(
+        "Assessor Name",
+        placeholder="e.g. John Doe",
+        key="assessor_name",
+    )
+    contact_email = st.text_input(
+        "Contact / Email",
+        placeholder="e.g. john.doe@example.com",
+        key="contact_email",
+    )
+
+with col2:
+    plant = st.text_input(
+        "Industrial Site / Plant",
+        placeholder="e.g. Jorf Lasfar Plant",
+        key="plant",
+    )
+    assessment_date = st.date_input(
+        "Assessment Date",
+        value=date.today(),
+        key="assessment_date",
+    )
+    assessor_role = st.text_input(
+        "Assessor Role",
+        placeholder="e.g. Digital Transformation Engineer",
+        key="assessor_role",
+    )
+
+# ------------------------------------------------------------------------------
+# 02 — Assessment Data
+# ------------------------------------------------------------------------------
+
+st.markdown("### 02 — Assessment Data")
+
+# File uploader
+uploaded_file = st.file_uploader(
+    "Upload Assessment Grid",
+    type=["xlsx", "xls"],
+    help="Upload the Excel file containing the assessment questionnaire.",
+    key="assessment_file",
+)
+
+if uploaded_file is not None:
+    st.success(f"✓ Ready to process: `{uploaded_file.name}` ({uploaded_file.size} bytes)")
+else:
+    st.info("No assessment file selected. Use the official assessment template to ensure compatibility.")
+
+# ------------------------------------------------------------------------------
+# 03 — Review & Launch
+# ------------------------------------------------------------------------------
+
+st.markdown("### 03 — Review & Launch")
+
+# Build a summary dictionary for display
+summary_data = {
+    "Assessment": assessment_name or "—",
+    "Site": plant or "—",
+    "Company": company or "—",
+    "Date": assessment_date.strftime("%Y-%m-%d") if assessment_date else "—",
+    "Assessor": assessor_name or "—",
+    "Role": assessor_role or "—",
+    "Assessment File": uploaded_file.name if uploaded_file else "—",
+}
+
+# Display summary in a two‑column layout
+col_sum1, col_sum2 = st.columns(2)
+
+with col_sum1:
+    st.markdown(f"**Assessment**<br>{summary_data['Assessment']}", unsafe_allow_html=True)
+    st.markdown(f"**Site**<br>{summary_data['Site']}", unsafe_allow_html=True)
+    st.markdown(f"**Company**<br>{summary_data['Company']}", unsafe_allow_html=True)
+    st.markdown(f"**Date**<br>{summary_data['Date']}", unsafe_allow_html=True)
+
+with col_sum2:
+    st.markdown(f"**Assessor**<br>{summary_data['Assessor']}", unsafe_allow_html=True)
+    st.markdown(f"**Role**<br>{summary_data['Role']}", unsafe_allow_html=True)
+    st.markdown(f"**Assessment File**<br>{summary_data['Assessment File']}", unsafe_allow_html=True)
+
+# ------------------------------------------------------------------------------
+# MAIN CTA
+# ------------------------------------------------------------------------------
+
+# Center the button
+col_btn1, col_btn2, col_btn3 = st.columns([1, 2, 1])
+
+with col_btn2:
+    if st.button(
+        "+ START ASSESSMENT →",
+        key="start_assessment_button",
+        use_container_width=True,
+    ):
+        # ---- Validation ----
+        errors = []
+
+        if not assessment_name.strip():
+            errors.append("Assessment Name is required.")
+        if not plant.strip():
+            errors.append("Industrial Site / Plant is required.")
+        if not company.strip():
+            errors.append("Company / Business Unit is required.")
+        if not assessor_name.strip():
+            errors.append("Assessor Name is required.")
+        if not assessor_role.strip():
+            errors.append("Assessor Role is required.")
+        if uploaded_file is None:
+            errors.append("Please upload the assessment grid before starting.")
+        if contact_email and not _validate_email(contact_email):
+            errors.append("Please enter a valid email address (or leave it empty).")
+
+        if errors:
+            for err in errors:
+                st.error(err)
+        else:
+            # ---- Store data (temporary, in‑memory) ----
+            assessment_data = {
+                "metadata": {
+                    "assessment_name": assessment_name,
+                    "plant": plant,
+                    "company": company,
+                    "assessment_date": assessment_date.isoformat(),
+                    "assessor_name": assessor_name,
+                    "assessor_role": assessor_role,
+                    "contact_email": contact_email or None,
+                },
+                "assessment_file": uploaded_file,  # stored as an in‑memory file object
+            }
+            st.session_state["new_assessment_data"] = assessment_data
+
+            # ---- Success feedback ----
+            st.success("Assessment information validated successfully.")
+            st.info("The assessment is ready to be processed.")
+            # Placeholder for future navigation – adjust when the target page is known.
+            # st.switch_page("pages/3_Dashboard.py")  # Uncomment when Dashboard page exists
+
+# ------------------------------------------------------------------------------
+# FOOTER
+# ------------------------------------------------------------------------------
+
+render_footer(
+    product_name="JESA DMAT",
+    version="v1.0.0",
+    organization="JESA · ENSAM Casablanca",
+    tagline="Internship Project · Digital Transformation & Industry 5.0",
+    links=[
+        {"label": "JESA", "url": "https://www.jesa.ma"},
+        {"label": "ENSAM Casablanca", "url": "https://ensam-casablanca.ma"},
+    ],
+    align="center",
+    compact=False,
+    show_divider=True,
+)
