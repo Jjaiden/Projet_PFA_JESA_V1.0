@@ -9,6 +9,7 @@ import streamlit as st
 from html import escape
 
 from components import render_footer, render_header
+from utils.assessment_service import export_selected_assessment
 
 
 # ------------------------------------------------------------------------------
@@ -167,30 +168,43 @@ def _render_export_section(data: dict) -> None:
     st.markdown("## Export Options")
     col1, col2 = st.columns(2)
 
-    # Placeholder – replace with actual report generation
-    # In production, call an export service:
-    # pdf_bytes = export_service.generate_pdf(data)
-    # excel_bytes = export_service.generate_excel(data)
-    pdf_bytes = b"Placeholder PDF content"
-    excel_bytes = b"Placeholder Excel content"
+    backend_results = st.session_state.get("backend_results")
+    if not backend_results:
+        st.info("Load an assessment before exporting.")
+        return
+
+    if st.button("PREPARE EXPORT FILES", key="prepare_roadmap_exports"):
+        try:
+            export_paths = export_selected_assessment(backend_results, ["pdf", "excel"])
+            st.session_state["latest_export_paths"] = {
+                key: str(path) for key, path in export_paths.items()
+            }
+            st.success("Export files prepared.")
+        except Exception as exc:
+            st.error(f"Export generation failed: {exc}")
+
+    export_paths = st.session_state.get("latest_export_paths", {})
 
     with col1:
-        st.download_button(
-            label="EXPORT PDF",
-            data=pdf_bytes,
-            file_name="JESA_DMAT_Report.pdf",
-            mime="application/pdf",
-            disabled=True,  # Enable when real export is implemented
-        )
+        pdf_path = export_paths.get("pdf")
+        if pdf_path:
+            with open(pdf_path, "rb") as file:
+                st.download_button(
+                    label="EXPORT PDF",
+                    data=file.read(),
+                    file_name="JESA_DMAT_Report.pdf",
+                    mime="application/pdf",
+                )
     with col2:
-        st.download_button(
-            label="EXPORT EXCEL",
-            data=excel_bytes,
-            file_name="JESA_DMAT_Report.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            disabled=True,
-        )
-    st.caption("Export functionality will be connected to the export service.")
+        excel_path = export_paths.get("excel")
+        if excel_path:
+            with open(excel_path, "rb") as file:
+                st.download_button(
+                    label="EXPORT EXCEL",
+                    data=file.read(),
+                    file_name="JESA_DMAT_Report.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                )
 
 
 def _render_navigation() -> None:

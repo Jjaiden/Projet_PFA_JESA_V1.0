@@ -52,7 +52,7 @@ from .file_manager import (
     get_assessment_path,
     sanitize_filename,
     build_output_path,
-    get_file_size,
+    file_size as get_file_size,
     is_empty_file,
 )
 from .formatters import format_date, format_number, format_percentage
@@ -72,9 +72,9 @@ from .excel_utils import (
     sheet_to_records,
     sheet_to_keyvalue,
     group_records_by,
-    excel_safe_int,
-    excel_safe_float,
-    excel_safe_str,
+    safe_int as excel_safe_int,
+    safe_float as excel_safe_float,
+    safe_str as excel_safe_str,
 )
 from .helpers import (
     normalize_text,

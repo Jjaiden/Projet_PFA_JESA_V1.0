@@ -70,6 +70,16 @@ if "assessment_id" not in st.session_state:
 if "assessment_results" not in st.session_state:
     st.session_state.assessment_results = None
 
+for key in (
+    "dashboard_data",
+    "backend_results",
+    "serialized_results",
+    "roadmap_results",
+    "decision_analysis_inputs",
+):
+    if key not in st.session_state:
+        st.session_state[key] = None
+
 
 # 4. Define navigation pages
 pages = {
@@ -93,7 +103,7 @@ pages = {
             icon=":material/dashboard:",
         ),
         st.Page(
-            "pages/4_Decision_Analysis.py",
+            "pages/4_Decision_analysis.py",
             title="Decision Analysis",
             icon=":material/analytics:",
         ),
@@ -104,6 +114,11 @@ pages = {
         ),
     ],
     "Output": [
+        st.Page(
+            "pages/6_History.py",
+            title="History",
+            icon=":material/history:",
+        ),
         st.Page(
             "pages/6_Export.py",
             title="Export",

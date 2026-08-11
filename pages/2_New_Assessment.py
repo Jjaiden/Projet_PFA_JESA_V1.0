@@ -11,6 +11,12 @@ from datetime import date
 import streamlit as st
 
 from components import render_footer, render_header
+from utils.assessment_service import (
+    AssessmentProcessingError,
+    process_uploaded_assessment,
+    save_uploaded_workbook,
+)
+from utils.history_store import save_assessment_history
 
 # ------------------------------------------------------------------------------
 # PAGE SPECIFIC CSS (to be added to main.css)
@@ -199,26 +205,46 @@ with col_btn2:
             for err in errors:
                 st.error(err)
         else:
-            # ---- Store data (temporary, in‑memory) ----
-            assessment_data = {
-                "metadata": {
-                    "assessment_name": assessment_name,
-                    "plant": plant,
-                    "company": company,
-                    "assessment_date": assessment_date.isoformat(),
-                    "assessor_name": assessor_name,
-                    "assessor_role": assessor_role,
-                    "contact_email": contact_email or None,
-                },
-                "assessment_file": uploaded_file,  # stored as an in‑memory file object
+            metadata = {
+                "assessment_name": assessment_name,
+                "plant": plant,
+                "company": company,
+                "assessment_date": assessment_date.isoformat(),
+                "assessor_name": assessor_name,
+                "assessor_role": assessor_role,
+                "contact_email": contact_email or None,
             }
-            st.session_state["new_assessment_data"] = assessment_data
 
-            # ---- Success feedback ----
-            st.success("Assessment information validated successfully.")
-            st.info("The assessment is ready to be processed.")
-            # Placeholder for future navigation – adjust when the target page is known.
-            # st.switch_page("pages/3_Dashboard.py")  # Uncomment when Dashboard page exists
+            try:
+                with st.spinner("Validating and processing the assessment workbook..."):
+                    workbook_path = save_uploaded_workbook(uploaded_file)
+                    result = process_uploaded_assessment(
+                        workbook_path,
+                        metadata,
+                        uploaded_file.name,
+                    )
+                    st.session_state["assessment_id"] = result["assessment_id"]
+                    st.session_state["new_assessment_data"] = {
+                        "metadata": metadata,
+                        "source_filename": uploaded_file.name,
+                    }
+                    st.session_state["backend_results"] = result["backend_results"]
+                    st.session_state["assessment_results"] = result["backend_results"]["aggregation"]
+                    st.session_state["dashboard_data"] = result["dashboard_data"]
+                    st.session_state["roadmap_results"] = result["roadmap_results"]
+                    st.session_state["serialized_results"] = result["serialized_results"]
+                    save_assessment_history(result["serialized_results"])
+
+                st.success("Assessment processed successfully.")
+                if result["validation_warnings"]:
+                    with st.expander("Validation warnings", expanded=False):
+                        for warning in result["validation_warnings"][:10]:
+                            st.warning(warning)
+                st.switch_page("pages/3_Dashboard.py")
+            except AssessmentProcessingError as exc:
+                st.error(str(exc))
+            except Exception as exc:
+                st.error(f"Assessment processing failed: {exc}")
 
 # ------------------------------------------------------------------------------
 # FOOTER

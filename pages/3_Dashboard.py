@@ -11,43 +11,6 @@ from components import render_footer, render_header
 from charts import BarChart, GaugeChart
 
 
-# ------------------------------------------------------------------------------
-# MOCK DATA PROVIDER (to be replaced by backend adapter)
-# ------------------------------------------------------------------------------
-def _get_mock_dashboard_data() -> dict:
-    """
-    Return mock dashboard data for frontend development.
-
-    This data follows the UI contract and will be replaced by a call to
-    a backend service when available.
-    """
-    return {
-        "dmi": 68.4,
-        "maturity_level": "Advanced",
-        "target_dmi": 75.0,
-        "dmi_gap": -6.6,
-        "pillars": [
-            {"name": "Automation", "score": 91},
-            {"name": "Infrastructure", "score": 85},
-            {"name": "Data & Analytics", "score": 72},
-            {"name": "Cybersecurity", "score": 64},
-            {"name": "Organizational Culture", "score": 58},
-        ],
-        "dimensions": [
-            {"name": "Digital Culture", "current": 50, "target": 75, "gap": -25},
-            {"name": "Data Governance", "current": 65, "target": 85, "gap": -20},
-            {"name": "Cyber Risk Management", "current": 70, "target": 85, "gap": -15},
-            {"name": "Network Connectivity", "current": 80, "target": 90, "gap": -10},
-            {"name": "Process Automation", "current": 92, "target": 95, "gap": -3},
-        ],
-        "insights": [
-            {"type": "danger", "title": "Main Constraint", "text": "Digital Culture is the largest maturity gap."},
-            {"type": "warning", "title": "Watch Area", "text": "Cybersecurity remains below the expected target."},
-            {"type": "success", "title": "Strength", "text": "Automation is already close to target."},
-        ],
-    }
-
-
 def _get_largest_gap(dimensions: list[dict]) -> dict | None:
     """Return the dimension with the largest negative gap."""
     if not dimensions:
@@ -66,12 +29,11 @@ def _count_attention_areas(dimensions: list[dict], threshold: int = -10) -> int:
 # ------------------------------------------------------------------------------
 
 # Check if assessment data exists
-if "new_assessment_data" not in st.session_state:
+if not st.session_state.get("dashboard_data"):
     st.warning("No assessment is currently loaded. Please start a new assessment from the Home page.")
     st.stop()
 
-# Retrieve mock data (replace with actual backend call later)
-data = _get_mock_dashboard_data()
+data = st.session_state["dashboard_data"]
 
 # Page header
 render_header(
@@ -246,10 +208,8 @@ with col_btn2:
         "ANALYZE & PRIORITIZE →",
         key="to_decision",
         use_container_width=True,
-        # disabled=True,  # Enable when pages/4_Decision_Analysis.py exists
     ):
-        # st.switch_page("pages/4_Decision_Analysis.py")
-        st.info("The Decision Analysis page is currently under development.")
+        st.switch_page("pages/4_Decision_analysis.py")
 
 # ------------------------------------------------------------------------------
 # FOOTER

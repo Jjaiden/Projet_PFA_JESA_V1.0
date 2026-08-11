@@ -1,116 +1,39 @@
-# pages/4_Decision_Analysis.py
+# pages/4_Decision_analysis.py
 """
-Decision Analysis page for JESA DMAT – From identified gaps to prioritized actions.
+Decision Analysis page for JESA DMAT - From identified gaps to prioritized actions.
 """
 
 from __future__ import annotations
 
-import streamlit as st
 import pandas as pd
+import streamlit as st
 
 from components import render_footer, render_header
-
-# ------------------------------------------------------------------------------
-# MOCK DATA PROVIDER (temporary – to be replaced by backend adapter)
-# ------------------------------------------------------------------------------
-def _get_mock_decision_data() -> dict:
-    """
-    Return mock decision‑analysis data for frontend development.
-
-    This function is temporary. In production, the criteria and recommendations
-    will come from the backend/dashboard via a dedicated service.
-    The frontend must NOT generate or filter recommendations itself.
-    """
-    return {
-        "criteria": [
-            {
-                "id": "gap",
-                "label": "Maturity Gap",
-                "unit": "points",
-                "min": 0,
-                "max": 100,
-            },
-            {
-                "id": "business_impact",
-                "label": "Business Impact",
-                "unit": "/100",
-                "min": 0,
-                "max": 100,
-            },
-            {
-                "id": "strategic_importance",
-                "label": "Strategic Importance",
-                "unit": "/100",
-                "min": 0,
-                "max": 100,
-            },
-            {
-                "id": "expected_roi",
-                "label": "Expected ROI",
-                "unit": "%",
-                "min": 0,
-                "max": 100,
-            },
-            {
-                "id": "implementation_cost",
-                "label": "Implementation Cost",
-                "unit": "k€",
-                "min": 0,
-                "max": 1000,
-            },
-            {
-                "id": "implementation_difficulty",
-                "label": "Implementation Difficulty",
-                "unit": "/100",
-                "min": 0,
-                "max": 100,
-            },
-        ],
-        "recommendations": [
-            {
-                "id": "REC_001",
-                "dimension": "Digital Culture",
-                "title": "Digital Workforce Program",
-            },
-            {
-                "id": "REC_002",
-                "dimension": "Smart Operations",
-                "title": "Smart Operations Improvement",
-            },
-            {
-                "id": "REC_003",
-                "dimension": "Cybersecurity",
-                "title": "OT Security Enhancement",
-            },
-        ],
-    }
+from utils.assessment_service import build_decision_rows, run_decision_analysis
+from utils.history_store import save_assessment_history
 
 
-def _validate_row(row: dict, criteria: list[dict]) -> list[str]:
-    """Validate a single row's inputs against criteria bounds and completeness."""
+CRITERIA = [
+    {"id": "business_impact", "label": "Business Impact", "unit": "1-5", "min": 1, "max": 5},
+    {"id": "strategic_importance", "label": "Strategic Importance", "unit": "1-5", "min": 1, "max": 5},
+    {"id": "expected_roi", "label": "Expected ROI", "unit": "1-5", "min": 1, "max": 5},
+    {"id": "implementation_cost", "label": "Implementation Cost", "unit": "1-5", "min": 1, "max": 5},
+    {"id": "implementation_difficulty", "label": "Implementation Difficulty", "unit": "1-5", "min": 1, "max": 5},
+]
+
+
+def _validate_row(row: dict) -> list[str]:
     errors = []
-    for criterion in criteria:
-        cid = criterion["id"]
-        value = row.get(cid)
-        # Check presence
-        if value is None or (isinstance(value, float) and value != value):  # NaN check
+    for criterion in CRITERIA:
+        value = row.get(criterion["id"])
+        if value is None or pd.isna(value):
             errors.append(f"Missing value for {criterion['label']}")
-        else:
-            # Check bounds
-            min_val = criterion.get("min")
-            max_val = criterion.get("max")
-            if min_val is not None and value < min_val:
-                errors.append(f"{criterion['label']} must be ≥ {min_val}")
-            if max_val is not None and value > max_val:
-                errors.append(f"{criterion['label']} must be ≤ {max_val}")
+            continue
+        if int(value) != value or value < criterion["min"] or value > criterion["max"]:
+            errors.append(f"{criterion['label']} must be an integer between 1 and 5")
     return errors
 
 
-# ------------------------------------------------------------------------------
-# PAGE CONTENT
-# ------------------------------------------------------------------------------
-
-# Page header
 render_header(
     title="DECISION ANALYSIS",
     subtitle="From identified gaps to prioritized transformation actions",
@@ -118,89 +41,59 @@ render_header(
     compact=False,
 )
 
-# Retrieve mock data – in production this will come from the backend/dashboard
-data = _get_mock_decision_data()
-criteria = data["criteria"]
-recommendations = data["recommendations"]
+backend_results = st.session_state.get("backend_results")
+if not backend_results:
+    st.warning(
+        "No assessment is currently loaded.\n\n"
+        "Start a new assessment or open one from History first."
+    )
+    st.stop()
 
-# ------------------------------------------------------------------------------
-# Empty state
-# ------------------------------------------------------------------------------
-if not recommendations:
+rows = build_decision_rows(backend_results)
+
+if not rows:
     st.warning(
         "No transformation opportunities currently require decision prioritization.\n\n"
         "Return to the Dashboard to review the maturity assessment."
     )
-    render_footer(
-        product_name="JESA DMAT",
-        version="v1.0.0",
-        organization="JESA · ENSAM Casablanca",
-        tagline="Internship Project · Digital Transformation & Industry 5.0",
-        links=[
-            {"label": "JESA", "url": "https://www.jesa.ma"},
-            {"label": "ENSAM Casablanca", "url": "https://ensam-casablanca.ma"},
-        ],
-        align="center",
-        compact=False,
-        show_divider=True,
-    )
     st.stop()
 
-# ------------------------------------------------------------------------------
-# Dynamic information banner
-# ------------------------------------------------------------------------------
-count = len(recommendations)
 st.info(
-    f"{count} transformation opportunity{'s' if count > 1 else ''} identified.\n\n"
-    f"Enter the required site‑specific values for each opportunity to calculate their priorities."
+    f"{len(rows)} transformation opportunity{'s' if len(rows) > 1 else ''} identified.\n\n"
+    "Enter the required site-specific values for each dimension to calculate priorities."
 )
 
-# ------------------------------------------------------------------------------
-# Methodology explanation (small, non‑intrusive)
-# ------------------------------------------------------------------------------
 with st.expander("How it works", expanded=False):
     st.markdown(
         """
-        Enter the site‑specific values required by the decision model.
-        These inputs will be sent to the decision engine for validation,
+        Enter values from 1 to 5 for each decision criterion.
+        These inputs are sent to the backend TPI engine for validation,
         normalization and priority calculation.
         """
     )
 
-# ------------------------------------------------------------------------------
-# Build the decision matrix (data editor)
-# ------------------------------------------------------------------------------
-# Create a DataFrame with recommendation metadata and blank input columns
-rows = []
-for rec in recommendations:
-    row = {
-        "recommendation_id": rec["id"],
-        "dimension": rec["dimension"],
-        "title": rec["title"],
-    }
-    for criterion in criteria:
-        row[criterion["id"]] = None  # user must fill
-    rows.append(row)
-
 df = pd.DataFrame(rows)
+for criterion in CRITERIA:
+    df[criterion["id"]] = 3
 
-# Configure column types
 column_config = {
-    "recommendation_id": st.column_config.TextColumn("ID", disabled=True),
+    "dimension_id": st.column_config.TextColumn("ID", disabled=True),
     "dimension": st.column_config.TextColumn("Dimension", disabled=True),
-    "title": st.column_config.TextColumn("Transformation Opportunity", disabled=True),
+    "current_score": st.column_config.NumberColumn("Current", disabled=True, format="%.2f"),
+    "target_score": st.column_config.NumberColumn("Target", disabled=True, format="%.2f"),
+    "gap": st.column_config.NumberColumn("Gap", disabled=True, format="%.2f"),
 }
 
-for criterion in criteria:
+for criterion in CRITERIA:
     column_config[criterion["id"]] = st.column_config.NumberColumn(
         f"{criterion['label']} ({criterion['unit']})",
-        min_value=criterion.get("min"),
-        max_value=criterion.get("max"),
+        min_value=criterion["min"],
+        max_value=criterion["max"],
+        step=1,
         required=True,
-        help=f"Enter a value between {criterion.get('min', '–')} and {criterion.get('max', '–')}.",
+        help="Enter an integer from 1 to 5.",
     )
 
-# Display the editor with fixed rows (no add/delete)
 st.markdown("### Decision Inputs")
 edited_df = st.data_editor(
     df,
@@ -208,59 +101,51 @@ edited_df = st.data_editor(
     width="stretch",
     hide_index=True,
     key="decision_matrix",
-    num_rows="fixed",  # Prevent row addition/deletion
+    num_rows="fixed",
 )
 
-# ------------------------------------------------------------------------------
-# Validation & status
-# ------------------------------------------------------------------------------
 all_valid = True
 missing_count = 0
-
-for idx, row in edited_df.iterrows():
-    row_errors = _validate_row(row.to_dict(), criteria)
+for _, row in edited_df.iterrows():
+    row_errors = _validate_row(row.to_dict())
     if row_errors:
         all_valid = False
-        missing_count += sum(1 for e in row_errors if "Missing" in e)
+        missing_count += sum(1 for error in row_errors if "Missing" in error)
 
-# Display validation summary – we keep it simple and avoid per-row expanders
 if not all_valid:
     if missing_count > 0:
-        st.warning(f"⚠ {missing_count} required input{'s' if missing_count > 1 else ''} are missing.")
-    st.error("Please correct the missing or out‑of‑range values in the table above.")
+        st.warning(f"{missing_count} required input{'s' if missing_count > 1 else ''} are missing.")
+    st.error("Please correct the missing or out-of-range values in the table above.")
 else:
-    st.success("✓ All required inputs completed")
+    st.success("All required inputs completed")
 
-# ------------------------------------------------------------------------------
-# Submission button (decision gate)
-# ------------------------------------------------------------------------------
 col_btn1, col_btn2, col_btn3 = st.columns([1, 2, 1])
 with col_btn2:
     if st.button(
-        "CONTINUE TO PRIORITIZATION →",
+        "CONTINUE TO PRIORITIZATION ->",
         key="submit_decision",
         use_container_width=True,
         disabled=not all_valid,
     ):
-        # Build the payload
-        payload = []
-        for idx, row in edited_df.iterrows():
-            rec_id = row["recommendation_id"]
-            criteria_inputs = {}
-            for criterion in criteria:
-                criteria_inputs[criterion["id"]] = row[criterion["id"]]
-            payload.append({"recommendation_id": rec_id, "criteria": criteria_inputs})
+        decision_inputs = {}
+        for _, row in edited_df.iterrows():
+            decision_inputs[row["dimension_id"]] = {
+                criterion["id"]: int(row[criterion["id"]])
+                for criterion in CRITERIA
+            }
 
-        # Store the decision inputs in session state for the backend
-        st.session_state["decision_analysis_inputs"] = payload
+        try:
+            result = run_decision_analysis(backend_results, decision_inputs)
+            st.session_state["decision_analysis_inputs"] = decision_inputs
+            st.session_state["backend_results"] = result["backend_results"]
+            st.session_state["roadmap_results"] = result["roadmap_results"]
+            st.session_state["serialized_results"] = result["serialized_results"]
+            save_assessment_history(result["serialized_results"])
+            st.success("Decision analysis completed successfully.")
+            st.switch_page("pages/5_Roadmap.py")
+        except Exception as exc:
+            st.error(f"Decision analysis failed: {exc}")
 
-        # Navigate to Roadmap page (when available)
-        # st.switch_page("pages/5_Roadmap.py")
-        st.info("The Roadmap page is currently under development. Your inputs have been stored.")
-
-# ------------------------------------------------------------------------------
-# FOOTER
-# ------------------------------------------------------------------------------
 render_footer(
     product_name="JESA DMAT",
     version="v1.0.0",
