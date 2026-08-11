@@ -89,6 +89,7 @@ for key in (
 
 
 # 4. Define navigation pages
+
 pages = {
     "Assessment": [
         st.Page(
@@ -103,6 +104,7 @@ pages = {
             icon=":material/add_chart:",
         ),
     ],
+
     "Analysis": [
         st.Page(
             "pages/3_Dashboard.py",
@@ -120,6 +122,7 @@ pages = {
             icon=":material/route:",
         ),
     ],
+
     "Output": [
         st.Page(
             "pages/6_History.py",
@@ -133,9 +136,8 @@ pages = {
         ),
     ],
 }
-
-
 # Create navigation
+
 pg = st.navigation(pages)
 
 

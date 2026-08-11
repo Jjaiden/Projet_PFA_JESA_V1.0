@@ -52,18 +52,18 @@
     --dmat-sidebar: #06265A;
     --dmat-sidebar-hover: #F8FBFF;
     --dmat-sidebar-text: #FFFFFF;
-    --dmat-sidebar-muted: #DCE7F5;
+    --dmat-sidebar-muted: #020202;
 
     --dmat-primary: #2563EB;
     --dmat-primary-hover: #1D4ED8;
     --dmat-secondary: #3B82F6;
 
     --dmat-border: #D5DCE5;
-    --dmat-divider: #CBD5E1;
+    --dmat-divider: #111214;
 
     --dmat-title: #0F172A;
-    --dmat-text: #4E6072;
-    --dmat-muted: #64748B;
+    --dmat-text: #5a5a5a;
+    --dmat-muted: #000000;
 
     --dmat-success: #10B981;
     --dmat-warning: #F59E0B;
@@ -116,17 +116,12 @@ html,
 body,
 .stApp,
 [data-testid="stAppViewContainer"],
-[data-testid="stAppViewContainer"] *,
-[data-testid="stSidebar"],
-[data-testid="stSidebar"] *,
 button,
 input,
 textarea,
 select {
     font-family: var(--dmat-font) !important;
 }
-
-
 /* Main background */
 
 body,
@@ -231,16 +226,14 @@ b {
 }
 
 
-/* Sidebar text */
+/* Sidebar text — do NOT target all spans because Streamlit
+   uses spans for Material Symbols icons. */
 
 [data-testid="stSidebar"] label,
 [data-testid="stSidebar"] .stMarkdown p,
 [data-testid="stSidebar"] .stMarkdown li,
-[data-testid="stSidebar"] span,
 [data-testid="stSidebar"] .stRadio label {
-
     color: var(--dmat-sidebar-text) !important;
-
     font-family: var(--dmat-font) !important;
 }
 
@@ -261,52 +254,84 @@ b {
 
 /* Navigation */
 
+/* ==========================================================================
+   5B. STREAMLIT NAVIGATION
+   ========================================================================== */
+
 [data-testid="stSidebarNav"] {
     background-color: transparent !important;
 }
 
 
+/* Navigation list */
+
 [data-testid="stSidebarNav"] ul {
     padding-top: 0.5rem;
+    margin: 0;
 }
 
 
-[data-testid="stSidebarNav"] li a {
+/* Navigation links */
 
+[data-testid="stSidebarNav"] li a {
     color: var(--dmat-sidebar-text) !important;
 
     font-family: var(--dmat-font) !important;
 
     border-radius: var(--dmat-radius-sm);
 
-    padding: 0.5rem 0.75rem !important;
+    padding: 0.55rem 0.75rem !important;
+
+    font-size: 0.95rem !important;
 
     font-weight: 600;
 
     transition:
         background-color 0.15s ease,
-        color 0.15s ease;
+        color 0.15s ease,
+        transform 0.15s ease;
 }
 
 
-[data-testid="stSidebarNav"] li a:hover {
+/* Keep Streamlit Material Symbols intact */
 
+[data-testid="stSidebarNav"]
+.material-symbols-rounded,
+[data-testid="stSidebarNav"]
+.material-symbols-outlined,
+[data-testid="stSidebarNav"]
+.material-symbols-sharp {
+    font-family:
+        "Material Symbols Rounded",
+        "Material Symbols Outlined",
+        "Material Symbols Sharp" !important;
+
+    font-weight: normal !important;
+
+    font-style: normal !important;
+
+    line-height: 1 !important;
+}
+
+
+/* Hover */
+
+[data-testid="stSidebarNav"] li a:hover {
     background-color: var(--dmat-sidebar-hover) !important;
 
     color: var(--dmat-sidebar) !important;
 }
 
 
-[data-testid="stSidebarNav"] li a[aria-current="page"] {
+/* Active page */
 
+[data-testid="stSidebarNav"] li a[aria-current="page"] {
     background-color: var(--dmat-primary) !important;
 
     color: #FFFFFF !important;
 
     font-weight: 700;
 }
-
-
 /* Hide Streamlit header */
 
 [data-testid="stHeader"] {
@@ -733,13 +758,13 @@ hr,
         0.75rem;
 
     padding:
-        2rem 0 1rem;
+        1rem 0 1rem;
 
     border-top:
         1px solid var(--dmat-border);
 
     margin-top:
-        2rem;
+        1rem;
 }
 
 
