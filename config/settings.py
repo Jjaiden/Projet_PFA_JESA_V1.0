@@ -115,7 +115,7 @@ class BackendSettings:
     ASSESSMENT_FILE: Path = Path(
         os.environ.get(
             "JDMAF_ASSESSMENT_FILE",
-            str(_ROOT_DIR / "data" / "assessment" / "Assessment.xlsx"),
+            str(_ROOT_DIR / "data" / "assessment" / "assessment.xlsx"),
         )
     )
 
@@ -438,6 +438,42 @@ class Settings:
     def __init__(self):
         self.backend = BackendSettings()
         self.frontend = FrontendSettings()
+
+    def __setattr__(self, name, value):
+        backend_fields = getattr(BackendSettings, "__dataclass_fields__", {})
+        frontend_fields = getattr(FrontendSettings, "__dataclass_fields__", {})
+
+        if name in {"backend", "frontend"}:
+            object.__setattr__(self, name, value)
+            return
+
+        if name in backend_fields and "backend" in self.__dict__:
+            object.__setattr__(
+                self,
+                "backend",
+                self._replace_dataclass_value(self.backend, name, value),
+            )
+            return
+
+        if name in frontend_fields and "frontend" in self.__dict__:
+            object.__setattr__(
+                self,
+                "frontend",
+                self._replace_dataclass_value(self.frontend, name, value),
+            )
+            return
+
+        object.__setattr__(self, name, value)
+
+    @staticmethod
+    def _replace_dataclass_value(instance, name, value):
+        from dataclasses import replace
+        from pathlib import Path
+
+        current = getattr(instance, name)
+        if isinstance(current, Path) and not isinstance(value, Path):
+            value = Path(value)
+        return replace(instance, **{name: value})
 
     # ========================================================================
     # Délégation des attributs backend

@@ -129,7 +129,7 @@ st.markdown("### 02 — Assessment Data")
 # File uploader
 uploaded_file = st.file_uploader(
     "Upload Assessment Grid",
-    type=["xlsx", "xls"],
+    type=["xlsx"],
     help="Upload the Excel file containing the assessment questionnaire.",
     key="assessment_file",
 )

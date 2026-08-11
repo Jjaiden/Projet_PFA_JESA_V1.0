@@ -7,6 +7,7 @@ putting business calculations in the pages.
 from __future__ import annotations
 
 import math
+import json
 import tempfile
 import uuid
 from dataclasses import replace
@@ -28,7 +29,6 @@ from engines.decision.priority import PriorityEngine, PriorityResult
 from engines.decision.recommendation import RecommendationEngine, RecommendationResult
 from engines.decision.roadmap import RoadmapEngine, RoadmapPhase
 from engines.decision.tpi import TPIEngine, TPIResult
-from exports.report import generate_report
 
 
 REQUIRED_ASSESSMENT_SHEETS = {
@@ -54,8 +54,8 @@ def save_uploaded_workbook(uploaded_file: Any) -> Path:
     """Persist a Streamlit UploadedFile to a temporary workbook path."""
 
     suffix = Path(uploaded_file.name).suffix.lower()
-    if suffix not in {".xlsx", ".xls"}:
-        raise AssessmentProcessingError("Only Excel files (.xlsx or .xls) are supported.")
+    if suffix != ".xlsx":
+        raise AssessmentProcessingError("Only Excel files (.xlsx) are supported.")
 
     data = uploaded_file.getvalue()
     if not data:
@@ -296,16 +296,49 @@ def export_selected_assessment(
 
     assessment_id = str(backend_results.get("assessment_id") or "assessment")
     output_dir = settings.OUTPUT_DIR / assessment_id
-    return generate_report(
-        aggregation_results=backend_results.get("aggregation", {}),
-        gap_results=backend_results.get("gaps", []),
-        tpi_results=backend_results.get("tpi", []),
-        priority_results=backend_results.get("priorities", []),
-        roadmap=backend_results.get("roadmap", []),
-        output_dir=output_dir,
-        assessment_id=assessment_id,
-        formats=formats,
-    )
+    output_dir.mkdir(parents=True, exist_ok=True)
+    outputs: dict[str, Path] = {}
+
+    if "excel" in formats:
+        from exports.excel import ExcelExporter
+
+        outputs["excel"] = ExcelExporter().export_assessment_results(
+            aggregation_results=backend_results.get("aggregation", {}),
+            gap_results=backend_results.get("gaps", []),
+            tpi_results=backend_results.get("tpi", []),
+            priority_results=backend_results.get("priorities", []),
+            roadmap=backend_results.get("roadmap", []),
+            output_path=output_dir / f"assessment_results_{assessment_id}.xlsx",
+            assessment_id=assessment_id,
+        )
+
+    if "json" in formats:
+        json_path = output_dir / f"assessment_report_{assessment_id}.json"
+        json_path.write_text(
+            json.dumps(serialize_backend_results(backend_results), indent=2, ensure_ascii=False),
+            encoding="utf-8",
+        )
+        outputs["json"] = json_path
+
+    if "pdf" in formats:
+        try:
+            from exports.pdf import PDFReportGenerator
+        except ModuleNotFoundError as exc:
+            raise AssessmentProcessingError(
+                "PDF export requires reportlab. Install project requirements before generating PDF reports."
+            ) from exc
+
+        outputs["pdf"] = PDFReportGenerator().generate_report(
+            aggregation_results=backend_results.get("aggregation", {}),
+            gap_results=backend_results.get("gaps", []),
+            tpi_results=backend_results.get("tpi", []),
+            priority_results=backend_results.get("priorities", []),
+            roadmap=backend_results.get("roadmap", []),
+            output_path=output_dir / f"assessment_report_{assessment_id}.pdf",
+            assessment_id=assessment_id,
+        )
+
+    return outputs
 
 
 def serialize_backend_results(results: Mapping[str, Any]) -> dict[str, Any]:
@@ -391,10 +424,18 @@ def _load_recommendations(gaps: list[GapResult]) -> dict[str, list[Recommendatio
     if not settings.RECOMMENDATIONS_FILE.exists():
         return {}
     workbook = pd.ExcelFile(settings.RECOMMENDATIONS_FILE)
-    recommendations = pd.read_excel(workbook, sheet_name=KnowledgeBaseSheets.RECOMMENDATIONS)
+    recommendations = pd.read_excel(
+        workbook,
+        sheet_name=KnowledgeBaseSheets.RECOMMENDATIONS,
+        header=1,
+    )
     trigger_mapping = None
     if KnowledgeBaseSheets.TRIGGER_MAPPING in workbook.sheet_names:
-        trigger_mapping = pd.read_excel(workbook, sheet_name=KnowledgeBaseSheets.TRIGGER_MAPPING)
+        trigger_mapping = pd.read_excel(
+            workbook,
+            sheet_name=KnowledgeBaseSheets.TRIGGER_MAPPING,
+            header=1,
+        )
     return RecommendationEngine(recommendations, trigger_mapping=trigger_mapping).get_all_recommendations(gaps)
 
 

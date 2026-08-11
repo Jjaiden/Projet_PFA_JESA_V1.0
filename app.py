@@ -30,7 +30,6 @@ from engines.decision.tpi import TPIEngine
 from engines.decision.priority import PriorityEngine
 from engines.decision.recommendation import RecommendationEngine
 from engines.decision.roadmap import RoadmapEngine
-from exports.report import generate_report, generate_executive_summary
 from utils.file_manager import ensure_directory, build_output_path
 
 logger = settings.get_logger(__name__)
@@ -53,15 +52,23 @@ st.set_page_config(
 
 
 # 2. Load global design system CSS
-CSS_PATH = Path(__file__).parent / "assets" / "styles" / "main.css"
+STYLES_DIR = Path(__file__).parent / "assets" / "styles"
 
-if CSS_PATH.exists():
-    with open(CSS_PATH, encoding="utf-8") as f:
-        st.markdown(
-            f"<style>{f.read()}</style>",
-            unsafe_allow_html=True,
-        )
+CSS_FILES = [
+    STYLES_DIR / "main.css",
+    STYLES_DIR / "components.css",
+    STYLES_DIR / "utilities.css",
+]
 
+for css_path in CSS_FILES:
+    if css_path.exists():
+        with open(css_path, encoding="utf-8") as f:
+            st.markdown(
+                f"<style>{f.read()}</style>",
+                unsafe_allow_html=True,
+            )
+    else:
+        logger.warning("CSS file not found: %s", css_path)
 
 # 3. Session state initialization
 if "assessment_id" not in st.session_state:
@@ -382,6 +389,8 @@ class AssessmentPipeline:
                 export_formats,
             )
 
+            from exports.report import generate_report
+
             output_files = generate_report(
                 aggregation_results=aggregation_results,
                 gap_results=gap_results,
@@ -396,6 +405,8 @@ class AssessmentPipeline:
             logger.info("Export completed")
 
         # Executive summary
+        from exports.report import generate_executive_summary
+
         summary = generate_executive_summary(
             aggregation_results=aggregation_results,
             gap_results=gap_results,

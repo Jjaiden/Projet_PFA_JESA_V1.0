@@ -838,7 +838,7 @@ def list_files(directory: Union[str, Path], pattern: str = "*") -> list[Path]:
     dir_obj = _assert_path(directory, "directory")
     _assert_directory(dir_obj)
 
-    files = sorted(p for p in dir_obj.glob(pattern) if p.is_file())
+    files = sorted(p for p in dir_obj.rglob(pattern) if p.is_file())
     _logger.debug("Listed %d files in %s (pattern='%s')", len(files), dir_obj, pattern)
     return files
 

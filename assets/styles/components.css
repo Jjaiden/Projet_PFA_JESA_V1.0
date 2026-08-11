@@ -206,7 +206,7 @@
 /* Variants */
 .dmat-button--primary {
   background-color: var(--dmat-primary);
-  color: #FFFFFF;
+  color: #fbf65e;
   border-color: var(--dmat-primary);
 }
 
@@ -217,7 +217,7 @@
 
 .dmat-button--secondary {
   background-color: var(--dmat-secondary);
-  color: #FFFFFF;
+  color: #88cfff;
   border-color: var(--dmat-secondary);
 }
 
@@ -228,7 +228,7 @@
 
 .dmat-button--success {
   background-color: var(--dmat-success);
-  color: #FFFFFF;
+  color: #6cfa7b;
   border-color: var(--dmat-success);
 }
 
@@ -238,7 +238,7 @@
 
 .dmat-button--warning {
   background-color: var(--dmat-warning);
-  color: #FFFFFF;
+  color: #db5e29;
   border-color: var(--dmat-warning);
 }
 
@@ -248,7 +248,7 @@
 
 .dmat-button--danger {
   background-color: var(--dmat-danger);
-  color: #FFFFFF;
+  color: #f72727;
   border-color: var(--dmat-danger);
 }
 
@@ -691,7 +691,7 @@
 }
 
 .dmat-sidebar__title {
-  color: #FFFFFF;
+  color: #00a8e6cc;
   font-size: 1.25rem;
   font-weight: 700;
   margin: 0;

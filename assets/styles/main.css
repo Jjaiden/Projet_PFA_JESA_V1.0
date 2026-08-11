@@ -1,273 +1,536 @@
 /* ==========================================================================
    JESA DMAT — Digital Maturity Assessment Tool
-   Design System CSS (v2.0 – Industrial Grade)
+   Design System CSS (v2.1 – Industrial Grade)
    ========================================================================== */
 
-/* ---------- Font ---------- */
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
 
 /* ==========================================================================
-   1. DESIGN TOKENS (Custom Properties)
+   0. TYPOGRAPHY
    ========================================================================== */
+
+/*
+   Primary font:
+   Century Gothic
+   Fallbacks:
+   Gill Sans MT → Segoe UI → Arial → sans-serif
+
+   Century Gothic is intentionally used as the primary visual identity.
+*/
+
 :root {
-  /* Palette */
-  --dmat-bg: #F5F7FA;
-  --dmat-surface: #FFFFFF;
-  --dmat-sidebar: #1E293B;
-  --dmat-sidebar-hover: #334155;
-  --dmat-sidebar-text: #E2E8F0;
-  --dmat-sidebar-muted: #94A3B8;
-  --dmat-primary: #2563EB;
-  --dmat-primary-hover: #1D4ED8;
-  --dmat-secondary: #3B82F6;
-  --dmat-border: #E2E8F0;
-  --dmat-divider: #CBD5E1;
-  --dmat-title: #0F172A;
-  --dmat-text: #334155;
-  --dmat-muted: #64748B;
-  --dmat-success: #10B981;
-  --dmat-warning: #F59E0B;
-  --dmat-danger: #EF4444;
+    --dmat-font:
+        "Century Gothic",
+        "CenturyGothic",
+        "Gill Sans MT",
+        "Gill Sans",
+        "Segoe UI",
+        Arial,
+        sans-serif;
 
-  /* Piliers */
-  --dmat-pillar-1: #2563EB;
-  --dmat-pillar-2: #3B82F6;
-  --dmat-pillar-3: #60A5FA;
-  --dmat-pillar-4: #93C5FD;
-  --dmat-pillar-5: #BFDBFE;
-
-  /* Typography */
-  --dmat-font: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-
-  /* Radii */
-  --dmat-radius-sm: 6px;
-  --dmat-radius-md: 10px;
-  --dmat-radius-lg: 16px;
-
-  /* Shadows */
-  --dmat-shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.05);
-  --dmat-shadow-md: 0 4px 12px rgba(15, 23, 42, 0.08);
-  --dmat-shadow-lg: 0 10px 24px rgba(15, 23, 42, 0.12);
+    --dmat-font-display:
+        "Century Gothic",
+        "CenturyGothic",
+        "Gill Sans MT",
+        "Gill Sans",
+        "Segoe UI",
+        Arial,
+        sans-serif;
 }
+
+
+/* ==========================================================================
+   1. DESIGN TOKENS
+   ========================================================================== */
+
+:root {
+
+    /* ---------- Palette ---------- */
+
+    --dmat-bg: #F5F7FA;
+    --dmat-surface: #FFFFFF;
+
+    --dmat-sidebar: #06265A;
+    --dmat-sidebar-hover: #F8FBFF;
+    --dmat-sidebar-text: #FFFFFF;
+    --dmat-sidebar-muted: #DCE7F5;
+
+    --dmat-primary: #2563EB;
+    --dmat-primary-hover: #1D4ED8;
+    --dmat-secondary: #3B82F6;
+
+    --dmat-border: #D5DCE5;
+    --dmat-divider: #CBD5E1;
+
+    --dmat-title: #0F172A;
+    --dmat-text: #4E6072;
+    --dmat-muted: #64748B;
+
+    --dmat-success: #10B981;
+    --dmat-warning: #F59E0B;
+    --dmat-danger: #EF4444;
+
+
+    /* ---------- Pillars ---------- */
+
+    --dmat-pillar-1: #1804F4;
+    --dmat-pillar-2: #2866C4;
+    --dmat-pillar-3: #23B9BE;
+    --dmat-pillar-4: #9EE1DB;
+    --dmat-pillar-5: #BFDBFE;
+
+
+    /* ---------- Radii ---------- */
+
+    --dmat-radius-sm: 6px;
+    --dmat-radius-md: 10px;
+    --dmat-radius-lg: 16px;
+
+
+    /* ---------- Shadows ---------- */
+
+    --dmat-shadow-sm:
+        0 1px 2px rgba(15, 23, 42, 0.05);
+
+    --dmat-shadow-md:
+        0 4px 12px rgba(15, 23, 42, 0.08);
+
+    --dmat-shadow-lg:
+        0 10px 24px rgba(15, 23, 42, 0.12);
+}
+
 
 /* ==========================================================================
    2. RESET & BASE
    ========================================================================== */
-/* Box-sizing only – no margin/padding reset to preserve Streamlit layout */
+
 *,
 *::before,
 *::after {
-  box-sizing: border-box;
+    box-sizing: border-box;
 }
 
-/* Apply font globally via stable selectors */
+
+/* Global typography */
+
 html,
 body,
-[data-testid="stAppViewContainer"] {
-  font-family: var(--dmat-font);
+.stApp,
+[data-testid="stAppViewContainer"],
+[data-testid="stAppViewContainer"] *,
+[data-testid="stSidebar"],
+[data-testid="stSidebar"] *,
+button,
+input,
+textarea,
+select {
+    font-family: var(--dmat-font) !important;
 }
 
-/* Background and default text color */
+
+/* Main background */
+
 body,
 .stApp {
-  background-color: var(--dmat-bg);
-  color: var(--dmat-text);
+    background-color: var(--dmat-bg);
+    color: var(--dmat-text);
 }
+
 
 /* ==========================================================================
    3. TYPOGRAPHY
    ========================================================================== */
-h1, h2, h3, h4, h5, h6,
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
 [data-testid="stMarkdownContainer"] h1,
 [data-testid="stMarkdownContainer"] h2,
-[data-testid="stMarkdownContainer"] h3 {
-  color: var(--dmat-title) !important;
-  font-weight: 600 !important;
-  letter-spacing: -0.02em;
+[data-testid="stMarkdownContainer"] h3,
+[data-testid="stMarkdownContainer"] h4,
+[data-testid="stMarkdownContainer"] h5,
+[data-testid="stMarkdownContainer"] h6 {
+
+    font-family: var(--dmat-font-display) !important;
+
+    color: var(--dmat-title) !important;
+
+    font-weight: 700 !important;
+
+    letter-spacing: 0.01em;
+
+    line-height: 1.2;
 }
 
-h1 { font-size: 2rem !important; }
-h2 { font-size: 1.5rem !important; }
-h3 { font-size: 1.25rem !important; }
 
-p, li, label,
-[data-testid="stMarkdownContainer"] p {
-  color: var(--dmat-text);
-  line-height: 1.6;
+h1 {
+    font-size: 2rem !important;
 }
 
-/* Utility class for muted text */
+h2 {
+    font-size: 1.5rem !important;
+}
+
+h3 {
+    font-size: 1.25rem !important;
+}
+
+
+p,
+li,
+label,
+[data-testid="stMarkdownContainer"] p,
+[data-testid="stMarkdownContainer"] li {
+
+    font-family: var(--dmat-font) !important;
+
+    color: var(--dmat-text);
+
+    line-height: 1.6;
+}
+
+
+/* Strong / bold text */
+
+strong,
+b {
+    font-family: var(--dmat-font) !important;
+    font-weight: 700 !important;
+}
+
+
+/* Muted text */
+
 .text-muted {
-  color: var(--dmat-muted) !important;
+    color: var(--dmat-muted) !important;
 }
+
 
 /* ==========================================================================
    4. LAYOUT
    ========================================================================== */
-/* Main container max-width for professional look */
+
 .block-container {
-  max-width: 1400px;
-  padding: 2rem 2rem;
+    max-width: 1400px;
+    padding: 2rem 2rem;
 }
+
 
 /* ==========================================================================
    5. SIDEBAR
    ========================================================================== */
+
 [data-testid="stSidebar"] {
-  background-color: var(--dmat-sidebar) !important;
-  border-right: 1px solid rgba(255, 255, 255, 0.06);
+
+    background-color: var(--dmat-sidebar) !important;
+
+    border-right:
+        1px solid rgba(255, 255, 255, 0.08);
 }
 
-/* Sidebar text elements (labels, markdown, radio buttons) */
+
+/* Sidebar text */
+
 [data-testid="stSidebar"] label,
 [data-testid="stSidebar"] .stMarkdown p,
 [data-testid="stSidebar"] .stMarkdown li,
 [data-testid="stSidebar"] span,
 [data-testid="stSidebar"] .stRadio label {
-  color: var(--dmat-sidebar-text) !important;
+
+    color: var(--dmat-sidebar-text) !important;
+
+    font-family: var(--dmat-font) !important;
 }
 
+
 /* Sidebar headings */
+
 [data-testid="stSidebar"] h1,
 [data-testid="stSidebar"] h2,
 [data-testid="stSidebar"] h3 {
-  color: #FFFFFF !important;
+
+    color: #FFFFFF !important;
+
+    font-family: var(--dmat-font-display) !important;
+
+    font-weight: 700 !important;
 }
+
 
 /* Navigation */
+
 [data-testid="stSidebarNav"] {
-  background-color: transparent !important;
+    background-color: transparent !important;
 }
+
 
 [data-testid="stSidebarNav"] ul {
-  padding-top: 0.5rem;
+    padding-top: 0.5rem;
 }
+
 
 [data-testid="stSidebarNav"] li a {
-  color: var(--dmat-sidebar-text) !important;
-  border-radius: var(--dmat-radius-sm);
-  padding: 0.5rem 0.75rem !important;
-  font-weight: 500;
-  transition: background-color 0.15s ease, color 0.15s ease;
+
+    color: var(--dmat-sidebar-text) !important;
+
+    font-family: var(--dmat-font) !important;
+
+    border-radius: var(--dmat-radius-sm);
+
+    padding: 0.5rem 0.75rem !important;
+
+    font-weight: 600;
+
+    transition:
+        background-color 0.15s ease,
+        color 0.15s ease;
 }
+
 
 [data-testid="stSidebarNav"] li a:hover {
-  background-color: var(--dmat-sidebar-hover) !important;
-  color: #FFFFFF !important;
+
+    background-color: var(--dmat-sidebar-hover) !important;
+
+    color: var(--dmat-sidebar) !important;
 }
+
 
 [data-testid="stSidebarNav"] li a[aria-current="page"] {
-  background-color: var(--dmat-primary) !important;
-  color: #FFFFFF !important;
-  font-weight: 600;
+
+    background-color: var(--dmat-primary) !important;
+
+    color: #FFFFFF !important;
+
+    font-weight: 700;
 }
+
 
 /* Hide Streamlit header */
+
 [data-testid="stHeader"] {
-  background-color: transparent !important;
+    background-color: transparent !important;
 }
+
 
 /* ==========================================================================
-   6. CARDS (Custom JESA Cards)
+   6. CARDS
    ========================================================================== */
+
 .dmat-card {
-  background: var(--dmat-surface);
-  border: 1px solid var(--dmat-border);
-  border-radius: var(--dmat-radius-md);
-  box-shadow: var(--dmat-shadow-sm);
-  padding: 1.25rem 1.5rem;
-  margin-bottom: 1rem;
+
+    background: var(--dmat-surface);
+
+    border:
+        1px solid var(--dmat-border);
+
+    border-radius:
+        var(--dmat-radius-md);
+
+    box-shadow:
+        var(--dmat-shadow-sm);
+
+    padding:
+        1.25rem 1.5rem;
+
+    margin-bottom:
+        1rem;
 }
+
 
 .dmat-card-title {
-  color: var(--dmat-title);
-  font-size: 1rem;
-  font-weight: 600;
-  margin-bottom: 0.5rem;
+
+    color: var(--dmat-title);
+
+    font-family: var(--dmat-font-display);
+
+    font-size: 1rem;
+
+    font-weight: 700;
+
+    margin-bottom: 0.5rem;
 }
+
 
 .dmat-card-value {
-  color: var(--dmat-primary);
-  font-size: 2rem;
-  font-weight: 700;
-  line-height: 1.2;
+
+    color: var(--dmat-primary);
+
+    font-family: var(--dmat-font-display);
+
+    font-size: 2rem;
+
+    font-weight: 700;
+
+    line-height: 1.2;
 }
 
+
 .dmat-card-subtitle {
-  color: var(--dmat-muted);
-  font-size: 0.875rem;
-  margin-top: 0.25rem;
+
+    color: var(--dmat-muted);
+
+    font-family: var(--dmat-font);
+
+    font-size: 0.875rem;
+
+    margin-top: 0.25rem;
 }
+
 
 /* ==========================================================================
    7. METRICS
    ========================================================================== */
+
 [data-testid="stMetric"] {
-  background: var(--dmat-surface);
-  border: 1px solid var(--dmat-border);
-  border-radius: var(--dmat-radius-md);
-  padding: 1rem 1.25rem;
-  box-shadow: var(--dmat-shadow-sm);
+
+    background:
+        var(--dmat-surface);
+
+    border:
+        1px solid var(--dmat-border);
+
+    border-radius:
+        var(--dmat-radius-md);
+
+    padding:
+        1rem 1.25rem;
+
+    box-shadow:
+        var(--dmat-shadow-sm);
 }
+
 
 [data-testid="stMetricLabel"] {
-  color: var(--dmat-muted) !important;
-  font-size: 0.875rem !important;
-  font-weight: 500 !important;
+
+    color: var(--dmat-muted) !important;
+
+    font-family: var(--dmat-font) !important;
+
+    font-size: 0.875rem !important;
+
+    font-weight: 600 !important;
 }
 
+
 [data-testid="stMetricValue"] {
-  color: var(--dmat-title) !important;
-  font-weight: 700 !important;
+
+    color: var(--dmat-title) !important;
+
+    font-family: var(--dmat-font-display) !important;
+
+    font-weight: 700 !important;
 }
+
 
 /* ==========================================================================
    8. BUTTONS
    ========================================================================== */
+
 .stButton > button {
-  background-color: var(--dmat-primary) !important;
-  color: #FFFFFF !important;
-  border: none !important;
-  border-radius: var(--dmat-radius-sm) !important;
-  font-weight: 600 !important;
-  padding: 0.5rem 1.25rem !important;
-  transition: background-color 0.15s ease, box-shadow 0.15s ease;
-  box-shadow: var(--dmat-shadow-sm);
+
+    background-color:
+        var(--dmat-primary) !important;
+
+    color:
+        #FFFFFF !important;
+
+    font-family:
+        var(--dmat-font) !important;
+
+    border:
+        none !important;
+
+    border-radius:
+        var(--dmat-radius-sm) !important;
+
+    font-weight:
+        700 !important;
+
+    padding:
+        0.5rem 1.25rem !important;
+
+    letter-spacing:
+        0.02em;
+
+    transition:
+        background-color 0.15s ease,
+        box-shadow 0.15s ease,
+        transform 0.1s ease;
+
+    box-shadow:
+        var(--dmat-shadow-sm);
 }
+
 
 .stButton > button:hover {
-  background-color: var(--dmat-primary-hover) !important;
-  box-shadow: var(--dmat-shadow-md);
+
+    background-color:
+        var(--dmat-primary-hover) !important;
+
+    color:
+        #FFFFFF !important;
+
+    box-shadow:
+        var(--dmat-shadow-md);
+
+    transform:
+        translateY(-1px);
 }
+
 
 .stButton > button:focus {
-  outline: 2px solid var(--dmat-secondary) !important;
-  outline-offset: 2px;
+
+    outline:
+        2px solid var(--dmat-secondary) !important;
+
+    outline-offset:
+        2px;
 }
 
+
 /* ==========================================================================
-   9. FORMS (Inputs, Selects, Sliders)
+   9. FORMS
    ========================================================================== */
-/* Inputs and textareas */
+
 .stTextInput > div > div > input,
 .stNumberInput > div > div > input,
 .stTextArea > div > div > textarea,
 .stSelectbox > div > div,
 .stMultiSelect > div > div {
-  background-color: var(--dmat-surface) !important;
-  border: 1px solid var(--dmat-border) !important;
-  border-radius: var(--dmat-radius-sm) !important;
-  color: var(--dmat-text) !important;
+
+    background-color:
+        var(--dmat-surface) !important;
+
+    border:
+        1px solid var(--dmat-border) !important;
+
+    border-radius:
+        var(--dmat-radius-sm) !important;
+
+    color:
+        var(--dmat-text) !important;
+
+    font-family:
+        var(--dmat-font) !important;
 }
+
 
 .stTextInput > div > div > input:focus,
 .stNumberInput > div > div > input:focus,
 .stTextArea > div > div > textarea:focus {
-  border-color: var(--dmat-primary) !important;
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15) !important;
+
+    border-color:
+        var(--dmat-primary) !important;
+
+    box-shadow:
+        0 0 0 3px rgba(37, 99, 235, 0.15) !important;
 }
 
-/* Labels */
+
+/* Form labels */
+
 .stTextInput label,
 .stNumberInput label,
 .stSelectbox label,
@@ -275,136 +538,269 @@ p, li, label,
 .stTextArea label,
 .stSlider label,
 .stRadio label {
-  color: var(--dmat-text) !important;
-  font-weight: 500 !important;
-  font-size: 0.875rem !important;
+
+    color:
+        var(--dmat-text) !important;
+
+    font-family:
+        var(--dmat-font) !important;
+
+    font-weight:
+        600 !important;
+
+    font-size:
+        0.875rem !important;
 }
 
-/* Slider handle */
+
+/* Slider */
+
 .stSlider [data-baseweb="slider"] div[role="slider"] {
-  background-color: var(--dmat-primary) !important;
+
+    background-color:
+        var(--dmat-primary) !important;
 }
+
 
 /* ==========================================================================
    10. TABS
    ========================================================================== */
+
 .stTabs [data-baseweb="tab-list"] {
-  gap: 0.5rem;
-  border-bottom: 1px solid var(--dmat-border);
+
+    gap:
+        0.5rem;
+
+    border-bottom:
+        1px solid var(--dmat-border);
 }
+
 
 .stTabs [data-baseweb="tab"] {
-  color: var(--dmat-muted) !important;
-  font-weight: 500;
-  border-radius: var(--dmat-radius-sm) var(--dmat-radius-sm) 0 0;
+
+    color:
+        var(--dmat-muted) !important;
+
+    font-family:
+        var(--dmat-font) !important;
+
+    font-weight:
+        600;
 }
+
 
 .stTabs [aria-selected="true"] {
-  color: var(--dmat-primary) !important;
-  border-bottom: 2px solid var(--dmat-primary) !important;
+
+    color:
+        var(--dmat-primary) !important;
+
+    border-bottom:
+        2px solid var(--dmat-primary) !important;
 }
 
+
 /* ==========================================================================
-   11. DATA DISPLAY (Tables, DataFrames)
+   11. DATA DISPLAY
    ========================================================================== */
+
 [data-testid="stDataFrame"] {
-  border: 1px solid var(--dmat-border);
-  border-radius: var(--dmat-radius-md);
-  overflow: hidden;
+
+    border:
+        1px solid var(--dmat-border);
+
+    border-radius:
+        var(--dmat-radius-md);
+
+    overflow:
+        hidden;
 }
+
 
 /* ==========================================================================
-   12. ALERTS & BADGES
+   12. BADGES
    ========================================================================== */
-/* Badges */
+
 .dmat-badge {
-  display: inline-block;
-  padding: 0.2rem 0.65rem;
-  border-radius: 9999px;
-  font-size: 0.75rem;
-  font-weight: 600;
+
+    display:
+        inline-block;
+
+    padding:
+        0.2rem 0.65rem;
+
+    border-radius:
+        9999px;
+
+    font-family:
+        var(--dmat-font);
+
+    font-size:
+        0.75rem;
+
+    font-weight:
+        700;
 }
 
-.dmat-badge-success { background: rgba(16, 185, 129, 0.12); color: var(--dmat-success); }
-.dmat-badge-warning { background: rgba(245, 158, 11, 0.12); color: var(--dmat-warning); }
-.dmat-badge-danger  { background: rgba(239, 68, 68, 0.12); color: var(--dmat-danger); }
-.dmat-badge-primary { background: rgba(37, 99, 235, 0.12); color: var(--dmat-primary); }
+
+.dmat-badge-success {
+
+    background:
+        rgba(16, 185, 129, 0.12);
+
+    color:
+        var(--dmat-success);
+}
+
+
+.dmat-badge-warning {
+
+    background:
+        rgba(245, 158, 11, 0.12);
+
+    color:
+        var(--dmat-warning);
+}
+
+
+.dmat-badge-danger {
+
+    background:
+        rgba(239, 68, 68, 0.12);
+
+    color:
+        var(--dmat-danger);
+}
+
+
+.dmat-badge-primary {
+
+    background:
+        rgba(37, 99, 235, 0.12);
+
+    color:
+        var(--dmat-primary);
+}
+
 
 /* ==========================================================================
    13. DIVIDERS & PROGRESS
    ========================================================================== */
+
 hr,
 [data-testid="stDivider"] {
-  border: none;
-  border-top: 1px solid var(--dmat-divider);
-  margin: 1.5rem 0;
+
+    border:
+        none;
+
+    border-top:
+        1px solid var(--dmat-divider);
+
+    margin:
+        1.5rem 0;
 }
 
+
 .stProgress > div > div > div {
-  background-color: var(--dmat-primary) !important;
+
+    background-color:
+        var(--dmat-primary) !important;
 }
+
+
 .stProgress > div > div {
-  background-color: var(--dmat-border) !important;
+
+    background-color:
+        var(--dmat-border) !important;
 }
+
 
 /* ==========================================================================
    14. FOOTER
    ========================================================================== */
+
 .dmat-footer {
-  text-align: center;
-  color: var(--dmat-muted);
-  font-size: 0.75rem;
-  padding: 2rem 0 1rem;
-  border-top: 1px solid var(--dmat-border);
-  margin-top: 2rem;
+
+    text-align:
+        center;
+
+    color:
+        var(--dmat-muted);
+
+    font-family:
+        var(--dmat-font);
+
+    font-size:
+        0.75rem;
+
+    padding:
+        2rem 0 1rem;
+
+    border-top:
+        1px solid var(--dmat-border);
+
+    margin-top:
+        2rem;
 }
 
-/* ==========================================================================
-   15. RESPONSIVE
-   ========================================================================== */
-@media (max-width: 768px) {
-  h1 { font-size: 1.5rem !important; }
-  h2 { font-size: 1.25rem !important; }
-  .dmat-card { padding: 1rem; }
-  [data-testid="stMetric"] { padding: 0.75rem 1rem; }
-}
 
 /* ==========================================================================
-   HOME PAGE — INDUSTRIAL DIGITAL NETWORK
+   15. HOME PAGE — INDUSTRIAL DIGITAL NETWORK
    ========================================================================== */
 
 .home-background {
-    position: relative;
-    overflow: hidden;
-    min-height: 80vh;
-    padding: 2rem 1rem;
+
+    position:
+        relative;
+
+    overflow:
+        hidden;
+
+    min-height:
+        80vh;
+
+    padding:
+        2rem 1rem;
 
     background:
+
         radial-gradient(
             circle at 15% 20%,
             rgba(37, 99, 235, 0.08) 0%,
             transparent 40%
         ),
+
         radial-gradient(
             circle at 85% 70%,
             rgba(59, 130, 246, 0.06) 0%,
             transparent 30%
         ),
+
         radial-gradient(
             circle at 50% 50%,
             rgba(16, 185, 129, 0.04) 0%,
             transparent 60%
         ),
+
         var(--dmat-bg);
 }
 
+
 .home-background::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
+
+    content:
+        "";
+
+    position:
+        absolute;
+
+    inset:
+        0;
+
+    pointer-events:
+        none;
 
     background:
+
         repeating-linear-gradient(
             45deg,
             transparent 0px,
@@ -412,6 +808,7 @@ hr,
             rgba(37, 99, 235, 0.06) 40px,
             rgba(37, 99, 235, 0.06) 41px
         ),
+
         repeating-linear-gradient(
             -45deg,
             transparent 0px,
@@ -420,219 +817,464 @@ hr,
             rgba(59, 130, 246, 0.05) 41px
         );
 
-    opacity: 0.8;
-    animation: slowNetworkShift 40s ease-in-out infinite alternate;
+    opacity:
+        0.8;
+
+    animation:
+        slowNetworkShift 40s ease-in-out infinite alternate;
 }
 
+
 @keyframes slowNetworkShift {
+
     0% {
-        transform: translate(0, 0);
+        transform:
+            translate(0, 0);
     }
 
     100% {
-        transform: translate(-15px, 20px);
+        transform:
+            translate(-15px, 20px);
     }
 }
 
+
 /* ==========================================================================
-   LOGOS
+   16. HOME LOGOS
    ========================================================================== */
 
 .logo-caption {
-    text-align: center;
-    color: var(--dmat-muted);
-    font-size: 0.875rem;
-    margin-top: 0.25rem;
+
+    text-align:
+        center;
+
+    color:
+        var(--dmat-muted);
+
+    font-family:
+        var(--dmat-font);
+
+    font-size:
+        0.875rem;
+
+    margin-top:
+        0.25rem;
 }
 
+
 /* ==========================================================================
-   DESCRIPTION
+   17. HOME DESCRIPTION
    ========================================================================== */
 
 .home-description {
-    max-width: 720px;
-    margin: 0 auto;
 
-    color: var(--dmat-text);
+    max-width:
+        720px;
 
-    font-size: 1.05rem;
-    line-height: 1.6;
+    margin:
+        0 auto;
 
-    text-align: center;
+    color:
+        var(--dmat-text);
+
+    font-family:
+        var(--dmat-font);
+
+    font-size:
+        1.05rem;
+
+    line-height:
+        1.6;
+
+    text-align:
+        center;
 }
 
+
 /* ==========================================================================
-   CTA – HOME PAGE
+   18. CTA — HOME
    ========================================================================== */
 
 .st-key-cta_button button {
-    background: var(--dmat-primary);
-    color: #ffffff;
 
-    border: none;
-    border-radius: var(--dmat-radius-sm);
+    background:
+        var(--dmat-primary) !important;
 
-    font-size: 1.125rem;
-    font-weight: 700;
+    color:
+        #FFFFFF !important;
 
-    padding: 0.75rem 2rem;
+    font-family:
+        var(--dmat-font) !important;
 
-    box-shadow: var(--dmat-shadow-md);
+    border:
+        none !important;
+
+    border-radius:
+        var(--dmat-radius-sm);
+
+    font-size:
+        1.125rem;
+
+    font-weight:
+        700;
+
+    padding:
+        0.75rem 2rem;
+
+    box-shadow:
+        var(--dmat-shadow-md);
 
     transition:
         background 0.2s ease,
         box-shadow 0.2s ease,
         transform 0.1s ease;
 
-    letter-spacing: 0.02em;
+    letter-spacing:
+        0.02em;
 }
+
 
 .st-key-cta_button button:hover {
-    background: var(--dmat-primary-hover);
-    color: #ffffff;
 
-    box-shadow: var(--dmat-shadow-lg);
+    background:
+        var(--dmat-primary-hover) !important;
 
-    transform: translateY(-2px);
+    color:
+        #FFFFFF !important;
+
+    box-shadow:
+        var(--dmat-shadow-lg);
+
+    transform:
+        translateY(-2px);
 }
+
 
 .st-key-cta_button button:active {
-    transform: translateY(0);
 
-    box-shadow: var(--dmat-shadow-sm);
+    transform:
+        translateY(0);
+
+    box-shadow:
+        var(--dmat-shadow-sm);
 }
 
+
 /* ==========================================================================
-   CTA – NEW ASSESSMENT PAGE
+   19. CTA — NEW ASSESSMENT
    ========================================================================== */
 
 .st-key-start_assessment_button button {
-    background: var(--dmat-primary);
-    color: #ffffff;
-    border: none;
-    border-radius: var(--dmat-radius-sm);
-    font-size: 1.125rem;
-    font-weight: 700;
-    padding: 0.75rem 2rem;
-    box-shadow: var(--dmat-shadow-md);
+
+    background:
+        var(--dmat-primary) !important;
+
+    color:
+        #FFFFFF !important;
+
+    font-family:
+        var(--dmat-font) !important;
+
+    border:
+        none !important;
+
+    border-radius:
+        var(--dmat-radius-sm);
+
+    font-size:
+        1.125rem;
+
+    font-weight:
+        700;
+
+    padding:
+        0.75rem 2rem;
+
+    box-shadow:
+        var(--dmat-shadow-md);
+
     transition:
         background 0.2s ease,
         box-shadow 0.2s ease,
         transform 0.1s ease;
-    letter-spacing: 0.02em;
-}
-.st-key-start_assessment_button button:hover {
-    background: var(--dmat-primary-hover);
-    color: #ffffff;
-    box-shadow: var(--dmat-shadow-lg);
-    transform: translateY(-2px);
-}
-.st-key-start_assessment_button button:active {
-    transform: translateY(0);
-    box-shadow: var(--dmat-shadow-sm);
+
+    letter-spacing:
+        0.02em;
 }
 
+
+.st-key-start_assessment_button:hover {
+
+    background:
+        var(--dmat-primary-hover) !important;
+
+    color:
+        #FFFFFF !important;
+
+    box-shadow:
+        var(--dmat-shadow-lg);
+
+    transform:
+        translateY(-2px);
+}
+
+
+.st-key-start_assessment_button:active {
+
+    transform:
+        translateY(0);
+
+    box-shadow:
+        var(--dmat-shadow-sm);
+}
+
+
 /* ==========================================================================
-   PROCESS FLOW
+   20. PROCESS FLOW
    ========================================================================== */
 
 .process-flow {
-    max-width: 700px;
 
-    margin: 1.5rem auto;
+    max-width:
+        700px;
 
-    text-align: center;
+    margin:
+        1.5rem auto;
 
-    color: var(--dmat-text);
+    text-align:
+        center;
 
-    font-size: 1rem;
-    line-height: 1.6;
+    color:
+        var(--dmat-text);
+
+    font-family:
+        var(--dmat-font);
+
+    font-size:
+        1rem;
+
+    line-height:
+        1.6;
 }
+
 
 .process-flow .step {
-    display: block;
 
-    font-weight: 500;
+    display:
+        block;
 
-    padding: 0.25rem 0;
+    font-family:
+        var(--dmat-font);
+
+    font-weight:
+        600;
+
+    padding:
+        0.25rem 0;
+
+    text-align:
+        center;
 }
+
 
 .process-flow .arrow-down {
-    display: block;
 
-    color: var(--dmat-primary);
+    display:
+        block;
 
-    font-size: 1.5rem;
-    line-height: 1;
+    color:
+        var(--dmat-primary);
 
-    margin: 0.2rem 0;
+    font-family:
+        var(--dmat-font);
+
+    font-size:
+        1.5rem;
+
+    line-height:
+        1;
+
+    margin:
+        0.2rem 0;
+
+    text-align:
+        center;
 }
 
+
 /* ==========================================================================
-   STRATEGIC FLOW
+   21. STRATEGIC FLOW
    ========================================================================== */
 
 .concept-line {
-    text-align: center;
 
-    color: var(--dmat-muted);
+    width:
+        100%;
 
-    font-size: 1.125rem;
+    display:
+        flex;
 
-    letter-spacing: 0.05em;
+    justify-content:
+        center;
 
-    margin-top: 2.5rem;
+    align-items:
+        center;
 
-    padding: 0.5rem 0;
+    flex-wrap:
+        wrap;
+
+    text-align:
+        center;
+
+    color:
+        var(--dmat-muted);
+
+    font-family:
+        var(--dmat-font);
+
+    font-size:
+        1.125rem;
+
+    font-weight:
+        600;
+
+    letter-spacing:
+        0.04em;
+
+    margin-top:
+        2.5rem;
+
+    padding:
+        0.5rem 0;
 }
+
+
+.concept-line span {
+
+    display:
+        inline-flex;
+
+    align-items:
+        center;
+
+    justify-content:
+        center;
+}
+
 
 .concept-line .arrow {
-    color: var(--dmat-primary);
 
-    font-weight: 300;
+    color:
+        var(--dmat-primary);
 
-    margin: 0 0.4rem;
+    font-weight:
+        700;
+
+    margin:
+        0 0.4rem;
 }
 
+
 /* ==========================================================================
-   TEAM
+   22. TEAM
    ========================================================================== */
 
 .team-attribution {
-    text-align: center;
 
-    color: var(--dmat-muted);
+    width:
+        100%;
 
-    font-size: 0.875rem;
+    text-align:
+        center;
 
-    margin-top: 1.5rem;
+    color:
+        var(--dmat-muted);
+
+    font-family:
+        var(--dmat-font);
+
+    font-size:
+        0.875rem;
+
+    line-height:
+        1.6;
+
+    margin-top:
+        1.5rem;
 }
 
+
+.team-attribution strong {
+
+    color:
+        var(--dmat-title);
+
+    font-family:
+        var(--dmat-font);
+
+    font-weight:
+        700;
+}
+
+
+.team-attribution span {
+
+    font-family:
+        var(--dmat-font);
+}
+
+
 /* ==========================================================================
-   RESPONSIVE
+   23. RESPONSIVE
    ========================================================================== */
 
 @media (max-width: 768px) {
 
+    h1 {
+        font-size:
+            1.5rem !important;
+    }
+
+    h2 {
+        font-size:
+            1.25rem !important;
+    }
+
+    .dmat-card {
+        padding:
+            1rem;
+    }
+
+    [data-testid="stMetric"] {
+        padding:
+            0.75rem 1rem;
+    }
+
     .logo-caption {
-        font-size: 0.75rem;
+        font-size:
+            0.75rem;
     }
 
     .home-description {
-        font-size: 1rem;
+        font-size:
+            1rem;
     }
 
     .concept-line {
-        font-size: 0.875rem;
+        font-size:
+            0.875rem;
+
+        gap:
+            0.15rem;
     }
 
-    .st-key-cta_button button {
-        font-size: 1rem;
-        padding: 0.6rem 1.5rem;
-    }
-
+    .st-key-cta_button button,
     .st-key-start_assessment_button button {
-        font-size: 1rem;
-        padding: 0.6rem 1.5rem;
+
+        font-size:
+            1rem;
+
+        padding:
+            0.6rem 1.5rem;
     }
 }
