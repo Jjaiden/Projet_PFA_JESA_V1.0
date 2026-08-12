@@ -1,83 +1,385 @@
 # pages/6_Export.py
-"""Export the selected JESA DMAT assessment."""
+"""
+Export page for JESA DMAT.
+
+Generates:
+- PDF report
+- Excel report
+- JSON report
+- Complete report bundle
+"""
 
 from __future__ import annotations
 
-import streamlit as st
+from pathlib import Path
+import zipfile
 
+import streamlit as st
 
 from components import render_footer, render_header
 from utils.assessment_service import export_selected_assessment
 
 
+# =============================================================================
+# HEADER
+# =============================================================================
+
 render_header(
     title="EXPORT",
-    subtitle="Generate report files for the selected assessment.",
+    subtitle="Generate and download the complete assessment report.",
     align="center",
     compact=False,
 )
 
+
+# =============================================================================
+# LOAD CURRENT ASSESSMENT
+# =============================================================================
+
 backend_results = st.session_state.get("backend_results")
 
 if not backend_results:
-    st.warning("No assessment is currently loaded. Start a new assessment or open one from History first.")
+    st.warning(
+        "No assessment is currently loaded. "
+        "Start a new assessment or open one from History first."
+    )
     st.stop()
 
-metadata = backend_results.get("metadata", {})
-summary = backend_results.get("summary", {})
 
-col1, col2, col3 = st.columns(3)
-with col1:
-    st.metric("Assessment", metadata.get("assessment_name") or backend_results.get("assessment_id"))
-with col2:
-    dmi = summary.get("dmi_score")
-    st.metric("DMI", f"{dmi:.1f}%" if dmi is not None else "N/A")
-with col3:
-    st.metric("Maturity", summary.get("dmi_level_name") or "N/A")
-
-formats = st.multiselect(
-    "Export formats",
-    options=["pdf", "excel", "json"],
-    default=["pdf", "excel"],
+assessment_id = str(
+    backend_results.get("assessment_id")
+    or "assessment"
 )
 
-if st.button("GENERATE EXPORT", use_container_width=True, disabled=not formats):
-    try:
-        export_paths = export_selected_assessment(backend_results, formats)
-        st.session_state["latest_export_paths"] = {
-            key: str(path) for key, path in export_paths.items()
-        }
-        st.success("Export generated successfully.")
-    except Exception as exc:
-        st.error(f"Export generation failed: {exc}")
+metadata = (
+    backend_results.get("metadata")
+    or {}
+)
 
-export_paths = st.session_state.get("latest_export_paths", {})
-if export_paths:
-    st.markdown("### Download")
-    for format_name, path in export_paths.items():
-        mime = {
-            "pdf": "application/pdf",
-            "excel": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            "json": "application/json",
-        }.get(format_name, "application/octet-stream")
-        suffix = "xlsx" if format_name == "excel" else format_name
-        with open(path, "rb") as file:
-            st.download_button(
-                label=f"DOWNLOAD {format_name.upper()}",
-                data=file.read(),
-                file_name=f"JESA_DMAT_{backend_results.get('assessment_id')}.{suffix}",
-                mime=mime,
-                key=f"download_{format_name}",
+summary = (
+    backend_results.get("summary")
+    or {}
+)
+
+
+# =============================================================================
+# ASSESSMENT SUMMARY
+# =============================================================================
+
+col1, col2, col3 = st.columns(3)
+
+with col1:
+    st.metric(
+        "Assessment",
+        metadata.get(
+            "assessment_name"
+        )
+        or assessment_id,
+    )
+
+with col2:
+    dmi = summary.get("dmi_score")
+
+    if dmi is not None:
+        st.metric(
+            "DMI",
+            f"{float(dmi):.1f}%",
+        )
+    else:
+        st.metric(
+            "DMI",
+            "N/A",
+        )
+
+with col3:
+    st.metric(
+        "Maturity",
+        summary.get(
+            "dmi_level_name"
+        )
+        or "N/A",
+    )
+
+
+# =============================================================================
+# EXPORT FORMAT SELECTION
+# =============================================================================
+
+st.markdown("### Export")
+
+formats = st.multiselect(
+    "Select export formats",
+    options=[
+        "pdf",
+        "excel",
+        "json",
+    ],
+    default=[
+        "pdf",
+        "excel",
+    ],
+)
+
+
+# =============================================================================
+# GENERATE EXPORTS
+# =============================================================================
+
+if st.button(
+    "GENERATE EXPORT",
+    use_container_width=True,
+    disabled=not formats,
+):
+
+    try:
+
+        # -------------------------------------------------------------
+        # Generate selected files
+        # -------------------------------------------------------------
+
+        export_paths = export_selected_assessment(
+            backend_results,
+            formats,
+        )
+
+        if not export_paths:
+            raise RuntimeError(
+                "No export file was generated."
             )
+
+        # -------------------------------------------------------------
+        # Store generated files in session state
+        # -------------------------------------------------------------
+
+        st.session_state[
+            "latest_export_paths"
+        ] = {
+            key: str(path)
+            for key, path in export_paths.items()
+            if path is not None
+        }
+
+        # -------------------------------------------------------------
+        # Reset previous report bundle
+        # -------------------------------------------------------------
+
+        st.session_state.pop(
+            "latest_report_path",
+            None,
+        )
+
+        # -------------------------------------------------------------
+        # Create complete ZIP report
+        # -------------------------------------------------------------
+
+        valid_paths = []
+
+        for path in export_paths.values():
+
+            if path is None:
+                continue
+
+            path = Path(path)
+
+            if path.exists() and path.is_file():
+                valid_paths.append(path)
+
+        if valid_paths:
+
+            output_dir = (
+                valid_paths[0].parent
+            )
+
+            report_path = (
+                output_dir
+                / f"JESA_DMAT_Report_{assessment_id}.zip"
+            )
+
+            with zipfile.ZipFile(
+                report_path,
+                mode="w",
+                compression=zipfile.ZIP_DEFLATED,
+            ) as archive:
+
+                for path in valid_paths:
+
+                    archive.write(
+                        path,
+                        arcname=path.name,
+                    )
+
+            st.session_state[
+                "latest_report_path"
+            ] = str(report_path)
+
+        st.success(
+            "Export generated successfully."
+        )
+
+    except Exception as exc:
+
+        st.error(
+            f"Export generation failed: {exc}"
+        )
+
+
+# =============================================================================
+# DOWNLOAD GENERATED FILES
+# =============================================================================
+
+export_paths = (
+    st.session_state.get(
+        "latest_export_paths",
+        {},
+    )
+)
+
+
+if export_paths:
+
+    st.markdown(
+        "### Download individual files"
+    )
+
+    mime_types = {
+        "pdf": "application/pdf",
+
+        "excel": (
+            "application/"
+            "vnd.openxmlformats-officedocument."
+            "spreadsheetml.sheet"
+        ),
+
+        "json": "application/json",
+    }
+
+    for format_name, path_string in export_paths.items():
+
+        path = Path(path_string)
+
+        if not path.exists():
+
+            st.warning(
+                f"{format_name.upper()} file is no longer available."
+            )
+
+            continue
+
+        suffix = (
+            "xlsx"
+            if format_name == "excel"
+            else format_name
+        )
+
+        with open(
+            path,
+            "rb",
+        ) as file:
+
+            st.download_button(
+                label=(
+                    f"DOWNLOAD "
+                    f"{format_name.upper()}"
+                ),
+
+                data=file.read(),
+
+                file_name=(
+                    f"JESA_DMAT_"
+                    f"{assessment_id}."
+                    f"{suffix}"
+                ),
+
+                mime=mime_types.get(
+                    format_name,
+                    "application/octet-stream",
+                ),
+
+                key=(
+                    f"download_"
+                    f"{format_name}"
+                ),
+
+                use_container_width=True,
+            )
+
+
+# =============================================================================
+# COMPLETE REPORT DOWNLOAD
+# =============================================================================
+
+report_path_string = (
+    st.session_state.get(
+        "latest_report_path"
+    )
+)
+
+
+if report_path_string:
+
+    report_path = Path(
+        report_path_string
+    )
+
+    if report_path.exists():
+
+        st.markdown(
+            "### Complete report"
+        )
+
+        st.caption(
+            "Download the complete JESA DMAT assessment package "
+            "containing all generated report files."
+        )
+
+        with open(
+            report_path,
+            "rb",
+        ) as file:
+
+            st.download_button(
+                label="DOWNLOAD REPORT",
+
+                data=file.read(),
+
+                file_name=report_path.name,
+
+                mime="application/zip",
+
+                key="download_complete_report",
+
+                use_container_width=True,
+            )
+
+    else:
+
+        st.warning(
+            "Report file was generated previously "
+            "but is no longer available."
+        )
+
+
+# =============================================================================
+# FOOTER
+# =============================================================================
 
 render_footer(
     product_name="JESA DMAT",
     version="v1.0.0",
     organization="JESA · ENSAM Casablanca",
-    tagline="Internship Project · Digital Transformation & Industry 5.0",
+    tagline=(
+        "Internship Project · "
+        "Digital Transformation & Industry 5.0"
+    ),
     links=[
-        {"label": "JESA", "url": "https://www.jesa.ma"},
-        {"label": "ENSAM Casablanca", "url": "https://ensam-casablanca.ma"},
+        {
+            "label": "JESA",
+            "url": "https://www.jesa.ma",
+        },
+        {
+            "label": "ENSAM Casablanca",
+            "url": "https://ensam-casablanca.ma",
+        },
     ],
     align="center",
     compact=False,
