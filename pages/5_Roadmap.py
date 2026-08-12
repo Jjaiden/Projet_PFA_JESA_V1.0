@@ -280,8 +280,10 @@ def _render_export_section() -> None:
     """
     Display export format selection and download buttons.
 
-    CORRECTION : layout fixe en 3 colonnes + type="primary" pour éviter
-    le rendu "blanc sur blanc" des boutons de download.
+    Three deliverables:
+    - PDF Score Summary (2‑page score summary)
+    - PDF Full Report (comprehensive)
+    - Excel Workbook (full data)
     """
 
     st.markdown("## Export Assessment")
@@ -300,12 +302,12 @@ def _render_export_section() -> None:
 
     selected_formats = st.multiselect(
         "Export formats",
-        options=["pdf", "excel", "report"],
-        default=["pdf"],
+        options=["pdf_score", "pdf_full", "excel"],
+        default=["pdf_score"],
         format_func=lambda value: {
-            "pdf": "PDF Report",
+            "pdf_score": "Score Summary (PDF)",
+            "pdf_full": "Full Report (PDF)",
             "excel": "Excel Workbook",
-            "report": "Management Report",
         }.get(value, value.upper()),
         key="roadmap_export_formats",
     )
@@ -357,27 +359,23 @@ def _render_export_section() -> None:
 
     st.markdown("### Available Downloads")
 
-    # ═══════════════════════════════════════════════════════════════
-    # CORRECTION : layout fixe en 3 colonnes + type="primary"
-    # pour éviter le rendu "blanc sur blanc" des boutons de download.
-    # ═══════════════════════════════════════════════════════════════
     cols = st.columns(3)
 
     format_meta = {
-        "pdf": (
-            "DOWNLOAD Scoring Report",
+        "pdf_score": (
+            "DOWNLOAD SCORE SUMMARY",
             "application/pdf",
-            "pdf",
+            "Score_Summary.pdf",
+        ),
+        "pdf_full": (
+            "DOWNLOAD FULL REPORT",
+            "application/pdf",
+            "Full_Report.pdf",
         ),
         "excel": (
             "DOWNLOAD EXCEL",
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            "xlsx",
-        ),
-        "report": (
-            "DOWNLOAD Global Report",
-            "application/pdf",
-            "pdf",
+            "Workbook.xlsx",
         ),
     }
 
@@ -422,7 +420,7 @@ def _render_export_section() -> None:
                 continue
 
             filename = (
-                f"JESA_DMAT_{assessment_id}.{ext}"
+                f"JESA_DMAT_{assessment_id}_{ext}"
             )
 
             st.download_button(
@@ -569,11 +567,11 @@ render_footer(
     links=[
         {
             "label": "JESA",
-            "url": "https://www.jesa.ma",
+            "url": "https://www.jesagroup.com/",
         },
         {
             "label": "ENSAM Casablanca",
-            "url": "https://ensam-casablanca.ma",
+            "url": "https://ensam-casa.ma/",
         },
     ],
     align="center",
