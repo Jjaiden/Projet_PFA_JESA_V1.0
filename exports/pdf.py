@@ -1,7 +1,4 @@
 """
-pdf.py
-======
-
 Professional Industrial Digital Maturity Assessment PDF exporter.
 
 IMPORTANT
@@ -9,28 +6,29 @@ IMPORTANT
 This module ONLY formats and presents already-computed assessment results.
 
 It does NOT calculate:
-    - scores
-    - DMI
-    - gaps
-    - TPI
-    - priorities
-    - roadmap phases
+- scores
+- DMI
+- gaps
+- TPI
+- priorities
+- roadmap phases
 
-The PDF is intentionally SCORE-FOCUSED.
+The PDF is intentionally SCORE-FOCUSED and limited to a maximum
+of two pages.
 
-The detailed report is handled separately by report.py.
+Detailed analysis belongs to the Excel report / detailed report.
 
 Expected input:
-    aggregation_results
-    gap_results
-    tpi_results
-    priority_results
-    roadmap
+- aggregation_results
+- gap_results
+- tpi_results
+- priority_results
+- roadmap
 
 Public API:
-    PDFExporter.export_assessment_results()
-    export_to_pdf()
-    export_full_analysis()
+- PDFExporter.export_assessment_results()
+- export_to_pdf()
+- export_full_analysis()
 """
 
 from __future__ import annotations
@@ -47,8 +45,6 @@ from reportlab.lib.units import mm
 from reportlab.platypus import (
     BaseDocTemplate,
     Frame,
-    HRFlowable,
-    Image,
     PageBreak,
     PageTemplate,
     Paragraph,
@@ -94,71 +90,6 @@ PRIORITY_COLORS = {
     "Very Low": VERY_LOW_GREY,
 }
 
-PRIORITY_RANK = {
-    "Critical": 1,
-    "High": 2,
-    "Medium": 3,
-    "Low": 4,
-    "Very Low": 5,
-}
-
-PHASE_ORDER = {
-    "Phase 1": 1,
-    "Phase 2": 2,
-    "Phase 3": 3,
-    "Phase 4": 4,
-}
-
-
-# ============================================================================
-# PROJECT ROOT / LOGOS
-# ============================================================================
-
-def _project_root() -> Path:
-    """
-    Return the repository root.
-
-    pdf.py is located in:
-        <project_root>/exports/pdf.py
-
-    Therefore:
-        parent      = exports
-        parent.parent = project root
-    """
-    return Path(__file__).resolve().parent.parent
-
-
-def _find_logo(filename: str) -> Optional[Path]:
-    """
-    Locate a real project logo.
-
-    The repository currently stores the logos in:
-
-        assets/logos/logo_ensam.png
-        assets/logos/logo_jesa.png
-
-    The lookup is based on __file__, NOT on Path.cwd(), so it works
-    correctly when Streamlit is launched from another directory.
-    """
-
-    root = _project_root()
-
-    candidates = [
-        root / "assets" / "logos" / filename,
-        root / "assets" / "logo" / filename,
-        root / "assets" / filename,
-    ]
-
-    for path in candidates:
-        if path.is_file():
-            return path
-
-    return None
-
-
-ENSAM_LOGO = _find_logo("logo_ensam.png")
-JESA_LOGO = _find_logo("logo_jesa.png")
-
 
 # ============================================================================
 # SAFE HELPERS
@@ -171,8 +102,8 @@ def _get(
 ) -> Any:
     """
     Read a value from either:
-        - a dictionary / Mapping
-        - an object attribute
+    - a dictionary / Mapping
+    - an object attribute
     """
 
     if obj is None:
@@ -278,12 +209,18 @@ def _as_list(value: Any) -> List[Any]:
     return [value]
 
 
-def _escape_xml(value: Any) -> str:
+def _escape_xml(
+    value: Any,
+    default: Any = None,
+) -> str:
     """
     Escape values inserted into ReportLab Paragraph markup.
     """
 
-    text = _safe_str(value)
+    text = _safe_str(
+        value,
+        _safe_str(default),
+    )
 
     return (
         text
@@ -301,9 +238,10 @@ class PDFExporter:
     """
     Professional score-focused PDF exporter.
 
-    This exporter presents already-computed results.
+    The exporter only presents already-computed values.
 
-    It never recalculates assessment values.
+    Maximum PDF length:
+        2 pages.
     """
 
     def __init__(
@@ -350,11 +288,14 @@ class PDFExporter:
         gap_results = _as_list(gap_results)
         tpi_results = _as_list(tpi_results)
         priority_results = _as_list(priority_results)
+
+        # Roadmap is intentionally NOT displayed in the PDF,
+        # but we keep it in the public API for compatibility.
         roadmap = _as_list(roadmap)
 
-        # ------------------------------------------------------------------
+        # --------------------------------------------------------------------
         # OUTPUT
-        # ------------------------------------------------------------------
+        # --------------------------------------------------------------------
 
         if output_path is None:
 
@@ -375,32 +316,20 @@ class PDFExporter:
 
         ensure_directory(output_path.parent)
 
-        # ------------------------------------------------------------------
-        # METADATA
-        # ------------------------------------------------------------------
-
-        metadata = aggregation_results.get(
-            "metadata",
-            {},
-        )
-
-        if not isinstance(metadata, Mapping):
-            metadata = {}
-
-        # ------------------------------------------------------------------
+        # --------------------------------------------------------------------
         # DOCUMENT
-        # ------------------------------------------------------------------
+        # --------------------------------------------------------------------
 
         doc = BaseDocTemplate(
             str(output_path),
             pagesize=A4,
-            rightMargin=16 * mm,
-            leftMargin=16 * mm,
-            topMargin=22 * mm,
-            bottomMargin=18 * mm,
+            rightMargin=12 * mm,
+            leftMargin=12 * mm,
+            topMargin=17 * mm,
+            bottomMargin=14 * mm,
             title="Industrial Digital Maturity Assessment",
             author="JESA DMAT",
-            subject="Industrial Digital Maturity Assessment - Scoring",
+            subject="Industrial Digital Maturity Assessment - Scores",
         )
 
         frame = Frame(
@@ -421,146 +350,35 @@ class PDFExporter:
 
         story: List[Any] = []
 
-        # ------------------------------------------------------------------
-        # COVER
-        # ------------------------------------------------------------------
+        # ====================================================================
+        # PAGE 1
+        # ====================================================================
 
         story.extend(
-            self._build_cover_page(
-                metadata,
-                assessment_id,
-            )
-        )
-
-        story.append(PageBreak())
-
-        # ------------------------------------------------------------------
-        # EXECUTIVE SCORING SUMMARY
-        # ------------------------------------------------------------------
-
-        story.extend(
-            self._build_executive_summary(
-                aggregation_results,
-                gap_results,
-                tpi_results,
-                priority_results,
-                roadmap,
-            )
-        )
-
-        story.append(PageBreak())
-
-        # ------------------------------------------------------------------
-        # DMI
-        # ------------------------------------------------------------------
-
-        story.extend(
-            self._build_dmi_overview(
-                aggregation_results,
-            )
-        )
-
-        story.append(PageBreak())
-
-        # ------------------------------------------------------------------
-        # PILLARS
-        # ------------------------------------------------------------------
-
-        story.extend(
-            self._build_pillar_assessment(
-                aggregation_results,
-            )
-        )
-
-        story.append(PageBreak())
-
-        # ------------------------------------------------------------------
-        # DIMENSIONS
-        # ------------------------------------------------------------------
-
-        story.extend(
-            self._build_dimension_assessment(
-                aggregation_results,
-            )
-        )
-
-        story.append(PageBreak())
-
-        # ------------------------------------------------------------------
-        # GAPS
-        # ------------------------------------------------------------------
-
-        story.extend(
-            self._build_gap_analysis(
-                gap_results,
-            )
-        )
-
-        story.append(PageBreak())
-
-        # ------------------------------------------------------------------
-        # TPI
-        # ------------------------------------------------------------------
-
-        story.extend(
-            self._build_tpi_prioritization(
-                tpi_results,
-            )
-        )
-
-        story.append(PageBreak())
-
-        # ------------------------------------------------------------------
-        # PRIORITY MATRIX
-        # ------------------------------------------------------------------
-
-        story.extend(
-            self._build_priority_matrix(
-                priority_results,
-            )
-        )
-
-        story.append(PageBreak())
-
-        # ------------------------------------------------------------------
-        # ROADMAP - SCORE SUMMARY ONLY
-        # ------------------------------------------------------------------
-
-        story.extend(
-            self._build_transformation_roadmap(
-                roadmap,
-            )
-        )
-
-        story.append(PageBreak())
-
-        # ------------------------------------------------------------------
-        # SCORING CONCLUSION
-        # ------------------------------------------------------------------
-
-        story.extend(
-            self._build_scoring_conclusion(
-                aggregation_results,
-                priority_results,
-            )
-        )
-
-        story.append(PageBreak())
-
-        # ------------------------------------------------------------------
-        # METADATA
-        # ------------------------------------------------------------------
-
-        story.extend(
-            self._build_metadata(
+            self._build_page_one(
                 aggregation_results,
                 assessment_id,
             )
         )
 
-        # ------------------------------------------------------------------
+        story.append(PageBreak())
+
+        # ====================================================================
+        # PAGE 2
+        # ====================================================================
+
+        story.extend(
+            self._build_page_two(
+                aggregation_results,
+                gap_results,
+                tpi_results,
+                priority_results,
+            )
+        )
+
+        # ====================================================================
         # BUILD
-        # ------------------------------------------------------------------
+        # ====================================================================
 
         doc.build(story)
 
@@ -580,61 +398,62 @@ class PDFExporter:
                 "ReportTitle",
                 parent=styles["Title"],
                 fontName="Helvetica-Bold",
-                fontSize=22,
-                leading=27,
+                fontSize=17,
+                leading=20,
                 textColor=JESA_DARK,
                 alignment=TA_CENTER,
-                spaceAfter=10,
+                spaceAfter=4,
             ),
 
             "subtitle": ParagraphStyle(
                 "ReportSubtitle",
                 parent=styles["Normal"],
                 fontName="Helvetica",
-                fontSize=10,
-                leading=14,
+                fontSize=7.5,
+                leading=9,
                 textColor=GREY_600,
                 alignment=TA_CENTER,
-                spaceAfter=12,
+                spaceAfter=5,
             ),
 
             "h1": ParagraphStyle(
                 "SectionTitle",
                 parent=styles["Heading1"],
                 fontName="Helvetica-Bold",
-                fontSize=17,
-                leading=21,
+                fontSize=13,
+                leading=15,
                 textColor=JESA_DARK,
-                spaceAfter=8,
+                spaceBefore=0,
+                spaceAfter=5,
             ),
 
             "h2": ParagraphStyle(
                 "SubSectionTitle",
                 parent=styles["Heading2"],
                 fontName="Helvetica-Bold",
-                fontSize=12,
-                leading=15,
+                fontSize=9,
+                leading=11,
                 textColor=JESA_DARK,
-                spaceBefore=8,
-                spaceAfter=6,
+                spaceBefore=4,
+                spaceAfter=3,
             ),
 
             "body": ParagraphStyle(
                 "Body",
                 parent=styles["BodyText"],
                 fontName="Helvetica",
-                fontSize=8.5,
-                leading=12,
+                fontSize=7,
+                leading=9,
                 textColor=GREY_800,
-                spaceAfter=5,
+                spaceAfter=3,
             ),
 
             "small": ParagraphStyle(
                 "Small",
                 parent=styles["BodyText"],
                 fontName="Helvetica",
-                fontSize=7,
-                leading=9,
+                fontSize=6,
+                leading=7,
                 textColor=GREY_600,
             ),
 
@@ -642,8 +461,8 @@ class PDFExporter:
                 "KPI",
                 parent=styles["BodyText"],
                 fontName="Helvetica-Bold",
-                fontSize=22,
-                leading=25,
+                fontSize=17,
+                leading=19,
                 textColor=JESA_DARK,
                 alignment=TA_CENTER,
             ),
@@ -652,8 +471,8 @@ class PDFExporter:
                 "KPILabel",
                 parent=styles["BodyText"],
                 fontName="Helvetica-Bold",
-                fontSize=7.5,
-                leading=10,
+                fontSize=6.5,
+                leading=8,
                 textColor=GREY_600,
                 alignment=TA_CENTER,
             ),
@@ -662,8 +481,8 @@ class PDFExporter:
                 "Table",
                 parent=styles["BodyText"],
                 fontName="Helvetica",
-                fontSize=6.8,
-                leading=8.5,
+                fontSize=5.8,
+                leading=7,
                 textColor=GREY_800,
             ),
 
@@ -671,19 +490,10 @@ class PDFExporter:
                 "TableHeader",
                 parent=styles["BodyText"],
                 fontName="Helvetica-Bold",
-                fontSize=6.8,
-                leading=8.5,
+                fontSize=5.8,
+                leading=7,
                 textColor=WHITE,
                 alignment=TA_CENTER,
-            ),
-
-            "cover_label": ParagraphStyle(
-                "CoverLabel",
-                parent=styles["BodyText"],
-                fontName="Helvetica-Bold",
-                fontSize=8,
-                leading=10,
-                textColor=JESA_DARK,
             ),
         }
 
@@ -701,57 +511,30 @@ class PDFExporter:
 
         width, height = A4
 
-        # Header: pages after cover
-        if doc.page > 1:
-
-            canvas.setStrokeColor(GREY_200)
-            canvas.setLineWidth(0.5)
-
-            canvas.line(
-                16 * mm,
-                height - 13 * mm,
-                width - 16 * mm,
-                height - 13 * mm,
-            )
-
-            canvas.setFont(
-                "Helvetica-Bold",
-                7,
-            )
-
-            canvas.setFillColor(
-                JESA_DARK
-            )
-
-            canvas.drawString(
-                16 * mm,
-                height - 10 * mm,
-                "JESA DMAT",
-            )
-
-            canvas.setFont(
-                "Helvetica",
-                7,
-            )
-
-            canvas.setFillColor(
-                GREY_600
-            )
-
-            canvas.drawRightString(
-                width - 16 * mm,
-                height - 10 * mm,
-                "Industrial Digital Maturity Assessment",
-            )
-
-        # Footer
+        # Header
         canvas.setStrokeColor(GREY_200)
+        canvas.setLineWidth(0.5)
 
         canvas.line(
-            16 * mm,
-            10 * mm,
-            width - 16 * mm,
-            10 * mm,
+            12 * mm,
+            height - 10 * mm,
+            width - 12 * mm,
+            height - 10 * mm,
+        )
+
+        canvas.setFont(
+            "Helvetica-Bold",
+            6.5,
+        )
+
+        canvas.setFillColor(
+            JESA_DARK
+        )
+
+        canvas.drawString(
+            12 * mm,
+            height - 7.5 * mm,
+            "JESA DMAT",
         )
 
         canvas.setFont(
@@ -763,400 +546,104 @@ class PDFExporter:
             GREY_600
         )
 
+        canvas.drawRightString(
+            width - 12 * mm,
+            height - 7.5 * mm,
+            "Industrial Digital Maturity Assessment — Scoring",
+        )
+
+        # Footer
+        canvas.setStrokeColor(GREY_200)
+
+        canvas.line(
+            12 * mm,
+            8 * mm,
+            width - 12 * mm,
+            8 * mm,
+        )
+
+        canvas.setFont(
+            "Helvetica",
+            5.8,
+        )
+
+        canvas.setFillColor(
+            GREY_600
+        )
+
         canvas.drawString(
-            16 * mm,
-            6 * mm,
+            12 * mm,
+            4.5 * mm,
             (
-                "JESA DMAT • Generated "
-                f"{self.generated_at.strftime('%Y-%m-%d %H:%M')}"
+                "JESA DMAT • Score-focused assessment"
             ),
         )
 
         canvas.drawRightString(
-            width - 16 * mm,
-            6 * mm,
-            f"Page {doc.page}",
+            width - 12 * mm,
+            4.5 * mm,
+            f"Page {doc.page} / 2",
         )
 
         canvas.restoreState()
 
     # ========================================================================
-    # COVER
+    # PAGE 1
     # ========================================================================
 
-    def _build_cover_page(
+    def _build_page_one(
         self,
-        metadata: Mapping[str, Any],
+        aggregation_results: Dict[str, Any],
         assessment_id: Optional[str],
     ) -> List[Any]:
 
         story: List[Any] = []
 
-        story.append(
-            Spacer(
-                1,
-                10 * mm,
-            )
-        )
-
-        # ------------------------------------------------------------------
-        # REAL LOGOS
-        # ------------------------------------------------------------------
-
-        logo_cells = [
-            self._logo_or_empty(
-                ENSAM_LOGO,
-                width=43 * mm,
-                height=25 * mm,
-            ),
-            self._logo_or_empty(
-                JESA_LOGO,
-                width=43 * mm,
-                height=25 * mm,
-            ),
-        ]
-
-        logo_table = Table(
-            [logo_cells],
-            colWidths=[
-                75 * mm,
-                75 * mm,
-            ],
-            hAlign="CENTER",
-        )
-
-        logo_table.setStyle(
-            TableStyle(
-                [
-                    (
-                        "ALIGN",
-                        (0, 0),
-                        (-1, -1),
-                        "CENTER",
-                    ),
-                    (
-                        "VALIGN",
-                        (0, 0),
-                        (-1, -1),
-                        "MIDDLE",
-                    ),
-                    (
-                        "LEFTPADDING",
-                        (0, 0),
-                        (-1, -1),
-                        5,
-                    ),
-                    (
-                        "RIGHTPADDING",
-                        (0, 0),
-                        (-1, -1),
-                        5,
-                    ),
-                    (
-                        "TOPPADDING",
-                        (0, 0),
-                        (-1, -1),
-                        4,
-                    ),
-                    (
-                        "BOTTOMPADDING",
-                        (0, 0),
-                        (-1, -1),
-                        4,
-                    ),
-                ]
-            )
-        )
-
-        story.append(logo_table)
-
-        story.append(
-            Spacer(
-                1,
-                24 * mm,
-            )
-        )
-
-        # ------------------------------------------------------------------
+        # --------------------------------------------------------------------
         # TITLE
-        # ------------------------------------------------------------------
+        # --------------------------------------------------------------------
 
         story.append(
             Paragraph(
-                "INDUSTRIAL DIGITAL<br/>MATURITY ASSESSMENT",
+                "INDUSTRIAL DIGITAL MATURITY ASSESSMENT",
                 self.styles["title"],
             )
         )
 
-        story.append(
-            Spacer(
-                1,
-                5 * mm,
-            )
+        metadata = aggregation_results.get(
+            "metadata",
+            {},
         )
 
-        story.append(
-            Paragraph(
-                "Digital Maturity Assessment Tool",
-                self.styles["subtitle"],
-            )
-        )
+        if not isinstance(metadata, Mapping):
+            metadata = {}
 
-        story.append(
-            Spacer(
-                1,
-                14 * mm,
-            )
-        )
-
-        # ------------------------------------------------------------------
-        # INFO
-        # ------------------------------------------------------------------
-
-        site_name = _get(
-            metadata,
+        site_name = metadata.get(
             "site_name",
             "Industrial Plant",
         )
 
-        identifier = (
-            assessment_id
-            or _get(
-                metadata,
-                "assessment_id",
-                "N/A",
-            )
-        )
-
-        assessment_date = _get(
-            metadata,
-            "assessment_date",
-            self.generated_at.strftime("%d %B %Y"),
-        )
-
-        info_data = [
-
-            [
-                Paragraph(
-                    "Assessment ID",
-                    self.styles["cover_label"],
-                ),
-                Paragraph(
-                    _escape_xml(identifier),
-                    self.styles["body"],
-                ),
-            ],
-
-            [
-                Paragraph(
-                    "Site",
-                    self.styles["cover_label"],
-                ),
-                Paragraph(
-                    _escape_xml(site_name),
-                    self.styles["body"],
-                ),
-            ],
-
-            [
-                Paragraph(
-                    "Assessment Date",
-                    self.styles["cover_label"],
-                ),
-                Paragraph(
-                    _escape_xml(assessment_date),
-                    self.styles["body"],
-                ),
-            ],
-
-            [
-                Paragraph(
-                    "Generated",
-                    self.styles["cover_label"],
-                ),
-                Paragraph(
-                    self.generated_at.strftime(
-                        "%d %B %Y"
-                    ),
-                    self.styles["body"],
-                ),
-            ],
-        ]
-
-        info_table = Table(
-            info_data,
-            colWidths=[
-                45 * mm,
-                95 * mm,
-            ],
-            hAlign="CENTER",
-        )
-
-        info_table.setStyle(
-            TableStyle(
-                [
-                    (
-                        "BACKGROUND",
-                        (0, 0),
-                        (0, -1),
-                        JESA_LIGHT,
-                    ),
-                    (
-                        "GRID",
-                        (0, 0),
-                        (-1, -1),
-                        0.4,
-                        GREY_200,
-                    ),
-                    (
-                        "VALIGN",
-                        (0, 0),
-                        (-1, -1),
-                        "MIDDLE",
-                    ),
-                    (
-                        "LEFTPADDING",
-                        (0, 0),
-                        (-1, -1),
-                        7,
-                    ),
-                    (
-                        "RIGHTPADDING",
-                        (0, 0),
-                        (-1, -1),
-                        7,
-                    ),
-                    (
-                        "TOPPADDING",
-                        (0, 0),
-                        (-1, -1),
-                        6,
-                    ),
-                    (
-                        "BOTTOMPADDING",
-                        (0, 0),
-                        (-1, -1),
-                        6,
-                    ),
-                ]
-            )
-        )
-
-        story.append(info_table)
-
-        story.append(
-            Spacer(
-                1,
-                30 * mm,
-            )
-        )
-
-        story.append(
-            HRFlowable(
-                width="80%",
-                thickness=1,
-                color=JESA_GREEN,
-                hAlign="CENTER",
-            )
-        )
-
-        story.append(
-            Spacer(
-                1,
-                5 * mm,
-            )
-        )
-
         story.append(
             Paragraph(
-                "Scoring & Digital Maturity Assessment Results",
+                (
+                    f"{_escape_xml(site_name)}"
+                    f" • Assessment ID: "
+                    f"{_escape_xml(assessment_id or metadata.get('assessment_id', 'N/A'))}"
+                ),
                 self.styles["subtitle"],
             )
         )
 
-        return story
+        # --------------------------------------------------------------------
+        # DMI
+        # --------------------------------------------------------------------
 
-    # ========================================================================
-    # LOGO HELPER
-    # ========================================================================
-
-    @staticmethod
-    def _logo_or_empty(
-        path: Optional[Path],
-        width: float,
-        height: float,
-    ):
-
-        if path is None:
-            # IMPORTANT:
-            # Do NOT write "ENSAM" / "JESA" as fake logos.
-            # If the real file cannot be found, leave the cell empty.
-            return Spacer(
-                width,
-                height,
-            )
-
-        try:
-
-            image = Image(
-                str(path),
-                width=width,
-                height=height,
-                kind="proportional",
-            )
-
-            image.hAlign = "CENTER"
-
-            return image
-
-        except Exception:
-            return Spacer(
-                width,
-                height,
-            )
-
-    # ========================================================================
-    # EXECUTIVE SUMMARY
-    # ========================================================================
-
-    def _build_executive_summary(
-        self,
-        aggregation_results: Dict[str, Any],
-        gap_results: List[Any],
-        tpi_results: List[Any],
-        priority_results: List[Any],
-        roadmap: List[Any],
-    ) -> List[Any]:
-
-        story: List[Any] = []
-
-        story.append(
-            Paragraph(
-                "1. Executive Scoring Summary",
-                self.styles["h1"],
-            )
-        )
-
-        story.append(
-            Paragraph(
-                "This section presents the principal scoring results "
-                "generated by the Digital Maturity Assessment Tool. "
-                "All values shown below are already-computed assessment "
-                "results.",
-                self.styles["body"],
-            )
-        )
-
-        dmi = aggregation_results.get(
-            "dmi"
-        )
+        dmi = aggregation_results.get("dmi")
 
         dmi_score = _get(
             dmi,
             "score",
-            aggregation_results.get(
-                "dmi_score"
-            ),
+            aggregation_results.get("dmi_score"),
         )
 
         dmi_level = _get(
@@ -1171,100 +658,7 @@ class PDFExporter:
             ),
         )
 
-        metadata = aggregation_results.get(
-            "metadata",
-            {},
-        )
-
-        if not isinstance(metadata, Mapping):
-            metadata = {}
-
-        total_indicators = metadata.get(
-            "total_indicators",
-            len(
-                aggregation_results.get(
-                    "indicators",
-                    {},
-                )
-                or {}
-            ),
-        )
-
-        total_dimensions = metadata.get(
-            "total_dimensions",
-            len(
-                aggregation_results.get(
-                    "dimensions",
-                    {},
-                )
-                or {}
-            ),
-        )
-
-        total_pillars = metadata.get(
-            "total_pillars",
-            len(
-                aggregation_results.get(
-                    "pillars",
-                    {},
-                )
-                or {}
-            ),
-        )
-
-        critical_count = sum(
-            1
-            for result in priority_results
-            if _normalize_priority(
-                _get(
-                    result,
-                    "priority_category",
-                    _get(
-                        result,
-                        "priority",
-                        "",
-                    ),
-                )
-            )
-            == "Critical"
-        )
-
-        high_count = sum(
-            1
-            for result in priority_results
-            if _normalize_priority(
-                _get(
-                    result,
-                    "priority_category",
-                    _get(
-                        result,
-                        "priority",
-                        "",
-                    ),
-                )
-            )
-            == "High"
-        )
-
-        roadmap_count = 0
-
-        for phase in roadmap:
-
-            items = _get(
-                phase,
-                "items",
-                [],
-            )
-
-            roadmap_count += len(
-                _as_list(items)
-            )
-
-        # ------------------------------------------------------------------
-        # KPI CARDS
-        # ------------------------------------------------------------------
-
-        kpis = [
+        kpi_data = [
             [
                 Paragraph(
                     _format_number(
@@ -1273,7 +667,6 @@ class PDFExporter:
                     ),
                     self.styles["kpi"],
                 ),
-
                 Paragraph(
                     _escape_xml(
                         dmi_level,
@@ -1281,52 +674,28 @@ class PDFExporter:
                     ),
                     self.styles["kpi"],
                 ),
-
-                Paragraph(
-                    str(total_indicators),
-                    self.styles["kpi"],
-                ),
-
-                Paragraph(
-                    str(total_dimensions),
-                    self.styles["kpi"],
-                ),
             ],
-
             [
                 Paragraph(
-                    "Digital Maturity Index",
+                    "DIGITAL MATURITY INDEX",
                     self.styles["kpi_label"],
                 ),
-
                 Paragraph(
-                    "Maturity Level",
-                    self.styles["kpi_label"],
-                ),
-
-                Paragraph(
-                    "Indicators",
-                    self.styles["kpi_label"],
-                ),
-
-                Paragraph(
-                    "Dimensions",
+                    "MATURITY LEVEL",
                     self.styles["kpi_label"],
                 ),
             ],
         ]
 
-        table = Table(
-            kpis,
+        kpi_table = Table(
+            kpi_data,
             colWidths=[
-                43 * mm,
-                43 * mm,
-                43 * mm,
-                43 * mm,
+                85 * mm,
+                85 * mm,
             ],
         )
 
-        table.setStyle(
+        kpi_table.setStyle(
             TableStyle(
                 [
                     (
@@ -1339,254 +708,85 @@ class PDFExporter:
                         "BOX",
                         (0, 0),
                         (-1, -1),
-                        0.7,
-                        GREY_200,
-                    ),
-                    (
-                        "INNERGRID",
-                        (0, 0),
-                        (-1, -1),
-                        0.5,
-                        GREY_200,
-                    ),
-                    (
-                        "VALIGN",
-                        (0, 0),
-                        (-1, -1),
-                        "MIDDLE",
-                    ),
-                    (
-                        "TOPPADDING",
-                        (0, 0),
-                        (-1, 0),
-                        10,
-                    ),
-                    (
-                        "BOTTOMPADDING",
-                        (0, 0),
-                        (-1, 0),
-                        10,
-                    ),
-                ]
-            )
-        )
-
-        story.append(table)
-
-        story.append(
-            Spacer(
-                1,
-                8 * mm,
-            )
-        )
-
-        # ------------------------------------------------------------------
-        # SUMMARY TABLE
-        # ------------------------------------------------------------------
-
-        rows = [
-
-            [
-                Paragraph(
-                    "Metric",
-                    self.styles["table_header"],
-                ),
-                Paragraph(
-                    "Value",
-                    self.styles["table_header"],
-                ),
-            ],
-
-            [
-                Paragraph(
-                    "Pillars assessed",
-                    self.styles["table"],
-                ),
-                Paragraph(
-                    str(total_pillars),
-                    self.styles["table"],
-                ),
-            ],
-
-            [
-                Paragraph(
-                    "Critical priorities",
-                    self.styles["table"],
-                ),
-                Paragraph(
-                    str(critical_count),
-                    self.styles["table"],
-                ),
-            ],
-
-            [
-                Paragraph(
-                    "High priorities",
-                    self.styles["table"],
-                ),
-                Paragraph(
-                    str(high_count),
-                    self.styles["table"],
-                ),
-            ],
-
-            [
-                Paragraph(
-                    "Transformation actions",
-                    self.styles["table"],
-                ),
-                Paragraph(
-                    str(roadmap_count),
-                    self.styles["table"],
-                ),
-            ],
-        ]
-
-        table = Table(
-            rows,
-            colWidths=[
-                90 * mm,
-                80 * mm,
-            ],
-        )
-
-        table.setStyle(
-            TableStyle(
-                [
-                    (
-                        "BACKGROUND",
-                        (0, 0),
-                        (-1, 0),
+                        0.8,
                         JESA_GREEN,
                     ),
                     (
-                        "GRID",
+                        "INNERGRID",
                         (0, 0),
                         (-1, -1),
                         0.4,
                         GREY_200,
                     ),
                     (
-                        "ROWBACKGROUNDS",
-                        (0, 1),
-                        (-1, -1),
-                        [WHITE, GREY_100],
-                    ),
-                    (
                         "VALIGN",
                         (0, 0),
                         (-1, -1),
                         "MIDDLE",
                     ),
                     (
-                        "LEFTPADDING",
-                        (0, 0),
-                        (-1, -1),
-                        7,
-                    ),
-                    (
-                        "RIGHTPADDING",
-                        (0, 0),
-                        (-1, -1),
-                        7,
-                    ),
-                    (
                         "TOPPADDING",
                         (0, 0),
-                        (-1, -1),
-                        5,
+                        (-1, 0),
+                        8,
                     ),
                     (
                         "BOTTOMPADDING",
                         (0, 0),
-                        (-1, -1),
-                        5,
+                        (-1, 0),
+                        8,
+                    ),
+                    (
+                        "TOPPADDING",
+                        (0, 1),
+                        (-1, 1),
+                        4,
+                    ),
+                    (
+                        "BOTTOMPADDING",
+                        (0, 1),
+                        (-1, 1),
+                        4,
                     ),
                 ]
             )
         )
 
-        story.append(table)
+        story.append(kpi_table)
 
-        return story
+        story.append(
+            Spacer(
+                1,
+                4 * mm,
+            )
+        )
 
-    # ========================================================================
-    # DMI
-    # ========================================================================
-
-    def _build_dmi_overview(
-        self,
-        aggregation_results: Dict[str, Any],
-    ) -> List[Any]:
-
-        story: List[Any] = []
+        # --------------------------------------------------------------------
+        # PILLAR SCORES
+        # --------------------------------------------------------------------
 
         story.append(
             Paragraph(
-                "2. Digital Maturity Index",
+                "1. Pillar Scores",
                 self.styles["h1"],
             )
         )
 
-        dmi = aggregation_results.get(
-            "dmi"
+        pillars = aggregation_results.get(
+            "pillars",
+            {},
         )
 
-        if dmi is None:
-
-            metadata = aggregation_results.get(
-                "metadata",
-                {},
-            )
-
-            if not isinstance(metadata, Mapping):
-                metadata = {}
-
-            score = metadata.get(
-                "dmi_score",
-                aggregation_results.get(
-                    "dmi_score"
-                ),
-            )
-
-            level = metadata.get(
-                "dmi_level_name",
-                metadata.get(
-                    "dmi_level",
-                    "—",
-                ),
-            )
-
-        else:
-
-            score = _get(
-                dmi,
-                "score",
-                None,
-            )
-
-            level = _get(
-                dmi,
-                "level_name",
-                _get(
-                    dmi,
-                    "level",
-                    "—",
-                ),
-            )
-
-        story.append(
-            Paragraph(
-                "Overall digital maturity score",
-                self.styles["h2"],
-            )
+        pillar_iterable = (
+            pillars.values()
+            if isinstance(pillars, Mapping)
+            else _as_list(pillars)
         )
 
-        data = [
-
+        pillar_rows = [
             [
                 Paragraph(
-                    "Indicator",
+                    "Pillar",
                     self.styles["table_header"],
                 ),
                 Paragraph(
@@ -1597,139 +797,13 @@ class PDFExporter:
                     "Maturity Level",
                     self.styles["table_header"],
                 ),
-            ],
-
-            [
-                Paragraph(
-                    "Digital Maturity Index (DMI)",
-                    self.styles["table"],
-                ),
-
-                Paragraph(
-                    _format_number(
-                        score,
-                        self.decimal_precision,
-                    ),
-                    self.styles["table"],
-                ),
-
-                Paragraph(
-                    _escape_xml(level),
-                    self.styles["table"],
-                ),
-            ],
-        ]
-
-        table = Table(
-            data,
-            colWidths=[
-                70 * mm,
-                40 * mm,
-                60 * mm,
-            ],
-        )
-
-        table.setStyle(
-            TableStyle(
-                [
-                    (
-                        "BACKGROUND",
-                        (0, 0),
-                        (-1, 0),
-                        JESA_GREEN,
-                    ),
-                    (
-                        "BACKGROUND",
-                        (0, 1),
-                        (-1, 1),
-                        GREY_100,
-                    ),
-                    (
-                        "GRID",
-                        (0, 0),
-                        (-1, -1),
-                        0.5,
-                        GREY_200,
-                    ),
-                    (
-                        "VALIGN",
-                        (0, 0),
-                        (-1, -1),
-                        "MIDDLE",
-                    ),
-                    (
-                        "ALIGN",
-                        (1, 1),
-                        (-1, -1),
-                        "CENTER",
-                    ),
-                ]
-            )
-        )
-
-        story.append(table)
-
-        return story
-
-    # ========================================================================
-    # PILLARS
-    # ========================================================================
-
-    def _build_pillar_assessment(
-        self,
-        aggregation_results: Dict[str, Any],
-    ) -> List[Any]:
-
-        story: List[Any] = []
-
-        story.append(
-            Paragraph(
-                "3. Pillar Scoring",
-                self.styles["h1"],
-            )
-        )
-
-        rows = [
-
-            [
-                Paragraph(
-                    "Pillar",
-                    self.styles["table_header"],
-                ),
-
-                Paragraph(
-                    "Score",
-                    self.styles["table_header"],
-                ),
-
-                Paragraph(
-                    "Level",
-                    self.styles["table_header"],
-                ),
-
-                Paragraph(
-                    "Applicability",
-                    self.styles["table_header"],
-                ),
             ]
         ]
 
-        pillars = aggregation_results.get(
-            "pillars",
-            {},
-        )
+        for result in pillar_iterable:
 
-        iterable = (
-            pillars.values()
-            if isinstance(pillars, Mapping)
-            else _as_list(pillars)
-        )
-
-        for result in iterable:
-
-            rows.append(
+            pillar_rows.append(
                 [
-
                     Paragraph(
                         _escape_xml(
                             _get(
@@ -1744,7 +818,6 @@ class PDFExporter:
                         ),
                         self.styles["table"],
                     ),
-
                     Paragraph(
                         _format_number(
                             _get(
@@ -1755,7 +828,6 @@ class PDFExporter:
                         ),
                         self.styles["table"],
                     ),
-
                     Paragraph(
                         _escape_xml(
                             _get(
@@ -1770,23 +842,12 @@ class PDFExporter:
                         ),
                         self.styles["table"],
                     ),
-
-                    Paragraph(
-                        _escape_xml(
-                            _get(
-                                result,
-                                "applicability",
-                                "—",
-                            )
-                        ),
-                        self.styles["table"],
-                    ),
                 ]
             )
 
-        if len(rows) == 1:
+        if len(pillar_rows) == 1:
 
-            rows.append(
+            pillar_rows.append(
                 [
                     Paragraph(
                         "No pillar results available.",
@@ -1794,22 +855,20 @@ class PDFExporter:
                     ),
                     "",
                     "",
-                    "",
                 ]
             )
 
-        table = Table(
-            rows,
+        pillar_table = Table(
+            pillar_rows,
             colWidths=[
-                80 * mm,
-                30 * mm,
-                40 * mm,
-                30 * mm,
+                90 * mm,
+                35 * mm,
+                45 * mm,
             ],
             repeatRows=1,
         )
 
-        table.setStyle(
+        pillar_table.setStyle(
             TableStyle(
                 [
                     (
@@ -1822,7 +881,7 @@ class PDFExporter:
                         "GRID",
                         (0, 0),
                         (-1, -1),
-                        0.4,
+                        0.35,
                         GREY_200,
                     ),
                     (
@@ -1843,78 +902,90 @@ class PDFExporter:
                         (-1, -1),
                         "CENTER",
                     ),
+                    (
+                        "LEFTPADDING",
+                        (0, 0),
+                        (-1, -1),
+                        5,
+                    ),
+                    (
+                        "RIGHTPADDING",
+                        (0, 0),
+                        (-1, -1),
+                        5,
+                    ),
+                    (
+                        "TOPPADDING",
+                        (0, 0),
+                        (-1, -1),
+                        3,
+                    ),
+                    (
+                        "BOTTOMPADDING",
+                        (0, 0),
+                        (-1, -1),
+                        3,
+                    ),
                 ]
             )
         )
 
-        story.append(table)
-
-        return story
-
-    # ========================================================================
-    # DIMENSIONS
-    # ========================================================================
-
-    def _build_dimension_assessment(
-        self,
-        aggregation_results: Dict[str, Any],
-    ) -> List[Any]:
-
-        story: List[Any] = []
+        story.append(pillar_table)
 
         story.append(
-            Paragraph(
-                "4. Dimension Scoring",
-                self.styles["h1"],
+            Spacer(
+                1,
+                4 * mm,
             )
         )
 
-        rows = [
+        # --------------------------------------------------------------------
+        # DIMENSION SCORES
+        # --------------------------------------------------------------------
 
-            [
-                Paragraph(
-                    "ID",
-                    self.styles["table_header"],
-                ),
-
-                Paragraph(
-                    "Dimension",
-                    self.styles["table_header"],
-                ),
-
-                Paragraph(
-                    "Score",
-                    self.styles["table_header"],
-                ),
-
-                Paragraph(
-                    "Level",
-                    self.styles["table_header"],
-                ),
-
-                Paragraph(
-                    "Pillar",
-                    self.styles["table_header"],
-                ),
-            ]
-        ]
+        story.append(
+            Paragraph(
+                "2. Dimension Scores",
+                self.styles["h1"],
+            )
+        )
 
         dimensions = aggregation_results.get(
             "dimensions",
             {},
         )
 
-        iterable = (
+        dimension_iterable = (
             dimensions.values()
             if isinstance(dimensions, Mapping)
             else _as_list(dimensions)
         )
 
-        for result in iterable:
+        dimension_rows = [
+            [
+                Paragraph(
+                    "ID",
+                    self.styles["table_header"],
+                ),
+                Paragraph(
+                    "Dimension",
+                    self.styles["table_header"],
+                ),
+                Paragraph(
+                    "Score",
+                    self.styles["table_header"],
+                ),
+                Paragraph(
+                    "Level",
+                    self.styles["table_header"],
+                ),
+            ]
+        ]
 
-            rows.append(
+        for result in dimension_iterable:
+
+            dimension_rows.append(
                 [
-
                     Paragraph(
                         _escape_xml(
                             _get(
@@ -1929,7 +1000,6 @@ class PDFExporter:
                         ),
                         self.styles["table"],
                     ),
-
                     Paragraph(
                         _escape_xml(
                             _get(
@@ -1944,7 +1014,6 @@ class PDFExporter:
                         ),
                         self.styles["table"],
                     ),
-
                     Paragraph(
                         _format_number(
                             _get(
@@ -1955,7 +1024,6 @@ class PDFExporter:
                         ),
                         self.styles["table"],
                     ),
-
                     Paragraph(
                         _escape_xml(
                             _get(
@@ -1970,23 +1038,12 @@ class PDFExporter:
                         ),
                         self.styles["table"],
                     ),
-
-                    Paragraph(
-                        _escape_xml(
-                            _get(
-                                result,
-                                "parent_id",
-                                "—",
-                            )
-                        ),
-                        self.styles["table"],
-                    ),
                 ]
             )
 
-        if len(rows) == 1:
+        if len(dimension_rows) == 1:
 
-            rows.append(
+            dimension_rows.append(
                 [
                     "",
                     Paragraph(
@@ -1995,23 +1052,21 @@ class PDFExporter:
                     ),
                     "",
                     "",
-                    "",
                 ]
             )
 
-        table = Table(
-            rows,
+        dimension_table = Table(
+            dimension_rows,
             colWidths=[
                 20 * mm,
-                75 * mm,
-                25 * mm,
-                40 * mm,
-                20 * mm,
+                85 * mm,
+                30 * mm,
+                35 * mm,
             ],
             repeatRows=1,
         )
 
-        table.setStyle(
+        dimension_table.setStyle(
             TableStyle(
                 [
                     (
@@ -2024,7 +1079,7 @@ class PDFExporter:
                         "GRID",
                         (0, 0),
                         (-1, -1),
-                        0.4,
+                        0.35,
                         GREY_200,
                     ),
                     (
@@ -2042,79 +1097,99 @@ class PDFExporter:
                     (
                         "ALIGN",
                         (0, 0),
-                        (-1, -1),
+                        (0, -1),
                         "CENTER",
                     ),
                     (
                         "ALIGN",
-                        (1, 1),
-                        (1, -1),
-                        "LEFT",
+                        (2, 1),
+                        (-1, -1),
+                        "CENTER",
+                    ),
+                    (
+                        "LEFTPADDING",
+                        (0, 0),
+                        (-1, -1),
+                        4,
+                    ),
+                    (
+                        "RIGHTPADDING",
+                        (0, 0),
+                        (-1, -1),
+                        4,
+                    ),
+                    (
+                        "TOPPADDING",
+                        (0, 0),
+                        (-1, -1),
+                        2.5,
+                    ),
+                    (
+                        "BOTTOMPADDING",
+                        (0, 0),
+                        (-1, -1),
+                        2.5,
                     ),
                 ]
             )
         )
 
-        story.append(table)
+        story.append(dimension_table)
 
         return story
 
     # ========================================================================
-    # GAP ANALYSIS
+    # PAGE 2
     # ========================================================================
 
-    def _build_gap_analysis(
+    def _build_page_two(
         self,
+        aggregation_results: Dict[str, Any],
         gap_results: List[Any],
+        tpi_results: List[Any],
+        priority_results: List[Any],
     ) -> List[Any]:
 
         story: List[Any] = []
 
         story.append(
             Paragraph(
-                "5. Gap Analysis",
+                "3. Score-Based Transformation Analysis",
                 self.styles["h1"],
             )
         )
 
+        # --------------------------------------------------------------------
+        # GAP ANALYSIS
+        # --------------------------------------------------------------------
+
         story.append(
             Paragraph(
-                "Comparison between current maturity scores and "
-                "target scores.",
-                self.styles["body"],
+                "Gap Scores",
+                self.styles["h2"],
             )
         )
 
-        rows = [
-
+        gap_rows = [
             [
                 Paragraph(
                     "Entity",
                     self.styles["table_header"],
                 ),
-
                 Paragraph(
                     "Type",
                     self.styles["table_header"],
                 ),
-
                 Paragraph(
                     "Current",
                     self.styles["table_header"],
                 ),
-
                 Paragraph(
                     "Target",
                     self.styles["table_header"],
                 ),
-
                 Paragraph(
                     "Gap",
-                    self.styles["table_header"],
-                ),
-
-                Paragraph(
-                    "Priority",
                     self.styles["table_header"],
                 ),
             ]
@@ -2122,17 +1197,8 @@ class PDFExporter:
 
         for gap in gap_results:
 
-            priority = _normalize_priority(
-                _get(
-                    gap,
-                    "priority",
-                    "",
-                )
-            )
-
-            rows.append(
+            gap_rows.append(
                 [
-
                     Paragraph(
                         _escape_xml(
                             _get(
@@ -2143,7 +1209,6 @@ class PDFExporter:
                         ),
                         self.styles["table"],
                     ),
-
                     Paragraph(
                         _escape_xml(
                             _get(
@@ -2154,7 +1219,6 @@ class PDFExporter:
                         ),
                         self.styles["table"],
                     ),
-
                     Paragraph(
                         _format_number(
                             _get(
@@ -2165,7 +1229,6 @@ class PDFExporter:
                         ),
                         self.styles["table"],
                     ),
-
                     Paragraph(
                         _format_number(
                             _get(
@@ -2176,7 +1239,6 @@ class PDFExporter:
                         ),
                         self.styles["table"],
                     ),
-
                     Paragraph(
                         _format_number(
                             _get(
@@ -2187,25 +1249,17 @@ class PDFExporter:
                         ),
                         self.styles["table"],
                     ),
-
-                    Paragraph(
-                        _escape_xml(
-                            priority or "—"
-                        ),
-                        self.styles["table"],
-                    ),
                 ]
             )
 
-        if len(rows) == 1:
+        if len(gap_rows) == 1:
 
-            rows.append(
+            gap_rows.append(
                 [
                     Paragraph(
-                        "No gap analysis results available.",
+                        "No gap results available.",
                         self.styles["table"],
                     ),
-                    "",
                     "",
                     "",
                     "",
@@ -2213,12 +1267,11 @@ class PDFExporter:
                 ]
             )
 
-        table = Table(
-            rows,
+        gap_table = Table(
+            gap_rows,
             colWidths=[
-                60 * mm,
+                65 * mm,
                 30 * mm,
-                25 * mm,
                 25 * mm,
                 25 * mm,
                 25 * mm,
@@ -2226,115 +1279,77 @@ class PDFExporter:
             repeatRows=1,
         )
 
-        commands = [
-            (
-                "BACKGROUND",
-                (0, 0),
-                (-1, 0),
-                JESA_GREEN,
-            ),
-
-            (
-                "GRID",
-                (0, 0),
-                (-1, -1),
-                0.4,
-                GREY_200,
-            ),
-
-            (
-                "ROWBACKGROUNDS",
-                (0, 1),
-                (-1, -1),
-                [WHITE, GREY_100],
-            ),
-
-            (
-                "VALIGN",
-                (0, 0),
-                (-1, -1),
-                "MIDDLE",
-            ),
-
-            (
-                "ALIGN",
-                (2, 1),
-                (-1, -1),
-                "CENTER",
-            ),
-        ]
-
-        for row_index, gap in enumerate(
-            gap_results,
-            start=1,
-        ):
-
-            priority = _normalize_priority(
-                _get(
-                    gap,
-                    "priority",
-                    "",
-                )
-            )
-
-            if priority:
-
-                commands.append(
+        gap_table.setStyle(
+            TableStyle(
+                [
                     (
                         "BACKGROUND",
-                        (5, row_index),
-                        (5, row_index),
-                        _priority_color(priority),
-                    )
-                )
-
-                if priority != "Medium":
-
-                    commands.append(
-                        (
-                            "TEXTCOLOR",
-                            (5, row_index),
-                            (5, row_index),
-                            WHITE,
-                        )
-                    )
-
-        table.setStyle(
-            TableStyle(commands)
-        )
-
-        story.append(table)
-
-        return story
-
-    # ========================================================================
-    # TPI
-    # ========================================================================
-
-    def _build_tpi_prioritization(
-        self,
-        tpi_results: List[Any],
-    ) -> List[Any]:
-
-        story: List[Any] = []
-
-        story.append(
-            Paragraph(
-                "6. Transformation Priority Index",
-                self.styles["h1"],
+                        (0, 0),
+                        (-1, 0),
+                        JESA_GREEN,
+                    ),
+                    (
+                        "GRID",
+                        (0, 0),
+                        (-1, -1),
+                        0.35,
+                        GREY_200,
+                    ),
+                    (
+                        "ROWBACKGROUNDS",
+                        (0, 1),
+                        (-1, -1),
+                        [WHITE, GREY_100],
+                    ),
+                    (
+                        "VALIGN",
+                        (0, 0),
+                        (-1, -1),
+                        "MIDDLE",
+                    ),
+                    (
+                        "ALIGN",
+                        (2, 1),
+                        (-1, -1),
+                        "CENTER",
+                    ),
+                    (
+                        "TOPPADDING",
+                        (0, 0),
+                        (-1, -1),
+                        2.5,
+                    ),
+                    (
+                        "BOTTOMPADDING",
+                        (0, 0),
+                        (-1, -1),
+                        2.5,
+                    ),
+                ]
             )
         )
 
+        story.append(gap_table)
+
         story.append(
-            Paragraph(
-                "Transformation opportunities ranked according "
-                "to the already-computed Transformation Priority "
-                "Index (TPI).",
-                self.styles["body"],
+            Spacer(
+                1,
+                3 * mm,
             )
         )
 
-        sorted_results = sorted(
+        # --------------------------------------------------------------------
+        # TPI
+        # --------------------------------------------------------------------
+
+        story.append(
+            Paragraph(
+                "Transformation Priority Index (TPI)",
+                self.styles["h2"],
+            )
+        )
+
+        sorted_tpi = sorted(
             tpi_results,
             key=lambda item: _safe_float(
                 _get(
@@ -2346,38 +1361,33 @@ class PDFExporter:
             reverse=True,
         )
 
-        rows = [
-
+        tpi_rows = [
             [
                 Paragraph(
                     "#",
                     self.styles["table_header"],
                 ),
-
                 Paragraph(
                     "Dimension",
                     self.styles["table_header"],
                 ),
-
                 Paragraph(
                     "TPI",
                     self.styles["table_header"],
                 ),
-
-                Paragraph(
-                    "Priority",
-                    self.styles["table_header"],
-                ),
-
                 Paragraph(
                     "Gap",
+                    self.styles["table_header"],
+                ),
+                Paragraph(
+                    "Priority",
                     self.styles["table_header"],
                 ),
             ]
         ]
 
         for rank, item in enumerate(
-            sorted_results,
+            sorted_tpi,
             start=1,
         ):
 
@@ -2393,14 +1403,12 @@ class PDFExporter:
                 )
             )
 
-            rows.append(
+            tpi_rows.append(
                 [
-
                     Paragraph(
                         str(rank),
                         self.styles["table"],
                     ),
-
                     Paragraph(
                         _escape_xml(
                             _get(
@@ -2415,7 +1423,6 @@ class PDFExporter:
                         ),
                         self.styles["table"],
                     ),
-
                     Paragraph(
                         _format_number(
                             _get(
@@ -2426,14 +1433,6 @@ class PDFExporter:
                         ),
                         self.styles["table"],
                     ),
-
-                    Paragraph(
-                        _escape_xml(
-                            priority or "—"
-                        ),
-                        self.styles["table"],
-                    ),
-
                     Paragraph(
                         _format_number(
                             _get(
@@ -2444,12 +1443,18 @@ class PDFExporter:
                         ),
                         self.styles["table"],
                     ),
+                    Paragraph(
+                        _escape_xml(
+                            priority or "—"
+                        ),
+                        self.styles["table"],
+                    ),
                 ]
             )
 
-        if len(rows) == 1:
+        if len(tpi_rows) == 1:
 
-            rows.append(
+            tpi_rows.append(
                 [
                     "",
                     Paragraph(
@@ -2462,65 +1467,72 @@ class PDFExporter:
                 ]
             )
 
-        table = Table(
-            rows,
+        tpi_table = Table(
+            tpi_rows,
             colWidths=[
                 12 * mm,
-                90 * mm,
+                80 * mm,
                 25 * mm,
-                30 * mm,
                 25 * mm,
+                28 * mm,
             ],
             repeatRows=1,
         )
 
-        commands = [
+        tpi_commands = [
             (
                 "BACKGROUND",
                 (0, 0),
                 (-1, 0),
                 JESA_GREEN,
             ),
-
             (
                 "GRID",
                 (0, 0),
                 (-1, -1),
-                0.4,
+                0.35,
                 GREY_200,
             ),
-
             (
                 "ROWBACKGROUNDS",
                 (0, 1),
                 (-1, -1),
                 [WHITE, GREY_100],
             ),
-
             (
                 "VALIGN",
                 (0, 0),
                 (-1, -1),
                 "MIDDLE",
             ),
-
             (
                 "ALIGN",
                 (0, 0),
                 (0, -1),
                 "CENTER",
             ),
-
             (
                 "ALIGN",
                 (2, 1),
                 (-1, -1),
                 "CENTER",
             ),
+            (
+                "TOPPADDING",
+                (0, 0),
+                (-1, -1),
+                2.5,
+            ),
+            (
+                "BOTTOMPADDING",
+                (0, 0),
+                (-1, -1),
+                2.5,
+            ),
         ]
 
         for row_index, item in enumerate(
-            sorted_results,
+            sorted_tpi,
             start=1,
         ):
 
@@ -2538,130 +1550,76 @@ class PDFExporter:
 
             if priority:
 
-                commands.append(
+                tpi_commands.append(
                     (
                         "BACKGROUND",
-                        (3, row_index),
-                        (3, row_index),
+                        (4, row_index),
+                        (4, row_index),
                         _priority_color(priority),
                     )
                 )
 
                 if priority != "Medium":
 
-                    commands.append(
+                    tpi_commands.append(
                         (
                             "TEXTCOLOR",
-                            (3, row_index),
-                            (3, row_index),
+                            (4, row_index),
+                            (4, row_index),
                             WHITE,
                         )
                     )
 
-        table.setStyle(
-            TableStyle(commands)
+        tpi_table.setStyle(
+            TableStyle(tpi_commands)
         )
 
-        story.append(table)
-
-        return story
-
-    # ========================================================================
-    # PRIORITY MATRIX
-    # ========================================================================
-
-    def _build_priority_matrix(
-        self,
-        priority_results: List[Any],
-    ) -> List[Any]:
-
-        story: List[Any] = []
+        story.append(tpi_table)
 
         story.append(
-            Paragraph(
-                "7. Priority Matrix",
-                self.styles["h1"],
+            Spacer(
+                1,
+                3 * mm,
             )
         )
 
+        # --------------------------------------------------------------------
+        # PRIORITY RESULTS
+        # --------------------------------------------------------------------
+
         story.append(
             Paragraph(
-                "Priorities are presented exactly as produced by "
-                "the decision engine. No priority is recalculated "
-                "by the PDF exporter.",
-                self.styles["body"],
+                "Priority Scores",
+                self.styles["h2"],
             )
         )
 
-        sorted_results = sorted(
-            priority_results,
-            key=lambda item: (
-                PRIORITY_RANK.get(
-                    _normalize_priority(
-                        _get(
-                            item,
-                            "priority_category",
-                            _get(
-                                item,
-                                "priority",
-                                "",
-                            ),
-                        )
-                    ),
-                    99,
-                ),
-
-                -_safe_float(
-                    _get(
-                        item,
-                        "tpi_score",
-                        0,
-                    )
-                ),
-
-                -_safe_float(
-                    _get(
-                        item,
-                        "gap",
-                        0,
-                    )
-                ),
-            ),
-        )
-
-        rows = [
-
+        priority_rows = [
             [
                 Paragraph(
                     "Rank",
                     self.styles["table_header"],
                 ),
-
                 Paragraph(
                     "Dimension",
                     self.styles["table_header"],
                 ),
-
                 Paragraph(
                     "Current",
                     self.styles["table_header"],
                 ),
-
                 Paragraph(
                     "Target",
                     self.styles["table_header"],
                 ),
-
                 Paragraph(
                     "Gap",
                     self.styles["table_header"],
                 ),
-
                 Paragraph(
                     "TPI",
                     self.styles["table_header"],
                 ),
-
                 Paragraph(
                     "Priority",
                     self.styles["table_header"],
@@ -2669,8 +1627,49 @@ class PDFExporter:
             ]
         ]
 
+        def priority_sort_key(item):
+
+            priority = _normalize_priority(
+                _get(
+                    item,
+                    "priority_category",
+                    _get(
+                        item,
+                        "priority",
+                        "",
+                    ),
+                )
+            )
+
+            rank = {
+                "Critical": 1,
+                "High": 2,
+                "Medium": 3,
+                "Low": 4,
+                "Very Low": 5,
+            }.get(
+                priority,
+                99,
+            )
+
+            return (
+                rank,
+                -_safe_float(
+                    _get(
+                        item,
+                        "tpi_score",
+                        0,
+                    )
+                ),
+            )
+
+        sorted_priorities = sorted(
+            priority_results,
+            key=priority_sort_key,
+        )
+
         for rank, result in enumerate(
-            sorted_results,
+            sorted_priorities,
             start=1,
         ):
 
@@ -2686,14 +1685,12 @@ class PDFExporter:
                 )
             )
 
-            rows.append(
+            priority_rows.append(
                 [
-
                     Paragraph(
                         str(rank),
                         self.styles["table"],
                     ),
-
                     Paragraph(
                         _escape_xml(
                             _get(
@@ -2708,7 +1705,6 @@ class PDFExporter:
                         ),
                         self.styles["table"],
                     ),
-
                     Paragraph(
                         _format_number(
                             _get(
@@ -2719,7 +1715,6 @@ class PDFExporter:
                         ),
                         self.styles["table"],
                     ),
-
                     Paragraph(
                         _format_number(
                             _get(
@@ -2730,7 +1725,6 @@ class PDFExporter:
                         ),
                         self.styles["table"],
                     ),
-
                     Paragraph(
                         _format_number(
                             _get(
@@ -2741,7 +1735,6 @@ class PDFExporter:
                         ),
                         self.styles["table"],
                     ),
-
                     Paragraph(
                         _format_number(
                             _get(
@@ -2752,7 +1745,6 @@ class PDFExporter:
                         ),
                         self.styles["table"],
                     ),
-
                     Paragraph(
                         _escape_xml(
                             priority or "—"
@@ -2762,9 +1754,9 @@ class PDFExporter:
                 ]
             )
 
-        if len(rows) == 1:
+        if len(priority_rows) == 1:
 
-            rows.append(
+            priority_rows.append(
                 [
                     "",
                     Paragraph(
@@ -2779,67 +1771,74 @@ class PDFExporter:
                 ]
             )
 
-        table = Table(
-            rows,
+        priority_table = Table(
+            priority_rows,
             colWidths=[
-                14 * mm,
-                65 * mm,
-                22 * mm,
-                22 * mm,
-                22 * mm,
-                22 * mm,
-                25 * mm,
+                12 * mm,
+                58 * mm,
+                21 * mm,
+                21 * mm,
+                21 * mm,
+                21 * mm,
+                26 * mm,
             ],
             repeatRows=1,
         )
 
-        commands = [
+        priority_commands = [
             (
                 "BACKGROUND",
                 (0, 0),
                 (-1, 0),
                 JESA_GREEN,
             ),
-
             (
                 "GRID",
                 (0, 0),
                 (-1, -1),
-                0.4,
+                0.35,
                 GREY_200,
             ),
-
             (
                 "ROWBACKGROUNDS",
                 (0, 1),
                 (-1, -1),
                 [WHITE, GREY_100],
             ),
-
             (
                 "VALIGN",
                 (0, 0),
                 (-1, -1),
                 "MIDDLE",
             ),
-
             (
                 "ALIGN",
                 (0, 0),
                 (0, -1),
                 "CENTER",
             ),
-
             (
                 "ALIGN",
                 (2, 1),
                 (-1, -1),
                 "CENTER",
             ),
+            (
+                "TOPPADDING",
+                (0, 0),
+                (-1, -1),
+                2,
+            ),
+            (
+                "BOTTOMPADDING",
+                (0, 0),
+                (-1, -1),
+                2,
+            ),
         ]
 
         for row_index, result in enumerate(
-            sorted_results,
+            sorted_priorities,
             start=1,
         ):
 
@@ -2857,7 +1856,7 @@ class PDFExporter:
 
             if priority:
 
-                commands.append(
+                priority_commands.append(
                     (
                         "BACKGROUND",
                         (6, row_index),
@@ -2868,7 +1867,7 @@ class PDFExporter:
 
                 if priority != "Medium":
 
-                    commands.append(
+                    priority_commands.append(
                         (
                             "TEXTCOLOR",
                             (6, row_index),
@@ -2877,703 +1876,28 @@ class PDFExporter:
                         )
                     )
 
-        table.setStyle(
-            TableStyle(commands)
+        priority_table.setStyle(
+            TableStyle(priority_commands)
         )
 
-        story.append(table)
-
-        return story
-
-    # ========================================================================
-    # ROADMAP
-    # ========================================================================
-
-    def _build_transformation_roadmap(
-        self,
-        roadmap: List[Any],
-    ) -> List[Any]:
-
-        story: List[Any] = []
-
-        story.append(
-            Paragraph(
-                "8. Transformation Roadmap — Scoring View",
-                self.styles["h1"],
-            )
-        )
-
-        story.append(
-            Paragraph(
-                "This section provides a concise scoring-oriented "
-                "view of the transformation roadmap. Detailed "
-                "implementation descriptions belong to the full Report.",
-                self.styles["body"],
-            )
-        )
-
-        if not roadmap:
-
-            story.append(
-                Paragraph(
-                    "No transformation roadmap is available.",
-                    self.styles["body"],
-                )
-            )
-
-            return story
-
-        sorted_phases = sorted(
-            roadmap,
-            key=lambda phase: PHASE_ORDER.get(
-                _safe_str(
-                    _get(
-                        phase,
-                        "phase_name",
-                        "",
-                    )
-                ),
-                99,
-            ),
-        )
-
-        for phase in sorted_phases:
-
-            phase_name = _safe_str(
-                _get(
-                    phase,
-                    "phase_name",
-                    "Phase",
-                )
-            )
-
-            horizon = _safe_str(
-                _get(
-                    phase,
-                    "horizon",
-                    "",
-                )
-            )
-
-            story.append(
-                Paragraph(
-                    _escape_xml(
-                        phase_name
-                    )
-                    + (
-                        f" — {_escape_xml(horizon)}"
-                        if horizon
-                        else ""
-                    ),
-                    self.styles["h2"],
-                )
-            )
-
-            items = _as_list(
-                _get(
-                    phase,
-                    "items",
-                    [],
-                )
-            )
-
-            rows = [
-
-                [
-                    Paragraph(
-                        "Action",
-                        self.styles["table_header"],
-                    ),
-
-                    Paragraph(
-                        "Dimension",
-                        self.styles["table_header"],
-                    ),
-
-                    Paragraph(
-                        "Priority",
-                        self.styles["table_header"],
-                    ),
-
-                    Paragraph(
-                        "TPI",
-                        self.styles["table_header"],
-                    ),
-                ]
-            ]
-
-            for item in items:
-
-                priority = _normalize_priority(
-                    _get(
-                        item,
-                        "priority",
-                        _get(
-                            item,
-                            "priority_category",
-                            "",
-                        ),
-                    )
-                )
-
-                rows.append(
-                    [
-
-                        Paragraph(
-                            _escape_xml(
-                                _get(
-                                    item,
-                                    "title",
-                                    _get(
-                                        item,
-                                        "action",
-                                        "—",
-                                    ),
-                                )
-                            ),
-                            self.styles["table"],
-                        ),
-
-                        Paragraph(
-                            _escape_xml(
-                                _get(
-                                    item,
-                                    "dimension_id",
-                                    _get(
-                                        item,
-                                        "dimension_name",
-                                        "—",
-                                    ),
-                                )
-                            ),
-                            self.styles["table"],
-                        ),
-
-                        Paragraph(
-                            _escape_xml(
-                                priority or "—"
-                            ),
-                            self.styles["table"],
-                        ),
-
-                        Paragraph(
-                            _format_number(
-                                _get(
-                                    item,
-                                    "tpi_score",
-                                ),
-                                1,
-                            ),
-                            self.styles["table"],
-                        ),
-                    ]
-                )
-
-            if len(rows) == 1:
-
-                rows.append(
-                    [
-                        Paragraph(
-                            "No actions in this phase.",
-                            self.styles["table"],
-                        ),
-                        "",
-                        "",
-                        "",
-                    ]
-                )
-
-            table = Table(
-                rows,
-                colWidths=[
-                    82 * mm,
-                    30 * mm,
-                    30 * mm,
-                    28 * mm,
-                ],
-                repeatRows=1,
-            )
-
-            commands = [
-                (
-                    "BACKGROUND",
-                    (0, 0),
-                    (-1, 0),
-                    JESA_GREEN,
-                ),
-
-                (
-                    "GRID",
-                    (0, 0),
-                    (-1, -1),
-                    0.4,
-                    GREY_200,
-                ),
-
-                (
-                    "ROWBACKGROUNDS",
-                    (0, 1),
-                    (-1, -1),
-                    [WHITE, GREY_100],
-                ),
-
-                (
-                    "VALIGN",
-                    (0, 0),
-                    (-1, -1),
-                    "MIDDLE",
-                ),
-
-                (
-                    "ALIGN",
-                    (1, 1),
-                    (-1, -1),
-                    "CENTER",
-                ),
-            ]
-
-            for row_index, item in enumerate(
-                items,
-                start=1,
-            ):
-
-                priority = _normalize_priority(
-                    _get(
-                        item,
-                        "priority",
-                        _get(
-                            item,
-                            "priority_category",
-                            "",
-                        ),
-                    )
-                )
-
-                if priority:
-
-                    commands.append(
-                        (
-                            "BACKGROUND",
-                            (2, row_index),
-                            (2, row_index),
-                            _priority_color(priority),
-                        )
-                    )
-
-                    if priority != "Medium":
-
-                        commands.append(
-                            (
-                                "TEXTCOLOR",
-                                (2, row_index),
-                                (2, row_index),
-                                WHITE,
-                            )
-                        )
-
-            table.setStyle(
-                TableStyle(commands)
-            )
-
-            story.append(table)
-
-            story.append(
-                Spacer(
-                    1,
-                    5 * mm,
-                )
-            )
-
-        return story
-
-    # ========================================================================
-    # SCORING CONCLUSION
-    # ========================================================================
-
-    def _build_scoring_conclusion(
-        self,
-        aggregation_results: Dict[str, Any],
-        priority_results: List[Any],
-    ) -> List[Any]:
-
-        story: List[Any] = []
-
-        story.append(
-            Paragraph(
-                "9. Scoring Conclusion",
-                self.styles["h1"],
-            )
-        )
-
-        dmi = aggregation_results.get(
-            "dmi"
-        )
-
-        score = _get(
-            dmi,
-            "score",
-            aggregation_results.get(
-                "dmi_score"
-            ),
-        )
-
-        level = _get(
-            dmi,
-            "level_name",
-            aggregation_results.get(
-                "dmi_level_name",
-                aggregation_results.get(
-                    "dmi_level",
-                    "—",
-                ),
-            ),
-        )
-
-        critical = sum(
-            1
-            for item in priority_results
-            if _normalize_priority(
-                _get(
-                    item,
-                    "priority_category",
-                    _get(
-                        item,
-                        "priority",
-                        "",
-                    ),
-                )
-            )
-            == "Critical"
-        )
-
-        high = sum(
-            1
-            for item in priority_results
-            if _normalize_priority(
-                _get(
-                    item,
-                    "priority_category",
-                    _get(
-                        item,
-                        "priority",
-                        "",
-                    ),
-                )
-            )
-            == "High"
-        )
-
-        story.append(
-            Paragraph(
-                (
-                    "The assessed site achieved a Digital "
-                    "Maturity Index of "
-                    f"<b>{_escape_xml(_format_number(score, self.decimal_precision))}</b> "
-                    f"with a maturity level of "
-                    f"<b>{_escape_xml(level)}</b>."
-                ),
-                self.styles["body"],
-            )
-        )
-
-        story.append(
-            Paragraph(
-                (
-                    f"The decision analysis identifies "
-                    f"<b>{critical}</b> critical-priority "
-                    f"opportunities and <b>{high}</b> "
-                    "high-priority opportunities."
-                ),
-                self.styles["body"],
-            )
-        )
+        story.append(priority_table)
 
         story.append(
             Spacer(
                 1,
-                5 * mm,
+                3 * mm,
             )
         )
 
         story.append(
             Paragraph(
-                "Important:",
-                self.styles["h2"],
-            )
-        )
-
-        story.append(
-            Paragraph(
-                "This PDF presents the scoring and prioritization "
-                "results of the assessment. Detailed recommendations, "
-                "implementation explanations, action descriptions and "
-                "supporting analysis are intentionally reserved for "
-                "the detailed Report document.",
-                self.styles["body"],
-            )
-        )
-
-        return story
-
-    # ========================================================================
-    # METADATA
-    # ========================================================================
-
-    def _build_metadata(
-        self,
-        aggregation_results: Dict[str, Any],
-        assessment_id: Optional[str],
-    ) -> List[Any]:
-
-        story: List[Any] = []
-
-        story.append(
-            Paragraph(
-                "10. Assessment Metadata",
-                self.styles["h1"],
-            )
-        )
-
-        metadata = aggregation_results.get(
-            "metadata",
-            {},
-        )
-
-        if not isinstance(metadata, Mapping):
-            metadata = {}
-
-        rows = [
-
-            [
-                Paragraph(
-                    "Field",
-                    self.styles["table_header"],
+                (
+                    "This document presents only the numerical "
+                    "assessment results. Detailed recommendations, "
+                    "roadmap actions and implementation guidance "
+                    "are excluded from this score-focused PDF."
                 ),
-
-                Paragraph(
-                    "Value",
-                    self.styles["table_header"],
-                ),
-            ]
-        ]
-
-        fields = [
-
-            (
-                "Assessment ID",
-                assessment_id
-                or metadata.get(
-                    "assessment_id",
-                    "—",
-                ),
-            ),
-
-            (
-                "Site ID",
-                metadata.get(
-                    "site_id",
-                    "—",
-                ),
-            ),
-
-            (
-                "Site Name",
-                metadata.get(
-                    "site_name",
-                    "—",
-                ),
-            ),
-
-            (
-                "Assessment Date",
-                metadata.get(
-                    "assessment_date",
-                    "—",
-                ),
-            ),
-
-            (
-                "Evaluator",
-                metadata.get(
-                    "evaluator",
-                    "—",
-                ),
-            ),
-
-            (
-                "Report Version",
-                metadata.get(
-                    "report_version",
-                    "1.0",
-                ),
-            ),
-
-            (
-                "Generated At",
-                self.generated_at.strftime(
-                    "%Y-%m-%d %H:%M"
-                ),
-            ),
-
-            (
-                "Total Indicators",
-                metadata.get(
-                    "total_indicators",
-                    0,
-                ),
-            ),
-
-            (
-                "Total Subdimensions",
-                metadata.get(
-                    "total_subdimensions",
-                    0,
-                ),
-            ),
-
-            (
-                "Total Dimensions",
-                metadata.get(
-                    "total_dimensions",
-                    0,
-                ),
-            ),
-
-            (
-                "Total Pillars",
-                metadata.get(
-                    "total_pillars",
-                    0,
-                ),
-            ),
-
-            (
-                "DMI Score",
-                metadata.get(
-                    "dmi_score",
-                    "—",
-                ),
-            ),
-
-            (
-                "DMI Level",
-                metadata.get(
-                    "dmi_level",
-                    "—",
-                ),
-            ),
-
-            (
-                "DMI Level Name",
-                metadata.get(
-                    "dmi_level_name",
-                    "—",
-                ),
-            ),
-        ]
-
-        for field, value in fields:
-
-            rows.append(
-                [
-
-                    Paragraph(
-                        _escape_xml(field),
-                        self.styles["table"],
-                    ),
-
-                    Paragraph(
-                        _escape_xml(value),
-                        self.styles["table"],
-                    ),
-                ]
-            )
-
-        table = Table(
-            rows,
-            colWidths=[
-                60 * mm,
-                100 * mm,
-            ],
-            repeatRows=1,
-        )
-
-        table.setStyle(
-            TableStyle(
-                [
-                    (
-                        "BACKGROUND",
-                        (0, 0),
-                        (-1, 0),
-                        JESA_GREEN,
-                    ),
-
-                    (
-                        "GRID",
-                        (0, 0),
-                        (-1, -1),
-                        0.4,
-                        GREY_200,
-                    ),
-
-                    (
-                        "ROWBACKGROUNDS",
-                        (0, 1),
-                        (-1, -1),
-                        [WHITE, GREY_100],
-                    ),
-
-                    (
-                        "VALIGN",
-                        (0, 0),
-                        (-1, -1),
-                        "MIDDLE",
-                    ),
-
-                    (
-                        "LEFTPADDING",
-                        (0, 0),
-                        (-1, -1),
-                        6,
-                    ),
-
-                    (
-                        "RIGHTPADDING",
-                        (0, 0),
-                        (-1, -1),
-                        6,
-                    ),
-
-                    (
-                        "TOPPADDING",
-                        (0, 0),
-                        (-1, -1),
-                        5,
-                    ),
-
-                    (
-                        "BOTTOMPADDING",
-                        (0, 0),
-                        (-1, -1),
-                        5,
-                    ),
-                ]
-            )
-        )
-
-        story.append(table)
-
-        story.append(
-            Spacer(
-                1,
-                10 * mm,
-            )
-        )
-
-        story.append(
-            Paragraph(
-                "End of Scoring Assessment",
-                self.styles["subtitle"],
+                self.styles["small"],
             )
         )
 
@@ -3613,6 +1937,10 @@ def export_full_analysis(
 ) -> Path:
     """
     Export the complete score-focused assessment to PDF.
+
+    The function keeps the same API for compatibility with the
+    existing export service, while the PDF itself only contains
+    score-focused information.
     """
 
     exporter = PDFExporter()

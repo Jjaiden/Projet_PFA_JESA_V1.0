@@ -39,18 +39,19 @@ from typing import Any, Dict, List, Mapping, Optional
 import pandas as pd
 
 from openpyxl import load_workbook
-from openpyxl.formatting.rule import CellIsRule, ColorScaleRule
+from openpyxl.formatting.rule import ColorScaleRule
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.worksheet.table import Table, TableStyleInfo
-from openpyxl.worksheet.dimensions import ColumnDimension
 from openpyxl.drawing.image import Image as XLImage
 
 from config import settings
+
 from engines.assessment.scoring import ScoreResult
 from engines.decision.gap import GapResult
 from engines.decision.tpi import TPIResult
 from engines.decision.priority import PriorityResult
 from engines.decision.roadmap import RoadmapPhase
+
 from utils.file_manager import ensure_directory, build_output_path
 
 
@@ -69,6 +70,7 @@ ENSAM_BLUE = "0057A8"
 
 WHITE = "FFFFFF"
 BLACK = "000000"
+
 GREY_100 = "F7F9F8"
 GREY_200 = "E9EEEC"
 GREY_400 = "B8C4BF"
@@ -92,6 +94,14 @@ SUCCESS_GREEN = "2E7D32"
 class ExcelExporter:
     """
     Generate a professional Industrial Digital Maturity Assessment workbook.
+
+    Important design rule
+    ---------------------
+    Only real tabular data ranges are converted to Excel Tables.
+
+    The Executive Summary contains merged presentation cells, therefore
+    its title/metadata area is intentionally NOT converted to a Table.
+    Only the KPI block is converted to a Table.
     """
 
     SHEETS = [
@@ -107,6 +117,20 @@ class ExcelExporter:
         "10_Recommendations",
         "11_Assessment_Metadata",
     ]
+
+    # Sheets containing genuine tabular datasets.
+    TABLE_SHEETS = {
+        "02_DMI_Overview",
+        "03_Pillar_Assessment",
+        "04_Dimension_Assessment",
+        "05_Indicator_Details",
+        "06_Gap_Analysis",
+        "07_TPI_Prioritization",
+        "08_Priority_Matrix",
+        "09_Transformation_Roadmap",
+        "10_Recommendations",
+        "11_Assessment_Metadata",
+    }
 
     PRIORITY_COLORS = {
         "Critical": CRITICAL_RED,
@@ -160,7 +184,7 @@ class ExcelExporter:
         assessment_id: Optional[str] = None,
     ) -> Path:
         """
-        Generate the complete Industrial Digital Maturity Assessment Workbook.
+        Generate the complete Industrial Digital Maturity Assessment workbook.
         """
 
         if output_path is None:
@@ -181,6 +205,10 @@ class ExcelExporter:
         output_path = Path(output_path)
 
         ensure_directory(output_path.parent)
+
+        # --------------------------------------------------------------------
+        # CREATE WORKBOOK WITH PANDAS
+        # --------------------------------------------------------------------
 
         with pd.ExcelWriter(
             output_path,
@@ -293,9 +321,9 @@ class ExcelExporter:
                 assessment_id,
             )
 
-        # ====================================================================
+        # --------------------------------------------------------------------
         # POST-PROCESS WORKBOOK WITH OPENPYXL
-        # ====================================================================
+        # --------------------------------------------------------------------
 
         self._format_workbook(
             output_path,
@@ -445,6 +473,7 @@ class ExcelExporter:
             "Executive Assessment Workbook"
         )
 
+        # Metadata
         ws["A4"] = "Assessment ID"
         ws["B4"] = assessment_id or metadata.get(
             "assessment_id",
@@ -468,9 +497,16 @@ class ExcelExporter:
             "%Y-%m-%d %H:%M"
         )
 
-        ws["A8"] = "Executive KPI"
-        ws["B8"] = "Value"
-        ws["C8"] = "Unit"
+        # KPI header
+        ws["A9"] = "Executive KPI"
+        ws["B9"] = "Value"
+        ws["C9"] = "Unit"
+
+        # IMPORTANT:
+        # Pandas writes the dataframe starting at row 9 in Excel
+        # because startrow=8 is zero-based.
+        #
+        # Therefore the KPI header is A9:C9.
 
         # Logo area
         self._insert_logos(ws)
@@ -751,7 +787,9 @@ class ExcelExporter:
         sorted_results = sorted(
             tpi_results,
             key=lambda x: (
-                -float(x.tpi_score),
+                -float(x.tpi_score)
+                if x.tpi_score is not None
+                else 0,
                 self.PRIORITY_RANK.get(
                     self._normalize_priority(
                         x.priority_category
@@ -774,9 +812,9 @@ class ExcelExporter:
                     "Dimension Name": tpi.dimension_name,
                     "TPI Score": (
                         float(tpi.tpi_score) * 100
-                            if tpi.tpi_score is not None
-                                else None
-                                ),
+                        if tpi.tpi_score is not None
+                        else None
+                    ),
                     "Priority": priority,
                     "Gap": tpi.gap,
                     "Business Impact (%)": tpi.business_impact,
@@ -840,7 +878,11 @@ class ExcelExporter:
                     if x.tpi_score is not None
                     else -1
                 ),
-                -x.gap,
+                -(
+                    x.gap
+                    if x.gap is not None
+                    else 0
+                ),
             ),
         )
 
@@ -947,12 +989,10 @@ class ExcelExporter:
                         "Effort": item.effort,
                         "Expected Impact": item.expected_impact,
                         "Prerequisites": "; ".join(
-                            item.prerequisites
-                            or []
+                            item.prerequisites or []
                         ),
                         "Dependencies": "; ".join(
-                            item.dependencies
-                            or []
+                            item.dependencies or []
                         ),
                     }
                 )
@@ -1267,9 +1307,9 @@ class ExcelExporter:
 
         wb = load_workbook(output_path)
 
-        # --------------------------------------------------------------
-        # Guarantee exact sheet order.
-        # --------------------------------------------------------------
+        # --------------------------------------------------------------------
+        # Guarantee exact sheet order
+        # --------------------------------------------------------------------
 
         for sheet_name in self.SHEETS:
 
@@ -1281,21 +1321,48 @@ class ExcelExporter:
             for sheet_name in self.SHEETS
         ]
 
+        # --------------------------------------------------------------------
+        # Base formatting
+        # --------------------------------------------------------------------
+
         for ws in wb.worksheets:
 
             self._format_sheet(ws)
 
-        # --------------------------------------------------------------
-        # Specific formatting
-        # --------------------------------------------------------------
+        # --------------------------------------------------------------------
+        # Executive Summary
+        # --------------------------------------------------------------------
 
         self._format_executive_summary(
             wb["01_Executive_Summary"]
         )
 
+        # --------------------------------------------------------------------
+        # KPI table
+        # --------------------------------------------------------------------
+
+        self._add_table(
+            wb["01_Executive_Summary"],
+            table_name="ExecutiveKPITable",
+            start_row=9,
+            end_row=wb[
+                "01_Executive_Summary"
+            ].max_row,
+            start_col=1,
+            end_col=3,
+        )
+
+        # --------------------------------------------------------------------
+        # DMI
+        # --------------------------------------------------------------------
+
         self._format_dmi(
             wb["02_DMI_Overview"]
         )
+
+        # --------------------------------------------------------------------
+        # Priority sheets
+        # --------------------------------------------------------------------
 
         self._format_priority_sheet(
             wb["07_TPI_Prioritization"]
@@ -1305,17 +1372,33 @@ class ExcelExporter:
             wb["08_Priority_Matrix"]
         )
 
+        # --------------------------------------------------------------------
+        # Roadmap
+        # --------------------------------------------------------------------
+
         self._format_roadmap(
             wb["09_Transformation_Roadmap"]
         )
+
+        # --------------------------------------------------------------------
+        # Recommendations
+        # --------------------------------------------------------------------
 
         self._format_recommendations(
             wb["10_Recommendations"]
         )
 
+        # --------------------------------------------------------------------
+        # Metadata
+        # --------------------------------------------------------------------
+
         self._format_metadata(
             wb["11_Assessment_Metadata"]
         )
+
+        # --------------------------------------------------------------------
+        # Final save
+        # --------------------------------------------------------------------
 
         wb.save(output_path)
 
@@ -1323,38 +1406,82 @@ class ExcelExporter:
     # BASE SHEET FORMAT
     # ========================================================================
 
-    def _format_sheet(self, ws) -> None:
+    def _format_sheet(
+        self,
+        ws,
+    ) -> None:
 
         ws.sheet_view.showGridLines = False
-
-        ws.freeze_panes = "A2"
 
         max_row = ws.max_row
         max_col = ws.max_column
 
-        if max_row >= 1:
+        # --------------------------------------------------------------------
+        # Header formatting
+        # --------------------------------------------------------------------
+
+        if max_row >= 1 and max_col >= 1:
 
             self._style_header_row(
                 ws,
                 1,
             )
 
-            ws.auto_filter.ref = (
-                f"A1:{self._column_letter(max_col)}{max_row}"
-            )
+        # --------------------------------------------------------------------
+        # IMPORTANT:
+        #
+        # We DO NOT create a worksheet-level AutoFilter.
+        #
+        # Excel Tables already provide their own filters.
+        #
+        # More importantly, the Executive Summary contains merged cells,
+        # so a global table/filter starting at A1 would conflict with
+        # the presentation layout and may cause Excel repair warnings.
+        # --------------------------------------------------------------------
 
-            self._add_table(
-                ws,
-                table_name=self._safe_table_name(
-                    ws.title
-                ),
-            )
+        if (
+            ws.title in self.TABLE_SHEETS
+            and max_row >= 2
+            and max_col >= 1
+        ):
 
+            # Metadata is a key/value sheet and does not need a structured
+            # Excel Table. This also keeps the workbook simpler.
+            if ws.title != "11_Assessment_Metadata":
+
+                self._add_table(
+                    ws,
+                    table_name=self._safe_table_name(
+                        ws.title
+                    ),
+                )
+
+        # --------------------------------------------------------------------
+        # Freeze panes
+        # --------------------------------------------------------------------
+
+        if ws.title == "01_Executive_Summary":
+
+            ws.freeze_panes = "A9"
+
+        else:
+
+            ws.freeze_panes = "A2"
+
+        # --------------------------------------------------------------------
         # Column widths
+        # --------------------------------------------------------------------
+
         for column_cells in ws.columns:
 
+            if not column_cells:
+                continue
+
             max_length = 0
-            column_letter = column_cells[0].column_letter
+
+            column_letter = (
+                column_cells[0].column_letter
+            )
 
             for cell in column_cells:
 
@@ -1372,7 +1499,10 @@ class ExcelExporter:
                 55,
             )
 
+        # --------------------------------------------------------------------
         # Wrap long textual fields
+        # --------------------------------------------------------------------
+
         for row in ws.iter_rows():
 
             for cell in row:
@@ -1382,10 +1512,11 @@ class ExcelExporter:
                     wrap_text=True,
                 )
 
+        # --------------------------------------------------------------------
         # Page setup
-        ws.page_setup.orientation = (
-            "landscape"
-        )
+        # --------------------------------------------------------------------
+
+        ws.page_setup.orientation = "landscape"
 
         ws.page_setup.paperSize = (
             ws.PAPERSIZE_A4
@@ -1426,13 +1557,29 @@ class ExcelExporter:
 
         ws.freeze_panes = "A9"
 
-        ws.merge_cells(
-            "A1:H1"
-        )
+        # --------------------------------------------------------------------
+        # Merge ONLY presentation cells.
+        #
+        # These merged cells are intentionally outside the KPI table.
+        # --------------------------------------------------------------------
 
-        ws.merge_cells(
-            "A2:H2"
-        )
+        if "A1:H1" not in [
+            str(rng)
+            for rng in ws.merged_cells.ranges
+        ]:
+
+            ws.merge_cells("A1:H1")
+
+        if "A2:H2" not in [
+            str(rng)
+            for rng in ws.merged_cells.ranges
+        ]:
+
+            ws.merge_cells("A2:H2")
+
+        # --------------------------------------------------------------------
+        # Main title
+        # --------------------------------------------------------------------
 
         ws["A1"].font = Font(
             size=20,
@@ -1450,16 +1597,33 @@ class ExcelExporter:
             vertical="center",
         )
 
+        # --------------------------------------------------------------------
+        # Subtitle
+        # --------------------------------------------------------------------
+
         ws["A2"].font = Font(
             size=11,
             italic=True,
             color=GREY_600,
         )
 
+        ws["A2"].alignment = Alignment(
+            horizontal="left",
+            vertical="center",
+        )
+
+        # --------------------------------------------------------------------
+        # Row heights
+        # --------------------------------------------------------------------
+
         ws.row_dimensions[1].height = 34
         ws.row_dimensions[2].height = 22
+        ws.row_dimensions[3].height = 55
 
+        # --------------------------------------------------------------------
         # Metadata blocks
+        # --------------------------------------------------------------------
+
         for cell in (
             "A4",
             "D4",
@@ -1479,11 +1643,21 @@ class ExcelExporter:
                 fgColor=JESA_LIGHT,
             )
 
+            ws[cell].alignment = Alignment(
+                vertical="center",
+                wrap_text=True,
+            )
+
+        # --------------------------------------------------------------------
         # KPI header
+        #
+        # The dataframe starts at Excel row 9.
+        # --------------------------------------------------------------------
+
         for cell in (
-            "A8",
-            "B8",
-            "C8",
+            "A9",
+            "B9",
+            "C9",
         ):
 
             ws[cell].font = Font(
@@ -1496,9 +1670,18 @@ class ExcelExporter:
                 fgColor=JESA_GREEN,
             )
 
+            ws[cell].alignment = Alignment(
+                horizontal="center",
+                vertical="center",
+                wrap_text=True,
+            )
+
+        # --------------------------------------------------------------------
         # KPI cards
+        # --------------------------------------------------------------------
+
         for row in range(
-            9,
+            10,
             ws.max_row + 1,
         ):
 
@@ -1547,10 +1730,10 @@ class ExcelExporter:
                 fgColor=JESA_LIGHT,
             )
 
-        # Logo row height
-        ws.row_dimensions[3].height = 55
-
+        # --------------------------------------------------------------------
         # Executive summary print area
+        # --------------------------------------------------------------------
+
         ws.print_area = (
             f"A1:H{max(ws.max_row, 18)}"
         )
@@ -1576,7 +1759,8 @@ class ExcelExporter:
             if score_column:
 
                 ws.conditional_formatting.add(
-                    f"{score_column}2:{score_column}{ws.max_row}",
+                    f"{score_column}2:"
+                    f"{score_column}{ws.max_row}",
                     ColorScaleRule(
                         start_type="min",
                         start_color=CRITICAL_RED,
@@ -1635,8 +1819,7 @@ class ExcelExporter:
                     bold=True,
                     color=(
                         WHITE
-                        if priority
-                        != "Medium"
+                        if priority != "Medium"
                         else BLACK
                     ),
                 )
@@ -1654,7 +1837,8 @@ class ExcelExporter:
         if tpi_col:
 
             ws.conditional_formatting.add(
-                f"{tpi_col}2:{tpi_col}{ws.max_row}",
+                f"{tpi_col}2:"
+                f"{tpi_col}{ws.max_row}",
                 ColorScaleRule(
                     start_type="min",
                     start_color=GREY_200,
@@ -1715,10 +1899,14 @@ class ExcelExporter:
                         bold=True,
                         color=(
                             WHITE
-                            if priority
-                            != "Medium"
+                            if priority != "Medium"
                             else BLACK
                         ),
+                    )
+
+                    cell.alignment = Alignment(
+                        horizontal="center",
+                        vertical="center",
                     )
 
         if phase_col:
@@ -1763,9 +1951,7 @@ class ExcelExporter:
         ws,
     ) -> None:
 
-        self._format_priority_sheet(
-            ws
-        )
+        self._format_priority_sheet(ws)
 
         for col_name in (
             "Title",
@@ -1838,11 +2024,9 @@ class ExcelExporter:
             / "logo",
         )
 
-        logo_dir = Path(
-            logo_dir
-        )
+        logo_dir = Path(logo_dir)
 
-        # JESA logo
+        # JESA logo candidates
         jesa_candidates = [
             "jesa_logo.png",
             "JESA_logo.png",
@@ -1850,7 +2034,7 @@ class ExcelExporter:
             "JESA.png",
         ]
 
-        # ENSAM logo
+        # ENSAM logo candidates
         ensam_candidates = [
             "ensam_logo.png",
             "ENSAM_logo.png",
@@ -1868,6 +2052,10 @@ class ExcelExporter:
             ensam_candidates,
         )
 
+        # --------------------------------------------------------------------
+        # JESA
+        # --------------------------------------------------------------------
+
         if jesa_path:
 
             try:
@@ -1876,15 +2064,23 @@ class ExcelExporter:
                     str(jesa_path)
                 )
 
-                img.height = 55
+                # Preserve original aspect ratio
+                original_width = img.width
+                original_height = img.height
 
-                img.width = int(
-                    img.width
-                    * (
-                        55
-                        / img.height
+                target_height = 55
+
+                if original_height:
+
+                    ratio = (
+                        target_height
+                        / original_height
                     )
-                )
+
+                    img.height = target_height
+                    img.width = int(
+                        original_width * ratio
+                    )
 
                 ws.add_image(
                     img,
@@ -1898,6 +2094,10 @@ class ExcelExporter:
                     exc,
                 )
 
+        # --------------------------------------------------------------------
+        # ENSAM
+        # --------------------------------------------------------------------
+
         if ensam_path:
 
             try:
@@ -1906,15 +2106,23 @@ class ExcelExporter:
                     str(ensam_path)
                 )
 
-                img.height = 55
+                # Preserve original aspect ratio
+                original_width = img.width
+                original_height = img.height
 
-                img.width = int(
-                    img.width
-                    * (
-                        55
-                        / img.height
+                target_height = 55
+
+                if original_height:
+
+                    ratio = (
+                        target_height
+                        / original_height
                     )
-                )
+
+                    img.height = target_height
+                    img.width = int(
+                        original_width * ratio
+                    )
 
                 ws.add_image(
                     img,
@@ -1944,7 +2152,7 @@ class ExcelExporter:
             if path.exists():
                 return path
 
-        # Fallback: case-insensitive search
+        # Case-insensitive fallback
         candidate_names = {
             name.lower()
             for name in candidates
@@ -1957,6 +2165,7 @@ class ExcelExporter:
                 and path.name.lower()
                 in candidate_names
             ):
+
                 return path
 
         return None
@@ -1969,19 +2178,84 @@ class ExcelExporter:
     def _add_table(
         ws,
         table_name: str,
+        start_row: int = 1,
+        end_row: Optional[int] = None,
+        start_col: int = 1,
+        end_col: Optional[int] = None,
     ) -> None:
+        """
+        Add a structured Excel Table to a genuine tabular range.
 
-        if ws.max_row < 2:
+        IMPORTANT:
+        - Does not create worksheet-level AutoFilter.
+        - Does not overlap merged cells.
+        - Requires at least one header row and one data row.
+        """
+
+        if end_row is None:
+            end_row = ws.max_row
+
+        if end_col is None:
+            end_col = ws.max_column
+
+        # Need header + at least one data row.
+        if end_row <= start_row:
             return
 
-        if ws.max_column < 1:
+        if end_col < start_col:
             return
+
+        start_letter = (
+            ExcelExporter._column_letter(
+                start_col
+            )
+        )
+
+        end_letter = (
+            ExcelExporter._column_letter(
+                end_col
+            )
+        )
 
         ref = (
-            f"A1:"
-            f"{ExcelExporter._column_letter(ws.max_column)}"
-            f"{ws.max_row}"
+            f"{start_letter}{start_row}:"
+            f"{end_letter}{end_row}"
         )
+
+        # ------------------------------------------------------------
+        # Prevent duplicate table names / tables.
+        # ------------------------------------------------------------
+
+        existing_table_names = {
+            table.name
+            for table in ws.parent.worksheets
+            for table in table.tables.values()
+        }
+
+        if table_name in existing_table_names:
+            return
+
+        # ------------------------------------------------------------
+        # Make sure the range does not intersect merged cells.
+        # ------------------------------------------------------------
+
+        for merged_range in ws.merged_cells.ranges:
+
+            if (
+                merged_range.min_row <= end_row
+                and merged_range.max_row >= start_row
+                and merged_range.min_col <= end_col
+                and merged_range.max_col >= start_col
+            ):
+                logger.warning(
+                    "Skipping Excel table '%s' because "
+                    "its range %s intersects merged cells %s.",
+                    table_name,
+                    ref,
+                    merged_range,
+                )
+
+                return
 
         table = Table(
             displayName=table_name,
@@ -1998,9 +2272,7 @@ class ExcelExporter:
 
         table.tableStyleInfo = style
 
-        ws.add_table(
-            table
-        )
+        ws.add_table(table)
 
     # ========================================================================
     # HEADER
@@ -2117,6 +2389,8 @@ class ExcelExporter:
         if cleaned[0].isdigit():
             cleaned = f"T_{cleaned}"
 
+        # Excel table names must not contain spaces
+        # and must be reasonably short.
         return cleaned[:250]
 
     @staticmethod

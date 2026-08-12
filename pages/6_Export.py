@@ -19,6 +19,40 @@ import streamlit as st
 from components import render_footer, render_header
 from utils.assessment_service import export_selected_assessment
 
+# =============================================================================
+# EXPORT BUTTON STYLE
+# =============================================================================
+
+st.markdown(
+    """
+    <style>
+    /* Main export buttons */
+    div.stButton > button,
+    div[data-testid="stDownloadButton"] > button {
+        background-color: #007A4D !important;
+        color: white !important;
+        border: 1px solid #007A4D !important;
+        border-radius: 8px !important;
+        font-weight: 600 !important;
+    }
+
+    div.stButton > button:hover,
+    div[data-testid="stDownloadButton"] > button:hover {
+        background-color: #00643F !important;
+        color: white !important;
+        border-color: #00643F !important;
+    }
+
+    div.stButton > button:focus,
+    div[data-testid="stDownloadButton"] > button:focus {
+        color: white !important;
+        border-color: #007A4D !important;
+        box-shadow: 0 0 0 2px rgba(0, 122, 77, 0.20) !important;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
 
 # =============================================================================
 # HEADER
