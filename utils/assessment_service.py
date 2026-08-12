@@ -253,127 +253,544 @@ def build_decision_rows(backend_results: Mapping[str, Any]) -> list[dict[str, An
         )
     return rows
 
-
-def build_roadmap_view_data(backend_results: Mapping[str, Any]) -> dict[str, Any]:
-    """Adapt RoadmapEngine phases to the page contract.
-    
-    CORRECTION : tri global par TPI décroissant, indépendamment de la phase.
+def _priority_from_tpi(
+    tpi_score: float,
+) -> str:
     """
-    aggregation = backend_results.get("aggregation", {})
+    Derive the displayed priority strictly from the TPI score.
+
+    Internal TPI:
+        0.80 - 1.00 -> Critical
+        0.60 - 0.7999 -> High
+        0.40 - 0.5999 -> Medium
+        0.20 - 0.3999 -> Low
+        0.00 - 0.1999 -> Very Low
+
+    The UI displays TPI as a percentage.
+    """
+
+    try:
+        score = float(tpi_score)
+    except (
+        TypeError,
+        ValueError,
+    ) as exc:
+        raise ValueError(
+            f"Invalid TPI score: {tpi_score!r}"
+        ) from exc
+
+    if not math.isfinite(score):
+        raise ValueError(
+            f"TPI score must be finite: {score!r}"
+        )
+
+    # Accept both:
+    # 0.703
+    # and
+    # 70.3
+    if score > 1.0:
+
+        if score <= 100.0:
+            score /= 100.0
+
+        else:
+            raise ValueError(
+                f"TPI score outside valid range: {score}"
+            )
+
+    score = max(
+        0.0,
+        min(1.0, score),
+    )
+
+    if score >= 0.80:
+        return "Critical"
+
+    if score >= 0.60:
+        return "High"
+
+    if score >= 0.40:
+        return "Medium"
+
+    if score >= 0.20:
+        return "Low"
+
+    return "Very Low"
+
+def build_roadmap_view_data(
+    backend_results: Mapping[str, Any],
+) -> dict[str, Any]:
+    """
+    Build the Roadmap page data.
+
+    IMPORTANT:
+    - TPI is the single source of truth for ranking.
+    - Priority category is derived directly from TPI.
+    - Actions are globally sorted by TPI descending.
+    - TPI is displayed as a percentage.
+    """
+
+    aggregation = (
+        backend_results.get("aggregation")
+        or {}
+    )
+
     dmi = aggregation.get("dmi")
-    actions = []
-    
-    for phase in backend_results.get("roadmap", []) or []:
-        for item in phase.items:
+
+    actions: list[dict[str, Any]] = []
+
+    roadmap = (
+        backend_results.get("roadmap")
+        or []
+    )
+
+    for phase in roadmap:
+
+        phase_items = (
+            getattr(
+                phase,
+                "items",
+                None,
+            )
+            or []
+        )
+
+        for item in phase_items:
+
+            raw_tpi = getattr(
+                item,
+                "tpi_score",
+                0,
+            )
+
+            try:
+                tpi_internal = float(
+                    raw_tpi or 0
+                )
+            except (
+                TypeError,
+                ValueError,
+            ):
+                tpi_internal = 0.0
+
+            # Defensive normalization:
+            # internal TPI must be [0,1]
+            if tpi_internal > 1.0:
+
+                if tpi_internal <= 100.0:
+                    tpi_internal /= 100.0
+
+                else:
+                    tpi_internal = 1.0
+
+            tpi_internal = max(
+                0.0,
+                min(
+                    1.0,
+                    tpi_internal,
+                ),
+            )
+
+            tpi_percent = round(
+                tpi_internal * 100,
+                1,
+            )
+
+            priority = _priority_from_tpi(
+                tpi_internal
+            )
+
+            detailed_actions = (
+                getattr(
+                    item,
+                    "detailed_actions",
+                    None,
+                )
+                or []
+            )
+
             actions.append(
                 {
-                    "rank": 0,  # sera recalculé après le tri
-                    "title": item.title,
-                    "dimension": item.dimension_id,
-                    "tpi": round(float(item.tpi_score or 0) * 100, 1),
-                    "priority_level": _priority_label(item.priority),
-                    "phase": f"{phase.phase_name} ({phase.horizon})",
-                    "description": item.expected_impact,
-                    "objective": item.title,
-                    "expected_benefit": item.expected_impact,
-                    "implementation_note": "; ".join(item.detailed_actions[:3]),
+                    "rank": 0,
+
+                    "title": getattr(
+                        item,
+                        "title",
+                        "",
+                    ),
+
+                    "dimension": getattr(
+                        item,
+                        "dimension_id",
+                        "",
+                    ),
+
+                    "tpi": tpi_percent,
+
+                    "priority_level": priority,
+
+                    "phase": (
+                        f"{getattr(phase, 'phase_name', '')}"
+                        f" ({getattr(phase, 'horizon', '')})"
+                    ),
+
+                    "description": getattr(
+                        item,
+                        "expected_impact",
+                        "",
+                    ),
+
+                    "objective": getattr(
+                        item,
+                        "title",
+                        "",
+                    ),
+
+                    "expected_benefit": getattr(
+                        item,
+                        "expected_impact",
+                        "",
+                    ),
+
+                    "implementation_note": (
+                        "; ".join(
+                            detailed_actions[:3]
+                        )
+                    ),
                 }
             )
-    
-    # ═══════════════════════════════════════════════════════════════
-    # CORRECTION CRITIQUE : tri GLOBAL par TPI décroissant
-    # ═══════════════════════════════════════════════════════════════
-    actions.sort(key=lambda a: a["tpi"], reverse=True)
-    
-    # Recalculer les rangs après le tri
-    for i, action in enumerate(actions, start=1):
-        action["rank"] = i
+
+    # ==================================================================
+    # GLOBAL TPI SORT
+    # ==================================================================
+
+    actions.sort(
+        key=lambda action: float(
+            action["tpi"]
+        ),
+        reverse=True,
+    )
+
+    # ==================================================================
+    # GLOBAL RANK
+    # ==================================================================
+
+    for rank, action in enumerate(
+        actions,
+        start=1,
+    ):
+        action["rank"] = rank
+
+    # ==================================================================
+    # SUMMARY
+    # ==================================================================
 
     return {
         "summary": {
-            "dmi": float(dmi.score) if dmi else 0.0,
-            "maturity_level": dmi.level_name if dmi else "N/A",
-        },
-        "prioritized_actions": actions,
-        "strategic_summary": _strategic_summary(actions),
-    }
+            "dmi": (
+                float(dmi.score)
+                if dmi
+                else 0.0
+            ),
 
+            "maturity_level": (
+                dmi.level_name
+                if dmi
+                else "N/A"
+            ),
+        },
+
+        "prioritized_actions": actions,
+
+        "strategic_summary": _strategic_summary(
+            actions
+        ),
+    }
 def export_selected_assessment(
     backend_results: Mapping[str, Any],
     formats: list[str],
 ) -> dict[str, Path]:
     """Generate selected report formats for the current assessment."""
 
-    assessment_id = str(backend_results.get("assessment_id") or "assessment")
-    output_dir = settings.OUTPUT_DIR / assessment_id
-    output_dir.mkdir(parents=True, exist_ok=True)
+    if not isinstance(backend_results, Mapping):
+        raise AssessmentProcessingError(
+            "Invalid backend results: expected a mapping."
+        )
+
+    assessment_id = str(
+        backend_results.get("assessment_id")
+        or "assessment"
+    )
+
+    output_dir = (
+        settings.OUTPUT_DIR
+        / assessment_id
+    )
+
+    output_dir.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
+
     outputs: dict[str, Path] = {}
 
+    # ------------------------------------------------------------------
+    # NORMALIZE BACKEND DATA
+    # ------------------------------------------------------------------
+
+    aggregation_results = (
+        backend_results.get("aggregation")
+        or {}
+    )
+
+    gap_results = (
+        backend_results.get("gaps")
+        or []
+    )
+
+    tpi_results = (
+        backend_results.get("tpi")
+        or []
+    )
+
+    priority_results = (
+        backend_results.get("priorities")
+        or []
+    )
+
+    roadmap = (
+        backend_results.get("roadmap")
+        or []
+    )
+
+    # ------------------------------------------------------------------
+    # EXCEL
+    # ------------------------------------------------------------------
+
     if "excel" in formats:
+
         from exports.excel import ExcelExporter
 
-        outputs["excel"] = ExcelExporter().export_assessment_results(
-            aggregation_results=backend_results.get("aggregation", {}),
-            gap_results=backend_results.get("gaps", []),
-            tpi_results=backend_results.get("tpi", []),
-            priority_results=backend_results.get("priorities", []),
-            roadmap=backend_results.get("roadmap", []),
-            output_path=output_dir / f"assessment_results_{assessment_id}.xlsx",
-            assessment_id=assessment_id,
+        outputs["excel"] = (
+            ExcelExporter()
+            .export_assessment_results(
+                aggregation_results=aggregation_results,
+                gap_results=gap_results,
+                tpi_results=tpi_results,
+                priority_results=priority_results,
+                roadmap=roadmap,
+                output_path=(
+                    output_dir
+                    / f"assessment_results_{assessment_id}.xlsx"
+                ),
+                assessment_id=assessment_id,
+            )
         )
+
+    # ------------------------------------------------------------------
+    # JSON
+    # ------------------------------------------------------------------
 
     if "json" in formats:
-        json_path = output_dir / f"assessment_report_{assessment_id}.json"
+
+        json_path = (
+            output_dir
+            / f"assessment_report_{assessment_id}.json"
+        )
+
+        serialized = serialize_backend_results(
+            backend_results
+        )
+
         json_path.write_text(
-            json.dumps(serialize_backend_results(backend_results), indent=2, ensure_ascii=False),
+            json.dumps(
+                serialized,
+                indent=2,
+                ensure_ascii=False,
+            ),
             encoding="utf-8",
         )
+
         outputs["json"] = json_path
 
+    # ------------------------------------------------------------------
+    # PDF
+    # ------------------------------------------------------------------
+
     if "pdf" in formats:
+
         try:
             from exports.pdf import PDFExporter
+
         except ImportError as exc:
+
             raise AssessmentProcessingError(
-            "PDF export could not be loaded. "
-            "Check exports/pdf.py and ensure reportlab is installed."
-        ) from exc
+                "PDF export could not be loaded. "
+                "Check exports/pdf.py and ensure "
+                "reportlab is installed."
+            ) from exc
 
-    outputs["pdf"] = PDFExporter().export_assessment_results(
-        aggregation_results=backend_results.get("aggregation", {}),
-        gap_results=backend_results.get("gaps", []),
-        tpi_results=backend_results.get("tpi", []),
-        priority_results=backend_results.get("priorities", []),
-        roadmap=backend_results.get("roadmap", []),
-        output_path=output_dir / f"assessment_report_{assessment_id}.pdf",
-        assessment_id=assessment_id,
+        outputs["pdf"] = (
+            PDFExporter()
+            .export_assessment_results(
+                aggregation_results=aggregation_results,
+                gap_results=gap_results,
+                tpi_results=tpi_results,
+                priority_results=priority_results,
+                roadmap=roadmap,
+                output_path=(
+                    output_dir
+                    / f"assessment_report_{assessment_id}.pdf"
+                ),
+                assessment_id=assessment_id,
+            )
+        )
+
+    return outputs
+def serialize_backend_results(
+    results: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Convert backend result objects to JSON-safe data."""
+
+    if not isinstance(results, Mapping):
+        raise AssessmentProcessingError(
+            "Backend results must be a mapping."
+        )
+
+    aggregation = (
+        results.get("aggregation")
+        or {}
     )
-def serialize_backend_results(results: Mapping[str, Any]) -> dict[str, Any]:
-    """Convert backend result objects to SQLite-safe JSON data."""
 
-    aggregation = results.get("aggregation", {})
+    if not isinstance(
+        aggregation,
+        Mapping,
+    ):
+        aggregation = {}
+
+    recommendations_raw = (
+        results.get("recommendations")
+        or {}
+    )
+
+    if not isinstance(
+        recommendations_raw,
+        Mapping,
+    ):
+        recommendations_raw = {}
+
+    gaps = (
+        results.get("gaps")
+        or []
+    )
+
+    tpi_results = (
+        results.get("tpi")
+        or []
+    )
+
+    priorities = (
+        results.get("priorities")
+        or []
+    )
+
+    roadmap = (
+        results.get("roadmap")
+        or []
+    )
+
     return {
-        "assessment_id": results.get("assessment_id"),
-        "metadata": results.get("metadata", {}),
-        "aggregation": {
-            "indicators": _serialize_score_map(aggregation.get("indicators", {})),
-            "subdimensions": _serialize_score_map(aggregation.get("subdimensions", {})),
-            "dimensions": _serialize_score_map(aggregation.get("dimensions", {})),
-            "pillars": _serialize_score_map(aggregation.get("pillars", {})),
-            "dmi": _serialize_score(aggregation.get("dmi")),
-            "metadata": aggregation.get("metadata", {}),
-        },
-        "gaps": [gap.to_dict() for gap in results.get("gaps", [])],
-        "recommendations": {
-            dim_id: [rec.to_dict() for rec in recs]
-            for dim_id, recs in (results.get("recommendations") or {}).items()
-        },
-        "tpi": [item.to_dict() for item in results.get("tpi", [])],
-        "priorities": [item.to_dict() for item in results.get("priorities", [])],
-        "roadmap": [phase.to_dict() for phase in results.get("roadmap", [])],
-        "summary": results.get("summary", {}),
-    }
+        "assessment_id": results.get(
+            "assessment_id"
+        ),
 
+        "metadata": (
+            results.get("metadata")
+            or {}
+        ),
+
+        "aggregation": {
+            "indicators": _serialize_score_map(
+                aggregation.get(
+                    "indicators"
+                )
+                or {}
+            ),
+
+            "subdimensions": _serialize_score_map(
+                aggregation.get(
+                    "subdimensions"
+                )
+                or {}
+            ),
+
+            "dimensions": _serialize_score_map(
+                aggregation.get(
+                    "dimensions"
+                )
+                or {}
+            ),
+
+            "pillars": _serialize_score_map(
+                aggregation.get(
+                    "pillars"
+                )
+                or {}
+            ),
+
+            "dmi": _serialize_score(
+                aggregation.get(
+                    "dmi"
+                )
+            ),
+
+            "metadata": (
+                aggregation.get(
+                    "metadata"
+                )
+                or {}
+            ),
+        },
+
+        "gaps": [
+            gap.to_dict()
+            for gap in gaps
+            if hasattr(gap, "to_dict")
+        ],
+
+        "recommendations": {
+            str(dim_id): [
+                rec.to_dict()
+                for rec in (recs or [])
+                if hasattr(rec, "to_dict")
+            ]
+            for dim_id, recs
+            in recommendations_raw.items()
+        },
+
+        "tpi": [
+            item.to_dict()
+            for item in tpi_results
+            if hasattr(item, "to_dict")
+        ],
+
+        "priorities": [
+            item.to_dict()
+            for item in priorities
+            if hasattr(item, "to_dict")
+        ],
+
+        "roadmap": [
+            phase.to_dict()
+            for phase in roadmap
+            if hasattr(phase, "to_dict")
+        ],
+
+        "summary": (
+            results.get("summary")
+            or {}
+        ),
+    }
 
 def deserialize_backend_results(data: Mapping[str, Any]) -> dict[str, Any]:
     """Restore stored JSON data to backend dataclass objects."""
