@@ -332,25 +332,22 @@ def export_selected_assessment(
 
     if "pdf" in formats:
         try:
-            from exports.pdf import PDFReportGenerator
-        except ModuleNotFoundError as exc:
+            from exports.pdf import PDFExporter
+        except ImportError as exc:
             raise AssessmentProcessingError(
-                "PDF export requires reportlab. Install project requirements before generating PDF reports."
-            ) from exc
+            "PDF export could not be loaded. "
+            "Check exports/pdf.py and ensure reportlab is installed."
+        ) from exc
 
-        outputs["pdf"] = PDFReportGenerator().generate_report(
-            aggregation_results=backend_results.get("aggregation", {}),
-            gap_results=backend_results.get("gaps", []),
-            tpi_results=backend_results.get("tpi", []),
-            priority_results=backend_results.get("priorities", []),
-            roadmap=backend_results.get("roadmap", []),
-            output_path=output_dir / f"assessment_report_{assessment_id}.pdf",
-            assessment_id=assessment_id,
-        )
-
-    return outputs
-
-
+    outputs["pdf"] = PDFExporter().export_assessment_results(
+        aggregation_results=backend_results.get("aggregation", {}),
+        gap_results=backend_results.get("gaps", []),
+        tpi_results=backend_results.get("tpi", []),
+        priority_results=backend_results.get("priorities", []),
+        roadmap=backend_results.get("roadmap", []),
+        output_path=output_dir / f"assessment_report_{assessment_id}.pdf",
+        assessment_id=assessment_id,
+    )
 def serialize_backend_results(results: Mapping[str, Any]) -> dict[str, Any]:
     """Convert backend result objects to SQLite-safe JSON data."""
 

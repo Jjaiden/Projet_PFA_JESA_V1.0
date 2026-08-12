@@ -673,7 +673,6 @@ class TPIEngine:
                 for result in tpi_results[:3]
             ],
         }
-
     # ==========================================================================
     # VALIDATE DECISION INPUTS
     # ==========================================================================
@@ -1093,13 +1092,16 @@ class TPIEngine:
         score: float,
     ) -> str:
 
-        for threshold, label in self.priority_thresholds:
+     for minimum, maximum, category, _phase in self.priority_thresholds:
 
-            if score >= threshold:
-                return label
+        if minimum <= score < maximum:
+            return category
 
-        return "Très faible"
+    # Cas limite du score maximal
+        if math.isclose(score, 1.0):
+            return "Critique"
 
+     return "Très faible"
 
 # ==============================================================================
 # BACKWARD COMPATIBILITY
