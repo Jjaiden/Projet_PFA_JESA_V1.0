@@ -133,7 +133,102 @@ class PDFExporter:
         self.generated_at = datetime.now()
 
         self.styles = self._build_styles()
+def _build_styles(self):
+    styles = getSampleStyleSheet()
 
+    return {
+        "title": ParagraphStyle(
+            "ReportTitle",
+            parent=styles["Title"],
+            fontName="Helvetica-Bold",
+            fontSize=24,
+            leading=28,
+            textColor=JESA_DARK,
+            alignment=TA_CENTER,
+            spaceAfter=12,
+        ),
+
+        "subtitle": ParagraphStyle(
+            "ReportSubtitle",
+            parent=styles["Normal"],
+            fontName="Helvetica",
+            fontSize=11,
+            leading=15,
+            textColor=GREY_600,
+            alignment=TA_CENTER,
+            spaceAfter=10,
+        ),
+
+        "section": ParagraphStyle(
+            "SectionTitle",
+            parent=styles["Heading1"],
+            fontName="Helvetica-Bold",
+            fontSize=18,
+            leading=22,
+            textColor=JESA_DARK,
+            spaceBefore=8,
+            spaceAfter=12,
+        ),
+
+        "subsection": ParagraphStyle(
+            "SubsectionTitle",
+            parent=styles["Heading2"],
+            fontName="Helvetica-Bold",
+            fontSize=13,
+            leading=17,
+            textColor=JESA_GREEN,
+            spaceBefore=8,
+            spaceAfter=8,
+        ),
+
+        "body": ParagraphStyle(
+            "BodyTextCustom",
+            parent=styles["BodyText"],
+            fontName="Helvetica",
+            fontSize=9,
+            leading=13,
+            textColor=GREY_800,
+            spaceAfter=6,
+        ),
+
+        "small": ParagraphStyle(
+            "SmallText",
+            parent=styles["BodyText"],
+            fontName="Helvetica",
+            fontSize=7.5,
+            leading=10,
+            textColor=GREY_600,
+        ),
+
+        "table_header": ParagraphStyle(
+            "TableHeader",
+            parent=styles["BodyText"],
+            fontName="Helvetica-Bold",
+            fontSize=8,
+            leading=10,
+            textColor=WHITE,
+            alignment=TA_CENTER,
+        ),
+
+        "table_body": ParagraphStyle(
+            "TableBody",
+            parent=styles["BodyText"],
+            fontName="Helvetica",
+            fontSize=7.5,
+            leading=10,
+            textColor=GREY_800,
+        ),
+
+        "kpi": ParagraphStyle(
+            "KPI",
+            parent=styles["BodyText"],
+            fontName="Helvetica-Bold",
+            fontSize=20,
+            leading=24,
+            textColor=JESA_GREEN,
+            alignment=TA_CENTER,
+        ),
+    }
     # ========================================================================
     # PUBLIC API
     # ========================================================================
@@ -350,3 +445,4 @@ class PDFExporter:
         )
 
         return output_path
+    PDFReportGenerator = PDFExporter 

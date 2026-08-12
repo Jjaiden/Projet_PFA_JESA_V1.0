@@ -571,17 +571,13 @@ class TPIEngine:
         ] = None,
     ) -> dict[str, list[TPIResult]]:
 
-        mapping = dict(
-            phase_mapping
-            or {
-                "Critique": "Phase 1 (< 6 mois)",
-                "Haute": "Phase 2 (6-12 mois)",
-                "Moyenne": "Phase 3 (12-24 mois)",
-                "Faible": "Phase 4 (> 24 mois)",
-                "Très faible": "Phase 4 (> 24 mois)",
-            }
-        )
-
+        mapping = {
+             "Critique": "Phase 1 (< 6 mois)",
+             "Haute": "Phase 1-2 (6-12 mois)",
+             "Moyenne": "Phase 2 (12-24 mois)",
+             "Faible": "Phase 3-4 (> 24 mois)",
+             "Très faible": "Non prioritaire",
+         }
         phases: dict[
             str,
             list[TPIResult],

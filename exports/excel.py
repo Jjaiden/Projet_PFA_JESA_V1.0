@@ -772,7 +772,11 @@ class ExcelExporter:
                     "Rank": len(rows) + 1,
                     "Dimension ID": tpi.dimension_id,
                     "Dimension Name": tpi.dimension_name,
-                    "TPI Score": tpi.tpi_score,
+                    "TPI Score": (
+                        float(tpi.tpi_score) * 100
+                            if tpi.tpi_score is not None
+                                else None
+                                ),
                     "Priority": priority,
                     "Gap": tpi.gap,
                     "Business Impact (%)": tpi.business_impact,
