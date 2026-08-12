@@ -1000,68 +1000,75 @@ class TPIEngine:
 
         return weights
 
-    # ==========================================================================
+        # ==========================================================================
     # PRIORITY THRESHOLDS
     # ==========================================================================
 
     def _load_priority_thresholds(
         self,
         custom: Any,
-    ) -> list[
-        tuple[float, str]
-    ]:
+    ) -> list[tuple[float, str]]:
+
+        # ------------------------------------------------------------------
+        # Default thresholds from config/constants.py
+        # ------------------------------------------------------------------
 
         if custom is None:
 
-          thresholds = []
+            thresholds: list[tuple[float, str]] = []
 
-          for item in constants.TPI_PRIORITY_THRESHOLDS:
+            for item in constants.TPI_PRIORITY_THRESHOLDS:
 
-              # Format complet :
-              # (minimum, maximum, label, phase)
-            if len(item) == 4:
+                # Full format:
+                # (minimum, maximum, label, phase)
 
-               minimum, maximum, label, phase = item
+                if len(item) == 4:
 
-               thresholds.append(
-                  (
-                    float(minimum),
-                    str(label),
-                  )
-             )
+                    minimum, maximum, label, phase = item
 
-             # Format simplifié :
-             # (minimum, label)
-            elif len(item) == 2:
+                    thresholds.append(
+                        (
+                            float(minimum),
+                            str(label),
+                        )
+                    )
 
-                 minimum, label = item
+                # Simplified format:
+                # (minimum, label)
 
-                 thresholds.append(
-                 (
-                    float(minimum),
-                    str(label),
-                 )
-             )
+                elif len(item) == 2:
 
-            else:
+                    minimum, label = item
 
-                 raise ValueError(
-                  "Format invalide dans "
-                  "TPI_PRIORITY_THRESHOLDS : "
-                  f"{item!r}. "
-                  "Chaque seuil doit contenir "
-                  "soit 2 valeurs "
-                  "(minimum, label), "
-                  "soit 4 valeurs "
-                  "(minimum, maximum, label, phase)."
-             )
+                    thresholds.append(
+                        (
+                            float(minimum),
+                            str(label),
+                        )
+                    )
 
-       # Highest threshold first
-        return sorted(
-          thresholds,
-          key=lambda item: item[0],
-          reverse=True,
-         )
+                else:
+
+                    raise ValueError(
+                        "Format invalide dans "
+                        "TPI_PRIORITY_THRESHOLDS : "
+                        f"{item!r}. "
+                        "Chaque seuil doit contenir "
+                        "2 valeurs "
+                        "(minimum, label) "
+                        "ou 4 valeurs "
+                        "(minimum, maximum, label, phase)."
+                    )
+
+            return sorted(
+                thresholds,
+                key=lambda item: item[0],
+                reverse=True,
+            )
+
+        # ------------------------------------------------------------------
+        # Custom thresholds
+        # ------------------------------------------------------------------
 
         if not isinstance(
             custom,
@@ -1097,9 +1104,7 @@ class TPIEngine:
                     f"{raw_label!r}"
                 )
 
-            value = float(
-                raw_value
-            )
+            value = float(raw_value)
 
             if not 0 <= value <= 1:
 
@@ -1117,24 +1122,24 @@ class TPIEngine:
 
         return sorted(
             thresholds,
+            key=lambda item: item[0],
             reverse=True,
         )
-
     # ==========================================================================
     # PRIORITY CATEGORY
     # ==========================================================================
 
-def _get_priority_category(
-    self,
-    score: float,
-) -> str:
+    def _get_priority_category(
+       self,
+       score: float,
+     ) -> str:
 
-    for minimum, label in self.priority_thresholds:
+        for minimum, label in self.priority_thresholds:
 
-        if score >= minimum:
+          if score >= minimum:
             return label
 
-    return "Très faible"
+        return "Très faible"
 # ==============================================================================
 # BACKWARD COMPATIBILITY
 # ==============================================================================
