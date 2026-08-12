@@ -46,24 +46,32 @@
 
     /* ---------- Palette ---------- */
 
-    --dmat-bg: #F5F7FA;
+    --dmat-bg: #F5F8FC;
     --dmat-surface: #FFFFFF;
 
-    --dmat-sidebar: #06265A;
-    --dmat-sidebar-hover: #F8FBFF;
+   /* ---------- Sidebar ---------- */
+    --dmat-sidebar: #082B63;
+    --dmat-sidebar-hover: rgba(59, 130, 246, 0.20);
     --dmat-sidebar-text: #FFFFFF;
-    --dmat-sidebar-muted: #020202;
+    --dmat-sidebar-muted: rgba(255, 255, 255, 0.72);
 
+   /* ---------- Brand / Interactive ---------- */
     --dmat-primary: #2563EB;
     --dmat-primary-hover: #1D4ED8;
-    --dmat-secondary: #3B82F6;
+    --dmat-secondary: #0EA5E9;
 
-    --dmat-border: #D5DCE5;
-    --dmat-divider: #111214;
+   /* ---------- Accent ---------- */
+    --dmat-accent: #14B8A6;
+    --dmat-accent-hover: #0D9488;
+
+   /* ---------- Neutral ---------- */
+    --dmat-border: #D8E1EC;
+    --dmat-divider: #D8E1EC;
 
     --dmat-title: #0F172A;
-    --dmat-text: #5a5a5a;
-    --dmat-muted: #000000;
+    --dmat-text: #334155;
+    --dmat-muted: #64748B;
+
 
     --dmat-success: #10B981;
     --dmat-warning: #F59E0B;
@@ -122,6 +130,24 @@ textarea,
 select {
     font-family: var(--dmat-font) !important;
 }
+
+/* Streamlit Material Symbols must keep their own font */
+.material-symbols-rounded,
+.material-symbols-outlined,
+.material-symbols-sharp,
+[data-testid="stIconMaterial"],
+span[class*="material-symbols"] {
+    font-family:
+        "Material Symbols Rounded",
+        "Material Symbols Outlined",
+        "Material Symbols Sharp" !important;
+
+    font-weight: normal !important;
+    font-style: normal !important;
+    line-height: 1 !important;
+    letter-spacing: normal !important;
+}
+
 /* Main background */
 
 body,
@@ -209,9 +235,8 @@ b {
 
 .block-container {
     max-width: 1400px;
-    padding: 2rem 2rem;
+    padding: 1.25rem 1.5rem 1rem;
 }
-
 
 /* ==========================================================================
    5. SIDEBAR
@@ -263,28 +288,30 @@ b {
 }
 
 
-/* Navigation list */
+/* Navigation container */
 
 [data-testid="stSidebarNav"] ul {
-    padding-top: 0.5rem;
-    margin: 0;
+    padding-top: 0.5rem !important;
+    margin: 0 !important;
 }
 
 
 /* Navigation links */
 
 [data-testid="stSidebarNav"] li a {
-    color: var(--dmat-sidebar-text) !important;
+    color: #FFFFFF !important;
 
     font-family: var(--dmat-font) !important;
 
-    border-radius: var(--dmat-radius-sm);
+    border-radius: var(--dmat-radius-sm) !important;
 
     padding: 0.55rem 0.75rem !important;
 
     font-size: 0.95rem !important;
 
-    font-weight: 600;
+    font-weight: 600 !important;
+
+    opacity: 1 !important;
 
     transition:
         background-color 0.15s ease,
@@ -293,18 +320,31 @@ b {
 }
 
 
-/* Keep Streamlit Material Symbols intact */
+/* Force text inside navigation links to remain white */
+
+[data-testid="stSidebarNav"] li a span,
+[data-testid="stSidebarNav"] li a p,
+[data-testid="stSidebarNav"] li a div {
+    color: #FFFFFF !important;
+}
+
+
+/* Icons */
 
 [data-testid="stSidebarNav"]
 .material-symbols-rounded,
+
 [data-testid="stSidebarNav"]
 .material-symbols-outlined,
+
 [data-testid="stSidebarNav"]
 .material-symbols-sharp {
     font-family:
         "Material Symbols Rounded",
         "Material Symbols Outlined",
         "Material Symbols Sharp" !important;
+
+    color: #FFFFFF !important;
 
     font-weight: normal !important;
 
@@ -317,9 +357,19 @@ b {
 /* Hover */
 
 [data-testid="stSidebarNav"] li a:hover {
-    background-color: var(--dmat-sidebar-hover) !important;
+    background-color:
+        rgba(59, 130, 246, 0.22) !important;
 
-    color: var(--dmat-sidebar) !important;
+    color: #FFFFFF !important;
+}
+
+
+/* Hover — force children to stay white */
+
+[data-testid="stSidebarNav"] li a:hover span,
+[data-testid="stSidebarNav"] li a:hover p,
+[data-testid="stSidebarNav"] li a:hover div {
+    color: #FFFFFF !important;
 }
 
 
@@ -330,14 +380,99 @@ b {
 
     color: #FFFFFF !important;
 
-    font-weight: 700;
-}
-/* Hide Streamlit header */
+    font-weight: 700 !important;
 
-[data-testid="stHeader"] {
-    background-color: transparent !important;
+    box-shadow:
+        0 4px 12px rgba(37, 99, 235, 0.28);
 }
 
+
+/* Active page — text and icon */
+
+[data-testid="stSidebarNav"] li a[aria-current="page"] span,
+[data-testid="stSidebarNav"] li a[aria-current="page"] p,
+[data-testid="stSidebarNav"] li a[aria-current="page"] div {
+    color: #FFFFFF !important;
+}
+
+/* Sidebar section titles */
+
+[data-testid="stSidebarNav"] > div,
+[data-testid="stSidebarNav"] [role="heading"] {
+    color: rgba(255, 255, 255, 0.78) !important;
+
+    font-family: var(--dmat-font-display) !important;
+
+    font-weight: 700 !important;
+
+    font-size: 0.78rem !important;
+
+    letter-spacing: 0.08em !important;
+
+    text-transform: uppercase;
+
+    margin-top: 0.85rem !important;
+    margin-bottom: 0.25rem !important;
+}
+
+/* ==========================================================================
+   SIDEBAR TOGGLE / COLLAPSE BUTTON
+   ========================================================================== */
+
+/* Collapsed sidebar button */
+
+[data-testid="collapsedControl"] button,
+[data-testid="stSidebarCollapseButton"] button {
+
+    color: #FFFFFF !important;
+
+    background-color:
+        rgba(8, 43, 99, 0.96) !important;
+
+    border: 1px solid rgba(255, 255, 255, 0.18) !important;
+
+    border-radius: 8px !important;
+
+    opacity: 1 !important;
+
+    box-shadow:
+        0 3px 10px rgba(8, 43, 99, 0.20);
+}
+
+
+/* Icon */
+
+[data-testid="collapsedControl"] button svg,
+[data-testid="stSidebarCollapseButton"] button svg {
+
+    color: #FFFFFF !important;
+
+    fill: #FFFFFF !important;
+
+    stroke: #FFFFFF !important;
+}
+
+
+/* SVG paths */
+
+[data-testid="collapsedControl"] button svg path,
+[data-testid="stSidebarCollapseButton"] button svg path {
+
+    fill: #FFFFFF !important;
+
+    stroke: #FFFFFF !important;
+}
+
+
+/* Hover */
+
+[data-testid="collapsedControl"] button:hover,
+[data-testid="stSidebarCollapseButton"] button:hover {
+
+    background-color: var(--dmat-primary) !important;
+
+    color: #FFFFFF !important;
+}
 
 /* ==========================================================================
    6. CARDS
@@ -453,68 +588,73 @@ b {
    8. BUTTONS
    ========================================================================== */
 
+.stButton > button,
+.stButton > button *,
+[data-testid="stBaseButton-primary"],
+[data-testid="stBaseButton-primary"] *,
+[data-testid="stBaseButton-secondary"],
+[data-testid="stBaseButton-secondary"] * {
+
+    color: #FFFFFF !important;
+    font-family: var(--dmat-font) !important;
+    font-weight: 700 !important;
+}
+
+
+/* Main button */
+
 .stButton > button {
+    background-color: var(--dmat-primary) !important;
 
-    background-color:
-        var(--dmat-primary) !important;
+    border: none !important;
+    border-radius: var(--dmat-radius-sm) !important;
 
-    color:
-        #FFFFFF !important;
+    padding: 0.5rem 1.25rem !important;
 
-    font-family:
-        var(--dmat-font) !important;
+    letter-spacing: 0.02em;
 
-    border:
-        none !important;
-
-    border-radius:
-        var(--dmat-radius-sm) !important;
-
-    font-weight:
-        700 !important;
-
-    padding:
-        0.5rem 1.25rem !important;
-
-    letter-spacing:
-        0.02em;
+    opacity: 1 !important;
 
     transition:
         background-color 0.15s ease,
         box-shadow 0.15s ease,
         transform 0.1s ease;
 
-    box-shadow:
-        var(--dmat-shadow-sm);
+    box-shadow: var(--dmat-shadow-sm);
 }
 
+
+/* Hover */
 
 .stButton > button:hover {
+    background-color: var(--dmat-primary-hover) !important;
+    color: #FFFFFF !important;
 
-    background-color:
-        var(--dmat-primary-hover) !important;
+    box-shadow: var(--dmat-shadow-md);
 
-    color:
-        #FFFFFF !important;
-
-    box-shadow:
-        var(--dmat-shadow-md);
-
-    transform:
-        translateY(-1px);
+    transform: translateY(-1px);
 }
 
 
-.stButton > button:focus {
+/* Disabled */
+
+.stButton > button:disabled,
+.stButton > button:disabled * {
+    color: #FFFFFF !important;
+    opacity: 0.75 !important;
+}
+
+
+/* Focus */
+
+.stButton > button:focus,
+.stButton > button:focus-visible {
 
     outline:
         2px solid var(--dmat-secondary) !important;
 
-    outline-offset:
-        2px;
+    outline-offset: 2px;
 }
-
-
 /* ==========================================================================
    9. FORMS
    ========================================================================== */
@@ -755,16 +895,13 @@ hr,
         var(--dmat-font);
 
     font-size:
-        0.75rem;
+        0.60rem;
 
     padding:
         1rem 0 1rem;
 
-    border-top:
-        1px solid var(--dmat-border);
-
     margin-top:
-        1rem;
+        0.5em;
 }
 
 

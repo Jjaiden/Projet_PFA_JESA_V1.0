@@ -12,7 +12,6 @@ from config import constants
 from engines.assessment.scoring import ScoreResult
 from engines.decision.gap import GapResult
 
-
 @dataclass
 class TPIResult:
     """Résultat de priorisation d'une dimension."""
@@ -44,7 +43,6 @@ class TPIResult:
             "details": self.details,
         }
 
-
 class TPIEngine:
     """Calcule le TPI à partir des écarts et des paramètres décisionnels 1 à 5."""
 
@@ -56,6 +54,23 @@ class TPIEngine:
         "implementation_difficulty",
     )
     WEIGHT_NAMES = ("gap",) + PARAMETER_NAMES
+
+    # ═══════════════════════════════════════════════════════════════
+    # CORRECTION : seuils par défaut explicites alignés sur la
+    # logique métier demandée :
+    #   0.80-1.00  → Critique
+    #   0.60-0.79  → Haute
+    #   0.40-0.59  → Moyenne
+    #   0.20-0.39  → Faible
+    #   0.00-0.19  → Très faible
+    # ═══════════════════════════════════════════════════════════════
+    DEFAULT_PRIORITY_THRESHOLDS = [
+        (0.80, "Critique"),
+        (0.60, "Haute"),
+        (0.40, "Moyenne"),
+        (0.20, "Faible"),
+        (0.00, "Très faible"),
+    ]
 
     def __init__(self, config: Optional[Mapping[str, Any]] = None):
         self.config = dict(config or {})
@@ -185,8 +200,8 @@ class TPIEngine:
             phase_mapping
             or {
                 "Critique": "Phase 1 (< 6 mois)",
-                "Haute": "Phase 2 (6-12 mois)",
-                "Moyenne": "Phase 3 (12-24 mois)",
+                "Haute": "Phase 1–2 (6-12 mois)",
+                "Moyenne": "Phase 2 (12-24 mois)",
                 "Faible": "Phase 4 (> 24 mois)",
                 "Très faible": "Phase 4 (> 24 mois)",
             }
@@ -267,12 +282,16 @@ class TPIEngine:
 
     def _load_priority_thresholds(self, custom: Any) -> list[tuple[float, str]]:
         if custom is None:
-            return [(minimum, label) for minimum, _, label, _ in constants.TPI_PRIORITY_THRESHOLDS]
+            # ═══════════════════════════════════════════════════
+            # CORRECTION : utiliser les seuils par défaut explicites
+            # au lieu de dépendre de constants.TPI_PRIORITY_THRESHOLDS
+            # ═══════════════════════════════════════════════════
+            return list(self.DEFAULT_PRIORITY_THRESHOLDS)
         if not isinstance(custom, Mapping):
             raise TypeError("priority_thresholds doit être un dictionnaire.")
         labels = {
             "critique": "Critique", "haute": "Haute", "moyenne": "Moyenne",
-            "faible": "Faible", "tres_faible": "Très faible", "très faible": "Très faible",
+            "faible": "Faible", "tres_faible": "Très faible", "très_faible": "Très faible",
         }
         thresholds = []
         for raw_label, raw_value in custom.items():
@@ -294,6 +313,5 @@ class TPIEngine:
     @staticmethod
     def _normalize_scale(value: int) -> float:
         return (value - 1) / 4
-
 
 TPICalculator = TPIEngine

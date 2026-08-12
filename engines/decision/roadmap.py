@@ -2,10 +2,10 @@
 roadmap.py — Génération de la feuille de route JDMAF.
 
 Responsabilités :
-    - transformer les priorités en phases ;
-    - associer les recommandations aux phases ;
-    - respecter les dépendances lorsque cela est possible ;
-    - produire une roadmap exploitable par le frontend et le PDF.
+- transformer les priorités en phases ;
+- associer les recommandations aux phases ;
+- respecter les dépendances lorsque cela est possible ;
+- produire une roadmap exploitable par le frontend et le PDF.
 
 Ce module ne calcule ni le score, ni le Gap, ni le TPI.
 """
@@ -22,11 +22,9 @@ from engines.decision.recommendation import (
     RecommendationResult,
 )
 
-
 # ============================================================================
 # STRUCTURES
 # ============================================================================
-
 
 @dataclass
 class RoadmapItem:
@@ -87,7 +85,6 @@ class RoadmapItem:
             "source_reference": self.source_reference,
         }
 
-
 @dataclass
 class RoadmapPhase:
     """
@@ -113,11 +110,9 @@ class RoadmapPhase:
             ],
         }
 
-
 # ============================================================================
 # ENGINE
 # ============================================================================
-
 
 class RoadmapEngine:
     """
@@ -125,17 +120,20 @@ class RoadmapEngine:
     et des recommandations.
     """
 
+    # ═══════════════════════════════════════════════════════════════
+    # CORRECTION : mapping des phases aligné sur la logique métier
+    # ═══════════════════════════════════════════════════════════════
     DEFAULT_PHASE_MAPPING = {
         "Critique": (
             "Phase 1",
             "< 6 mois",
         ),
         "Haute": (
-            "Phase 2",
+            "Phase 1–2",      # CORRECTION : avant "Phase 2"
             "6-12 mois",
         ),
         "Moyenne": (
-            "Phase 3",
+            "Phase 2",        # CORRECTION : avant "Phase 3"
             "12-24 mois",
         ),
         "Faible": (
@@ -207,6 +205,7 @@ class RoadmapEngine:
                 phase_name
                 .lower()
                 .replace(" ", "_")
+                .replace("–", "_")
             )
 
             phase = phases.setdefault(
@@ -442,9 +441,10 @@ class RoadmapEngine:
 
         order = {
             "Phase 1": 1,
-            "Phase 2": 2,
-            "Phase 3": 3,
-            "Phase 4": 4,
+            "Phase 1–2": 2,   # AJOUT
+            "Phase 2": 3,     # décalé
+            "Phase 3": 4,     # décalé
+            "Phase 4": 5,     # décalé
         }
 
         for phase in phases:
@@ -474,6 +474,5 @@ class RoadmapEngine:
                 99,
             ),
         )
-
 
 RoadmapGenerator = RoadmapEngine

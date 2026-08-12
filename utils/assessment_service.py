@@ -6,6 +6,7 @@ putting business calculations in the pages.
 
 from __future__ import annotations
 
+import re 
 import math
 import json
 import tempfile
@@ -254,17 +255,19 @@ def build_decision_rows(backend_results: Mapping[str, Any]) -> list[dict[str, An
 
 
 def build_roadmap_view_data(backend_results: Mapping[str, Any]) -> dict[str, Any]:
-    """Adapt RoadmapEngine phases to the page contract."""
-
+    """Adapt RoadmapEngine phases to the page contract.
+    
+    CORRECTION : tri global par TPI décroissant, indépendamment de la phase.
+    """
     aggregation = backend_results.get("aggregation", {})
     dmi = aggregation.get("dmi")
     actions = []
-    rank = 1
+    
     for phase in backend_results.get("roadmap", []) or []:
         for item in phase.items:
             actions.append(
                 {
-                    "rank": rank,
+                    "rank": 0,  # sera recalculé après le tri
                     "title": item.title,
                     "dimension": item.dimension_id,
                     "tpi": round(float(item.tpi_score or 0) * 100, 1),
@@ -276,7 +279,15 @@ def build_roadmap_view_data(backend_results: Mapping[str, Any]) -> dict[str, Any
                     "implementation_note": "; ".join(item.detailed_actions[:3]),
                 }
             )
-            rank += 1
+    
+    # ═══════════════════════════════════════════════════════════════
+    # CORRECTION CRITIQUE : tri GLOBAL par TPI décroissant
+    # ═══════════════════════════════════════════════════════════════
+    actions.sort(key=lambda a: a["tpi"], reverse=True)
+    
+    # Recalculer les rangs après le tri
+    for i, action in enumerate(actions, start=1):
+        action["rank"] = i
 
     return {
         "summary": {
@@ -286,7 +297,6 @@ def build_roadmap_view_data(backend_results: Mapping[str, Any]) -> dict[str, Any
         "prioritized_actions": actions,
         "strategic_summary": _strategic_summary(actions),
     }
-
 
 def export_selected_assessment(
     backend_results: Mapping[str, Any],
@@ -491,21 +501,36 @@ def _dashboard_insights(largest_gap: dict[str, Any] | None, strongest: dict[str,
     return insights
 
 
-def _priority_label(value: str) -> str:
+import re  # ← ajouter en haut du fichier si absent
+
+def _priority_label(value) -> str:
+    """Normalise n'importe quelle valeur de priorité en label anglais standard."""
+    if value is None:
+        return "Medium"
+    
+    # Déballer les tuples/listes (bug observé : ('HAUTE',))
+    if isinstance(value, (list, tuple)):
+        value = value[0] if len(value) > 0 else ""
+    
+    raw = str(value).strip().lower()
+    
+    # Nettoyer les caractères parasites : parenthèses, apostrophes, points, etc.
+    raw = re.sub(r"[^a-zàâäéèêëïîôöùûüÿç\s]", "", raw).strip()
+    
     labels = {
         "critical": "Critical",
-        "high": "High",
-        "medium": "Medium",
-        "low": "Low",
         "critique": "Critical",
+        "high": "High",
         "haute": "High",
+        "medium": "Medium",
         "moyenne": "Medium",
+        "low": "Low",
         "faible": "Low",
-        "tres faible": "Low",
-        "très faible": "Low",
+        "very low": "Very Low",
+        "tres faible": "Very Low",
+        "très faible": "Very Low",
     }
-    return labels.get(str(value).strip().lower(), str(value) or "Medium")
-
+    return labels.get(raw, "Medium")
 
 def _strategic_summary(actions: list[dict[str, Any]]) -> str:
     if not actions:
@@ -645,3 +670,4 @@ def _roadmap_phase_from_dict(data: Mapping[str, Any]) -> RoadmapPhase:
             )
         )
     return phase
+ 
