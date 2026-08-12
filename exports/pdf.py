@@ -239,41 +239,26 @@ class _BasePDFExporter:
             ),
         }
 
-    def _add_logos(self, canvas, doc):
-        """Add JESA and ENSAM logos to the top of each page."""
-        canvas.saveState()
-        width, height = A4
-        logo_dir = getattr(settings.frontend, "LOGO_DIR", Path(settings.backend.BASE_DIR) / "assets" / "logo")
-        logo_dir = Path(logo_dir)
+    def _find_logo(directory: Path, candidates: List[str]) -> Optional[Path]:
+         if not directory.exists():
+             return None
+         for fname in candidates:
+             path = directory / fname
+             if path.exists():
+                 return path
+         # case‑insensitive fallback
+         names = {name.lower() for name in candidates}
+         for path in directory.iterdir():
+             if path.is_file() and path.name.lower() in names:
+                return path
+         return None
 
-        jesa_candidates = ["jesa_logo.png", "JESA_logo.png", "jesa.png", "JESA.png"]
-        ensam_candidates = ["ensam_logo.png", "ENSAM_logo.png", "ensam.png", "ENSAM.png"]
+         # Line under logos
+         canvas.setStrokeColor(GREY_200)
+         canvas.setLineWidth(0.5)
+         canvas.line(12*mm, height - 14*mm, width - 12*mm, height - 14*mm)
 
-        jesa_path = self._find_logo(logo_dir, jesa_candidates)
-        ensam_path = self._find_logo(logo_dir, ensam_candidates)
-
-        # JESA logo (left)
-        if jesa_path:
-            try:
-                img = ImageReader(str(jesa_path))
-                canvas.drawImage(img, 12*mm, height - 12*mm, width=80, height=40, preserveAspectRatio=True)
-            except Exception:
-                pass
-
-        # ENSAM logo (right)
-        if ensam_path:
-            try:
-                img = ImageReader(str(ensam_path))
-                canvas.drawImage(img, width - 92*mm, height - 12*mm, width=80, height=40, preserveAspectRatio=True)
-            except Exception:
-                pass
-
-        # Line under logos
-        canvas.setStrokeColor(GREY_200)
-        canvas.setLineWidth(0.5)
-        canvas.line(12*mm, height - 14*mm, width - 12*mm, height - 14*mm)
-
-        canvas.restoreState()
+         canvas.restoreState()
 
     @staticmethod
     def _find_logo(directory: Path, candidates: List[str]) -> Optional[Path]:

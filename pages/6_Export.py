@@ -3,9 +3,10 @@
 Export page for JESA DMAT.
 
 Generates:
-- PDF report
-- Excel report
-- JSON report
+- PDF Score Summary
+- PDF Full Report
+- Excel Workbook
+- JSON Report
 - Complete report bundle
 """
 
@@ -144,12 +145,13 @@ st.markdown("### Export")
 formats = st.multiselect(
     "Select export formats",
     options=[
-        "pdf",
+        "pdf_score",
+        "pdf_full",
         "excel",
         "json",
     ],
     default=[
-        "pdf",
+        "pdf_score",
         "excel",
     ],
 )
@@ -276,14 +278,9 @@ if export_paths:
     )
 
     mime_types = {
-        "pdf": "application/pdf",
-
-        "excel": (
-            "application/"
-            "vnd.openxmlformats-officedocument."
-            "spreadsheetml.sheet"
-        ),
-
+        "pdf_score": "application/pdf",
+        "pdf_full": "application/pdf",
+        "excel": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         "json": "application/json",
     }
 
@@ -311,29 +308,14 @@ if export_paths:
         ) as file:
 
             st.download_button(
-                label=(
-                    f"DOWNLOAD "
-                    f"{format_name.upper()}"
-                ),
-
+                label=(f"DOWNLOAD {format_name.replace('_', ' ').upper()}"),
                 data=file.read(),
-
-                file_name=(
-                    f"JESA_DMAT_"
-                    f"{assessment_id}."
-                    f"{suffix}"
-                ),
-
+                file_name=(f"JESA_DMAT_{assessment_id}.{suffix}"),
                 mime=mime_types.get(
                     format_name,
                     "application/octet-stream",
                 ),
-
-                key=(
-                    f"download_"
-                    f"{format_name}"
-                ),
-
+                key=f"download_{format_name}",
                 use_container_width=True,
             )
 
@@ -373,15 +355,10 @@ if report_path_string:
 
             st.download_button(
                 label="DOWNLOAD REPORT",
-
                 data=file.read(),
-
                 file_name=report_path.name,
-
                 mime="application/zip",
-
                 key="download_complete_report",
-
                 use_container_width=True,
             )
 

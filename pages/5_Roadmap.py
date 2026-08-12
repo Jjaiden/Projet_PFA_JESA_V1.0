@@ -1,3 +1,4 @@
+# pages/5_Roadmap.py
 """
 Transformation Roadmap for JESA DMAT.
 
@@ -277,17 +278,9 @@ def _render_strategic_synthesis(data: dict) -> None:
 # ==============================================================================
 
 def _render_export_section() -> None:
-    """
-    Display export format selection and download buttons.
-
-    Three deliverables:
-    - PDF Score Summary (2‑page score summary)
-    - PDF Full Report (comprehensive)
-    - Excel Workbook (full data)
-    """
+    """Display export format selection and download buttons."""
 
     st.markdown("## Export Assessment")
-
     st.caption(
         "Select the deliverables you want to generate for this assessment."
     )
