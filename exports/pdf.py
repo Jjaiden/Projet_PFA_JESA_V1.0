@@ -133,10 +133,10 @@ class PDFExporter:
         self.generated_at = datetime.now()
 
         self.styles = self._build_styles()
-def _build_styles(self):
-    styles = getSampleStyleSheet()
+    def _build_styles(self):
+        styles = getSampleStyleSheet()
 
-    return {
+        return {
         "title": ParagraphStyle(
             "ReportTitle",
             parent=styles["Title"],
@@ -229,220 +229,102 @@ def _build_styles(self):
             alignment=TA_CENTER,
         ),
     }
-    # ========================================================================
-    # PUBLIC API
-    # ========================================================================
+     # ========================================================================
+     # PUBLIC API
+     # ========================================================================
+    def _build_styles(self):
+        styles = getSampleStyleSheet()
 
-    def export_assessment_results(
-        self,
-        aggregation_results: Dict[str, Any],
-        gap_results: Optional[List[GapResult]] = None,
-        tpi_results: Optional[List[TPIResult]] = None,
-        priority_results: Optional[List[PriorityResult]] = None,
-        roadmap: Optional[List[RoadmapPhase]] = None,
-        output_path: Optional[Path] = None,
-        assessment_id: Optional[str] = None,
-    ) -> Path:
+        return {
+            "title": ParagraphStyle(
+                "ReportTitle",
+                parent=styles["Title"],
+                fontName="Helvetica-Bold",
+                fontSize=24,
+                leading=28,
+                textColor=JESA_DARK,
+                alignment=TA_CENTER,
+                spaceAfter=12,
+            ),
 
-        if output_path is None:
+            "subtitle": ParagraphStyle(
+                "ReportSubtitle",
+                parent=styles["Normal"],
+                fontName="Helvetica",
+                fontSize=11,
+                leading=15,
+                textColor=GREY_600,
+                alignment=TA_CENTER,
+                spaceAfter=10,
+            ),
 
-            suffix = (
-                f"_{assessment_id}"
-                if assessment_id
-                else ""
-            )
+            "section": ParagraphStyle(
+                "SectionTitle",
+                parent=styles["Heading1"],
+                fontName="Helvetica-Bold",
+                fontSize=18,
+                leading=22,
+                textColor=JESA_DARK,
+                spaceBefore=8,
+                spaceAfter=12,
+            ),
 
-            filename = (
-                f"industrial_digital_maturity_assessment"
-                f"{suffix}.pdf"
-            )
+            "subsection": ParagraphStyle(
+                "SubsectionTitle",
+                parent=styles["Heading2"],
+                fontName="Helvetica-Bold",
+                fontSize=13,
+                leading=17,
+                textColor=JESA_GREEN,
+                spaceBefore=8,
+                spaceAfter=8,
+            ),
 
-            output_path = build_output_path(filename)
+            "body": ParagraphStyle(
+                "BodyTextCustom",
+                parent=styles["BodyText"],
+                fontName="Helvetica",
+                fontSize=9,
+                leading=13,
+                textColor=GREY_800,
+                spaceAfter=6,
+            ),
 
-        output_path = Path(output_path)
+            "small": ParagraphStyle(
+                "SmallText",
+                parent=styles["BodyText"],
+                fontName="Helvetica",
+                fontSize=7.5,
+                leading=10,
+                textColor=GREY_600,
+            ),
 
-        ensure_directory(output_path.parent)
+            "table_header": ParagraphStyle(
+                "TableHeader",
+                parent=styles["BodyText"],
+                fontName="Helvetica-Bold",
+                fontSize=8,
+                leading=10,
+                textColor=WHITE,
+                alignment=TA_CENTER,
+            ),
 
-        metadata = aggregation_results.get(
-            "metadata",
-            {},
-        )
+            "table_body": ParagraphStyle(
+                "TableBody",
+                parent=styles["BodyText"],
+                fontName="Helvetica",
+                fontSize=7.5,
+                leading=10,
+                textColor=GREY_800,
+            ),
 
-        doc = BaseDocTemplate(
-            str(output_path),
-            pagesize=A4,
-            rightMargin=18 * mm,
-            leftMargin=18 * mm,
-            topMargin=22 * mm,
-            bottomMargin=20 * mm,
-            title="Digital Maturity Assessment Report",
-            author="JESA DMAT",
-            subject="Industrial Digital Maturity Assessment",
-        )
-
-        frame = Frame(
-            doc.leftMargin,
-            doc.bottomMargin,
-            doc.width,
-            doc.height,
-            id="normal",
-        )
-
-        doc.addPageTemplates(
-            [
-                PageTemplate(
-                    id="AssessmentReport",
-                    frames=frame,
-                    onPage=self._draw_page_header_footer,
-                )
-            ]
-        )
-
-        story = []
-
-        # --------------------------------------------------------------
-        # COVER
-        # --------------------------------------------------------------
-
-        story.extend(
-            self._build_cover_page(
-                metadata,
-                assessment_id,
-            )
-        )
-
-        story.append(PageBreak())
-
-        # --------------------------------------------------------------
-        # EXECUTIVE SUMMARY
-        # --------------------------------------------------------------
-
-        story.extend(
-            self._build_executive_summary(
-                aggregation_results,
-                gap_results or [],
-                tpi_results or [],
-                priority_results or [],
-                roadmap or [],
-            )
-        )
-
-        story.append(PageBreak())
-
-        # --------------------------------------------------------------
-        # DIGITAL MATURITY OVERVIEW
-        # --------------------------------------------------------------
-
-        story.extend(
-            self._build_dmi_overview(
-                aggregation_results
-            )
-        )
-
-        story.append(PageBreak())
-
-        # --------------------------------------------------------------
-        # PILLARS
-        # --------------------------------------------------------------
-
-        story.extend(
-            self._build_pillar_assessment(
-                aggregation_results
-            )
-        )
-
-        story.append(PageBreak())
-
-        # --------------------------------------------------------------
-        # DIMENSIONS
-        # --------------------------------------------------------------
-
-        story.extend(
-            self._build_dimension_assessment(
-                aggregation_results
-            )
-        )
-
-        story.append(PageBreak())
-
-        # --------------------------------------------------------------
-        # GAP ANALYSIS
-        # --------------------------------------------------------------
-
-        story.extend(
-            self._build_gap_analysis(
-                gap_results or []
-            )
-        )
-
-        story.append(PageBreak())
-
-        # --------------------------------------------------------------
-        # TPI
-        # --------------------------------------------------------------
-
-        story.extend(
-            self._build_tpi_prioritization(
-                tpi_results or []
-            )
-        )
-
-        story.append(PageBreak())
-
-        # --------------------------------------------------------------
-        # PRIORITY MATRIX
-        # --------------------------------------------------------------
-
-        story.extend(
-            self._build_priority_matrix(
-                priority_results or []
-            )
-        )
-
-        story.append(PageBreak())
-
-        # --------------------------------------------------------------
-        # ROADMAP
-        # --------------------------------------------------------------
-
-        story.extend(
-            self._build_transformation_roadmap(
-                roadmap or []
-            )
-        )
-
-        story.append(PageBreak())
-
-        # --------------------------------------------------------------
-        # RECOMMENDATIONS
-        # --------------------------------------------------------------
-
-        story.extend(
-            self._build_recommendations(
-                priority_results or [],
-                roadmap or [],
-            )
-        )
-
-        story.append(PageBreak())
-
-        # --------------------------------------------------------------
-        # APPENDIX
-        # --------------------------------------------------------------
-
-        story.extend(
-            self._build_metadata(
-                aggregation_results,
-                assessment_id,
-            )
-        )
-
-        doc.build(story)
-
-        logger.info(
-            "Industrial PDF report generated: %s",
-            output_path,
-        )
-
-        return output_path
-    PDFReportGenerator = PDFExporter 
+            "kpi": ParagraphStyle(
+                "KPI",
+                parent=styles["BodyText"],
+                fontName="Helvetica-Bold",
+                fontSize=20,
+                leading=24,
+                textColor=JESA_GREEN,
+                alignment=TA_CENTER,
+            ),
+        }
