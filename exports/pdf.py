@@ -3,19 +3,18 @@ Professional PDF exports for JESA DMAT.
 
 Two distinct exports are provided:
 - Score Summary (2 pages): DMI, pillar scores, dimension scores, gaps, TPI, priorities.
-- Full Report (multiple pages): includes all score data + recommendations + roadmap details.
-
-This module ONLY formats pre‑computed results.
+- Full Report (comprehensive, multi‑page): reproduces all sheets from the Excel workbook.
 """
 
 from __future__ import annotations
 
+import logging
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Mapping, Optional
 
 from reportlab.lib import colors
-from reportlab.lib.enums import TA_CENTER
+from reportlab.lib.enums import TA_CENTER, TA_LEFT
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import mm
@@ -33,6 +32,8 @@ from reportlab.lib.utils import ImageReader
 
 from config import settings
 from utils.file_manager import ensure_directory, build_output_path
+
+logger = logging.getLogger(__name__)
 
 # ------------------------------------------------------------------------------
 # Brand / Palette
@@ -127,8 +128,22 @@ def _escape_xml(value: Any, default: Any = None) -> str:
     text = _safe_str(value, _safe_str(default))
     return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 
+def _find_logo(directory: Path, candidates: List[str]) -> Optional[Path]:
+    if not directory.exists():
+        return None
+    for fname in candidates:
+        path = directory / fname
+        if path.exists():
+            return path
+    # case‑insensitive fallback
+    names = {name.lower() for name in candidates}
+    for path in directory.iterdir():
+        if path.is_file() and path.name.lower() in names:
+            return path
+    return None
+
 # ------------------------------------------------------------------------------
-# PDF Exporter – Base class
+# Base PDF Exporter
 # ------------------------------------------------------------------------------
 class _BasePDFExporter:
     """Common functionality for both PDF types."""
@@ -141,6 +156,7 @@ class _BasePDFExporter:
         )
         self.generated_at = datetime.now()
         self.styles = self._build_styles()
+        self._logo_paths = self._locate_logos()
 
     def _build_styles(self):
         styles = getSampleStyleSheet()
@@ -220,14 +236,6 @@ class _BasePDFExporter:
                 textColor=GREY_600,
                 alignment=TA_CENTER,
             ),
-            "table": ParagraphStyle(
-                "Table",
-                parent=styles["BodyText"],
-                fontName="Helvetica",
-                fontSize=5.8,
-                leading=7,
-                textColor=GREY_800,
-            ),
             "table_header": ParagraphStyle(
                 "TableHeader",
                 parent=styles["BodyText"],
@@ -237,61 +245,76 @@ class _BasePDFExporter:
                 textColor=WHITE,
                 alignment=TA_CENTER,
             ),
+            "table_cell": ParagraphStyle(
+                "TableCell",
+                parent=styles["BodyText"],
+                fontName="Helvetica",
+                fontSize=5.8,
+                leading=7,
+                textColor=GREY_800,
+            ),
+            "table_cell_bold": ParagraphStyle(
+                "TableCellBold",
+                parent=styles["BodyText"],
+                fontName="Helvetica-Bold",
+                fontSize=5.8,
+                leading=7,
+                textColor=GREY_800,
+            ),
         }
 
-    def _find_logo(directory: Path, candidates: List[str]) -> Optional[Path]:
-         if not directory.exists():
-             return None
-         for fname in candidates:
-             path = directory / fname
-             if path.exists():
-                 return path
-         # case‑insensitive fallback
-         names = {name.lower() for name in candidates}
-         for path in directory.iterdir():
-             if path.is_file() and path.name.lower() in names:
-                return path
-         return None
+    def _locate_logos(self) -> Dict[str, Optional[Path]]:
+        """Locate JESA and ENSAM logos."""
+        base_dir = Path(settings.backend.BASE_DIR)
+        # Search in assets/logos/ first, then fallback to other possible directories
+        logo_dirs = [
+            base_dir / "assets" / "logos",
+            base_dir / "assets" / "logo",
+            base_dir / "assets",
+        ]
+        jesa_path = None
+        ensam_path = None
+        for d in logo_dirs:
+            if not d.exists():
+                continue
+            if jesa_path is None:
+                jesa_path = _find_logo(d, ["jesa_logo.png", "JESA_logo.png", "jesa.png", "JESA.png"])
+            if ensam_path is None:
+                ensam_path = _find_logo(d, ["ensam_logo.png", "ENSAM_logo.png", "ensam.png", "ENSAM.png"])
+        return {"jesa": jesa_path, "ensam": ensam_path}
 
-         # Line under logos
-         canvas.setStrokeColor(GREY_200)
-         canvas.setLineWidth(0.5)
-         canvas.line(12*mm, height - 14*mm, width - 12*mm, height - 14*mm)
-
-         canvas.restoreState()
-
-    @staticmethod
-    def _find_logo(directory: Path, candidates: List[str]) -> Optional[Path]:
-        if not directory.exists():
-            return None
-        for fname in candidates:
-            path = directory / fname
-            if path.exists():
-                return path
-        # case‑insensitive fallback
-        names = {name.lower() for name in candidates}
-        for path in directory.iterdir():
-            if path.is_file() and path.name.lower() in names:
-                return path
-        return None
-
-    def _header_footer(self, canvas, doc, title_prefix=""):
-        """Standard header/footer with page numbers."""
+    def _draw_header_footer(self, canvas, doc, title_prefix=""):
+        """Standard header/footer with logos and page numbers."""
         canvas.saveState()
         width, height = A4
 
-        # Header line
+        # Logos
+        if self._logo_paths.get("jesa"):
+            try:
+                img = ImageReader(str(self._logo_paths["jesa"]))
+                canvas.drawImage(img, 12*mm, height - 16*mm, width=80, height=40, preserveAspectRatio=True)
+            except Exception as e:
+                logger.warning(f"Could not draw JESA logo: {e}")
+        if self._logo_paths.get("ensam"):
+            try:
+                img = ImageReader(str(self._logo_paths["ensam"]))
+                canvas.drawImage(img, width - 92*mm, height - 16*mm, width=80, height=40, preserveAspectRatio=True)
+            except Exception as e:
+                logger.warning(f"Could not draw ENSAM logo: {e}")
+
+        # Title line
         canvas.setStrokeColor(GREY_200)
         canvas.setLineWidth(0.5)
-        canvas.line(12*mm, height - 10*mm, width - 12*mm, height - 10*mm)
+        canvas.line(12*mm, height - 12*mm, width - 12*mm, height - 12*mm)
 
+        # Header text
         canvas.setFont("Helvetica-Bold", 6.5)
         canvas.setFillColor(JESA_DARK)
-        canvas.drawString(12*mm, height - 7.5*mm, "JESA DMAT")
+        canvas.drawString(12*mm, height - 9*mm, "JESA DMAT")
 
         canvas.setFont("Helvetica", 6.5)
         canvas.setFillColor(GREY_600)
-        canvas.drawRightString(width - 12*mm, height - 7.5*mm, title_prefix + " — Industrial Digital Maturity Assessment")
+        canvas.drawRightString(width - 12*mm, height - 9*mm, title_prefix + " — Industrial Digital Maturity Assessment")
 
         # Footer
         canvas.setStrokeColor(GREY_200)
@@ -332,7 +355,7 @@ class PDFScoreSummaryExporter(_BasePDFExporter):
             pagesize=A4,
             rightMargin=12*mm,
             leftMargin=12*mm,
-            topMargin=17*mm,
+            topMargin=20*mm,  # increased for logos
             bottomMargin=14*mm,
             title="Score Summary – JESA DMAT",
             author="JESA DMAT",
@@ -343,7 +366,7 @@ class PDFScoreSummaryExporter(_BasePDFExporter):
         page_template = PageTemplate(
             id="ScoreSummary",
             frames=frame,
-            onPage=lambda canvas, doc: self._header_footer(canvas, doc, "Score Summary"),
+            onPage=lambda canvas, doc: self._draw_header_footer(canvas, doc, "Score Summary"),
         )
         doc.addPageTemplates([page_template])
 
@@ -396,12 +419,12 @@ class PDFScoreSummaryExporter(_BasePDFExporter):
                  Paragraph("Maturity", self.styles["table_header"])]]
         for res in pillar_iter:
             rows.append([
-                Paragraph(_escape_xml(_get(res, "entity_name", "—")), self.styles["table"]),
-                Paragraph(_format_number(_get(res, "score"), self.decimal_precision), self.styles["table"]),
-                Paragraph(_escape_xml(_get(res, "level_name", "—")), self.styles["table"]),
+                Paragraph(_escape_xml(_get(res, "entity_name", "—")), self.styles["table_cell"]),
+                Paragraph(_format_number(_get(res, "score"), self.decimal_precision), self.styles["table_cell"]),
+                Paragraph(_escape_xml(_get(res, "level_name", "—")), self.styles["table_cell"]),
             ])
         if len(rows) == 1:
-            rows.append([Paragraph("No pillar results", self.styles["table"]), "", ""])
+            rows.append([Paragraph("No pillar results", self.styles["table_cell"]), "", ""])
 
         tab = Table(rows, colWidths=[90*mm, 35*mm, 45*mm], repeatRows=1)
         tab.setStyle(TableStyle([
@@ -424,13 +447,13 @@ class PDFScoreSummaryExporter(_BasePDFExporter):
                      Paragraph("Level", self.styles["table_header"])]]
         for res in dim_iter:
             rows_dim.append([
-                Paragraph(_escape_xml(_get(res, "entity_id", "—")), self.styles["table"]),
-                Paragraph(_escape_xml(_get(res, "entity_name", "—")), self.styles["table"]),
-                Paragraph(_format_number(_get(res, "score"), self.decimal_precision), self.styles["table"]),
-                Paragraph(_escape_xml(_get(res, "level_name", "—")), self.styles["table"]),
+                Paragraph(_escape_xml(_get(res, "entity_id", "—")), self.styles["table_cell"]),
+                Paragraph(_escape_xml(_get(res, "entity_name", "—")), self.styles["table_cell"]),
+                Paragraph(_format_number(_get(res, "score"), self.decimal_precision), self.styles["table_cell"]),
+                Paragraph(_escape_xml(_get(res, "level_name", "—")), self.styles["table_cell"]),
             ])
         if len(rows_dim) == 1:
-            rows_dim.append(["", Paragraph("No dimensions", self.styles["table"]), "", ""])
+            rows_dim.append(["", Paragraph("No dimensions", self.styles["table_cell"]), "", ""])
 
         tab_dim = Table(rows_dim, colWidths=[20*mm, 85*mm, 30*mm, 35*mm], repeatRows=1)
         tab_dim.setStyle(TableStyle([
@@ -455,14 +478,14 @@ class PDFScoreSummaryExporter(_BasePDFExporter):
                      Paragraph("Gap", self.styles["table_header"])]]
         for gap in gap_results or []:
             gap_rows.append([
-                Paragraph(_escape_xml(_get(gap, "entity_name", "—")), self.styles["table"]),
-                Paragraph(_escape_xml(_get(gap, "entity_type", "—")), self.styles["table"]),
-                Paragraph(_format_number(_get(gap, "current_score"), 1), self.styles["table"]),
-                Paragraph(_format_number(_get(gap, "target_score"), 1), self.styles["table"]),
-                Paragraph(_format_number(_get(gap, "gap"), 1), self.styles["table"]),
+                Paragraph(_escape_xml(_get(gap, "entity_name", "—")), self.styles["table_cell"]),
+                Paragraph(_escape_xml(_get(gap, "entity_type", "—")), self.styles["table_cell"]),
+                Paragraph(_format_number(_get(gap, "current_score"), 1), self.styles["table_cell"]),
+                Paragraph(_format_number(_get(gap, "target_score"), 1), self.styles["table_cell"]),
+                Paragraph(_format_number(_get(gap, "gap"), 1), self.styles["table_cell"]),
             ])
         if len(gap_rows) == 1:
-            gap_rows.append([Paragraph("No gaps", self.styles["table"]), "", "", "", ""])
+            gap_rows.append([Paragraph("No gaps", self.styles["table_cell"]), "", "", "", ""])
         gap_tab = Table(gap_rows, colWidths=[65*mm, 30*mm, 25*mm, 25*mm, 25*mm], repeatRows=1)
         gap_tab.setStyle(TableStyle([
             ("BACKGROUND", (0,0), (-1,0), JESA_GREEN),
@@ -485,14 +508,14 @@ class PDFScoreSummaryExporter(_BasePDFExporter):
         for rank, item in enumerate(sorted_tpi, 1):
             priority = _normalize_priority(_get(item, "priority_category", _get(item, "priority", "")))
             tpi_rows.append([
-                Paragraph(str(rank), self.styles["table"]),
-                Paragraph(_escape_xml(_get(item, "dimension_name", "—")), self.styles["table"]),
-                Paragraph(_format_number(_get(item, "tpi_score"), 1), self.styles["table"]),
-                Paragraph(_format_number(_get(item, "gap"), 1), self.styles["table"]),
-                Paragraph(_escape_xml(priority or "—"), self.styles["table"]),
+                Paragraph(str(rank), self.styles["table_cell"]),
+                Paragraph(_escape_xml(_get(item, "dimension_name", "—")), self.styles["table_cell"]),
+                Paragraph(_format_number(_get(item, "tpi_score"), 1), self.styles["table_cell"]),
+                Paragraph(_format_number(_get(item, "gap"), 1), self.styles["table_cell"]),
+                Paragraph(_escape_xml(priority or "—"), self.styles["table_cell"]),
             ])
         if len(tpi_rows) == 1:
-            tpi_rows.append(["", Paragraph("No TPI", self.styles["table"]), "", "", ""])
+            tpi_rows.append(["", Paragraph("No TPI", self.styles["table_cell"]), "", "", ""])
         tpi_tab = Table(tpi_rows, colWidths=[12*mm, 80*mm, 25*mm, 25*mm, 28*mm], repeatRows=1)
         tpi_cmds = [
             ("BACKGROUND", (0,0), (-1,0), JESA_GREEN),
@@ -515,10 +538,10 @@ class PDFScoreSummaryExporter(_BasePDFExporter):
         story.append(Paragraph("This document presents only the numerical scores. Detailed recommendations and roadmap are available in the Full Report.", self.styles["small"]))
 
 # ------------------------------------------------------------------------------
-# PDF Full Report (includes recommendations, roadmap, etc.)
+# PDF Full Report (Comprehensive, reproduces Excel content)
 # ------------------------------------------------------------------------------
 class PDFFullReportExporter(_BasePDFExporter):
-    """Generates a comprehensive PDF with all assessment data + recommendations + roadmap."""
+    """Generates a comprehensive PDF with all data from the Excel workbook."""
 
     def export(
         self,
@@ -544,7 +567,7 @@ class PDFFullReportExporter(_BasePDFExporter):
             pagesize=A4,
             rightMargin=12*mm,
             leftMargin=12*mm,
-            topMargin=17*mm,
+            topMargin=20*mm,
             bottomMargin=14*mm,
             title="Full Report – JESA DMAT",
             author="JESA DMAT",
@@ -555,25 +578,48 @@ class PDFFullReportExporter(_BasePDFExporter):
         page_template = PageTemplate(
             id="FullReport",
             frames=frame,
-            onPage=lambda canvas, doc: self._header_footer(canvas, doc, "Full Report"),
+            onPage=lambda canvas, doc: self._draw_header_footer(canvas, doc, "Full Report"),
         )
         doc.addPageTemplates([page_template])
 
         story = []
-        # Page 1: same as score summary's page 1
+        # --------------------------------------------------------------------
+        # Page 1: Executive Summary + DMI + Pillars + Dimensions
+        # --------------------------------------------------------------------
         self._build_page1(story, aggregation_results, assessment_id)
         story.append(PageBreak())
-        # Page 2: gaps, TPI, priorities (like score summary)
+        # --------------------------------------------------------------------
+        # Page 2: Gap Analysis + TPI + Priority Matrix
+        # --------------------------------------------------------------------
         self._build_page2(story, aggregation_results, gap_results, tpi_results, priority_results)
         story.append(PageBreak())
-        # Additional pages: recommendations, roadmap
-        self._build_recommendations_and_roadmap(story, priority_results, roadmap)
+        # --------------------------------------------------------------------
+        # Page 3: Indicator Details
+        # --------------------------------------------------------------------
+        self._build_indicator_details(story, aggregation_results)
+        story.append(PageBreak())
+        # --------------------------------------------------------------------
+        # Page 4: Recommendations
+        # --------------------------------------------------------------------
+        self._build_recommendations(story, priority_results)
+        story.append(PageBreak())
+        # --------------------------------------------------------------------
+        # Page 5: Transformation Roadmap
+        # --------------------------------------------------------------------
+        self._build_roadmap(story, roadmap)
+        story.append(PageBreak())
+        # --------------------------------------------------------------------
+        # Page 6: Assessment Metadata
+        # --------------------------------------------------------------------
+        self._build_metadata(story, aggregation_results, assessment_id)
 
         doc.build(story)
         return output_path
 
+    # ------------------------------------------------------------------------
+    # Private builder methods
+    # ------------------------------------------------------------------------
     def _build_page1(self, story, results, assessment_id):
-        # Same as ScoreSummaryExporter._build_page1
         metadata = results.get("metadata", {})
         site_name = metadata.get("site_name", "Industrial Plant")
         dmi = results.get("dmi")
@@ -614,13 +660,12 @@ class PDFFullReportExporter(_BasePDFExporter):
                  Paragraph("Maturity", self.styles["table_header"])]]
         for res in pillar_iter:
             rows.append([
-                Paragraph(_escape_xml(_get(res, "entity_name", "—")), self.styles["table"]),
-                Paragraph(_format_number(_get(res, "score"), self.decimal_precision), self.styles["table"]),
-                Paragraph(_escape_xml(_get(res, "level_name", "—")), self.styles["table"]),
+                Paragraph(_escape_xml(_get(res, "entity_name", "—")), self.styles["table_cell"]),
+                Paragraph(_format_number(_get(res, "score"), self.decimal_precision), self.styles["table_cell"]),
+                Paragraph(_escape_xml(_get(res, "level_name", "—")), self.styles["table_cell"]),
             ])
         if len(rows) == 1:
-            rows.append([Paragraph("No pillar results", self.styles["table"]), "", ""])
-
+            rows.append([Paragraph("No pillar results", self.styles["table_cell"]), "", ""])
         tab = Table(rows, colWidths=[90*mm, 35*mm, 45*mm], repeatRows=1)
         tab.setStyle(TableStyle([
             ("BACKGROUND", (0,0), (-1,0), JESA_GREEN),
@@ -642,14 +687,13 @@ class PDFFullReportExporter(_BasePDFExporter):
                      Paragraph("Level", self.styles["table_header"])]]
         for res in dim_iter:
             rows_dim.append([
-                Paragraph(_escape_xml(_get(res, "entity_id", "—")), self.styles["table"]),
-                Paragraph(_escape_xml(_get(res, "entity_name", "—")), self.styles["table"]),
-                Paragraph(_format_number(_get(res, "score"), self.decimal_precision), self.styles["table"]),
-                Paragraph(_escape_xml(_get(res, "level_name", "—")), self.styles["table"]),
+                Paragraph(_escape_xml(_get(res, "entity_id", "—")), self.styles["table_cell"]),
+                Paragraph(_escape_xml(_get(res, "entity_name", "—")), self.styles["table_cell"]),
+                Paragraph(_format_number(_get(res, "score"), self.decimal_precision), self.styles["table_cell"]),
+                Paragraph(_escape_xml(_get(res, "level_name", "—")), self.styles["table_cell"]),
             ])
         if len(rows_dim) == 1:
-            rows_dim.append(["", Paragraph("No dimensions", self.styles["table"]), "", ""])
-
+            rows_dim.append(["", Paragraph("No dimensions", self.styles["table_cell"]), "", ""])
         tab_dim = Table(rows_dim, colWidths=[20*mm, 85*mm, 30*mm, 35*mm], repeatRows=1)
         tab_dim.setStyle(TableStyle([
             ("BACKGROUND", (0,0), (-1,0), JESA_GREEN),
@@ -662,7 +706,6 @@ class PDFFullReportExporter(_BasePDFExporter):
         story.append(tab_dim)
 
     def _build_page2(self, story, results, gap_results, tpi_results, priority_results):
-        # Same as ScoreSummaryExporter._build_page2
         story.append(Paragraph("3. Gap & Priority Analysis", self.styles["h1"]))
 
         # Gaps
@@ -674,14 +717,14 @@ class PDFFullReportExporter(_BasePDFExporter):
                      Paragraph("Gap", self.styles["table_header"])]]
         for gap in gap_results or []:
             gap_rows.append([
-                Paragraph(_escape_xml(_get(gap, "entity_name", "—")), self.styles["table"]),
-                Paragraph(_escape_xml(_get(gap, "entity_type", "—")), self.styles["table"]),
-                Paragraph(_format_number(_get(gap, "current_score"), 1), self.styles["table"]),
-                Paragraph(_format_number(_get(gap, "target_score"), 1), self.styles["table"]),
-                Paragraph(_format_number(_get(gap, "gap"), 1), self.styles["table"]),
+                Paragraph(_escape_xml(_get(gap, "entity_name", "—")), self.styles["table_cell"]),
+                Paragraph(_escape_xml(_get(gap, "entity_type", "—")), self.styles["table_cell"]),
+                Paragraph(_format_number(_get(gap, "current_score"), 1), self.styles["table_cell"]),
+                Paragraph(_format_number(_get(gap, "target_score"), 1), self.styles["table_cell"]),
+                Paragraph(_format_number(_get(gap, "gap"), 1), self.styles["table_cell"]),
             ])
         if len(gap_rows) == 1:
-            gap_rows.append([Paragraph("No gaps", self.styles["table"]), "", "", "", ""])
+            gap_rows.append([Paragraph("No gaps", self.styles["table_cell"]), "", "", "", ""])
         gap_tab = Table(gap_rows, colWidths=[65*mm, 30*mm, 25*mm, 25*mm, 25*mm], repeatRows=1)
         gap_tab.setStyle(TableStyle([
             ("BACKGROUND", (0,0), (-1,0), JESA_GREEN),
@@ -693,7 +736,7 @@ class PDFFullReportExporter(_BasePDFExporter):
         story.append(gap_tab)
         story.append(Spacer(1, 3*mm))
 
-        # TPI
+        # TPI (Priority Index)
         story.append(Paragraph("Transformation Priority Index (TPI)", self.styles["h2"]))
         sorted_tpi = sorted(tpi_results or [], key=lambda x: -_safe_float(_get(x, "tpi_score", 0)))
         tpi_rows = [[Paragraph("#", self.styles["table_header"]),
@@ -704,14 +747,14 @@ class PDFFullReportExporter(_BasePDFExporter):
         for rank, item in enumerate(sorted_tpi, 1):
             priority = _normalize_priority(_get(item, "priority_category", _get(item, "priority", "")))
             tpi_rows.append([
-                Paragraph(str(rank), self.styles["table"]),
-                Paragraph(_escape_xml(_get(item, "dimension_name", "—")), self.styles["table"]),
-                Paragraph(_format_number(_get(item, "tpi_score"), 1), self.styles["table"]),
-                Paragraph(_format_number(_get(item, "gap"), 1), self.styles["table"]),
-                Paragraph(_escape_xml(priority or "—"), self.styles["table"]),
+                Paragraph(str(rank), self.styles["table_cell"]),
+                Paragraph(_escape_xml(_get(item, "dimension_name", "—")), self.styles["table_cell"]),
+                Paragraph(_format_number(_get(item, "tpi_score"), 1), self.styles["table_cell"]),
+                Paragraph(_format_number(_get(item, "gap"), 1), self.styles["table_cell"]),
+                Paragraph(_escape_xml(priority or "—"), self.styles["table_cell"]),
             ])
         if len(tpi_rows) == 1:
-            tpi_rows.append(["", Paragraph("No TPI", self.styles["table"]), "", "", ""])
+            tpi_rows.append(["", Paragraph("No TPI", self.styles["table_cell"]), "", "", ""])
         tpi_tab = Table(tpi_rows, colWidths=[12*mm, 80*mm, 25*mm, 25*mm, 28*mm], repeatRows=1)
         tpi_cmds = [
             ("BACKGROUND", (0,0), (-1,0), JESA_GREEN),
@@ -729,63 +772,155 @@ class PDFFullReportExporter(_BasePDFExporter):
                     tpi_cmds.append(("TEXTCOLOR", (4,i), (4,i), WHITE))
         tpi_tab.setStyle(TableStyle(tpi_cmds))
         story.append(tpi_tab)
+        story.append(Spacer(1, 3*mm))
 
-    def _build_recommendations_and_roadmap(self, story, priority_results, roadmap):
-        # Recommendations
-        story.append(Paragraph("4. Recommendations", self.styles["h1"]))
-        if priority_results:
-            rows = [[Paragraph("Dimension", self.styles["table_header"]),
-                     Paragraph("Priority", self.styles["table_header"]),
-                     Paragraph("Recommendation", self.styles["table_header"])]]
-            for pr in priority_results:
-                for rec in pr.recommendations:
-                    rows.append([
-                        Paragraph(_escape_xml(pr.dimension_name or pr.dimension_id), self.styles["table"]),
-                        Paragraph(_escape_xml(_normalize_priority(pr.priority_category)), self.styles["table"]),
-                        Paragraph(_escape_xml(rec.title or rec.recommendation_id), self.styles["table"]),
-                    ])
-            if len(rows) == 1:
-                rows.append([Paragraph("No recommendations", self.styles["table"]), "", ""])
-            rec_tab = Table(rows, colWidths=[60*mm, 30*mm, 80*mm], repeatRows=1)
-            rec_tab.setStyle(TableStyle([
-                ("BACKGROUND", (0,0), (-1,0), JESA_GREEN),
-                ("GRID", (0,0), (-1,-1), 0.35, GREY_200),
-                ("ROWBACKGROUNDS", (0,1), (-1,-1), [WHITE, GREY_100]),
-                ("VALIGN", (0,0), (-1,-1), "MIDDLE"),
-            ]))
-            story.append(rec_tab)
-        else:
-            story.append(Paragraph("No recommendations available.", self.styles["body"]))
-
-        story.append(Spacer(1, 4*mm))
-
-        # Roadmap
-        story.append(Paragraph("5. Transformation Roadmap", self.styles["h1"]))
-        if roadmap:
-            rows = [[Paragraph("Phase", self.styles["table_header"]),
-                     Paragraph("Action", self.styles["table_header"]),
+        # Priority Matrix
+        story.append(Paragraph("Priority Matrix", self.styles["h2"]))
+        sorted_priority = sorted(priority_results or [], key=lambda x: (PRIORITY_COLORS.get(_normalize_priority(x.priority_category), 999), -_safe_float(x.tpi_score, 0)))
+        pri_rows = [[Paragraph("Rank", self.styles["table_header"]),
+                     Paragraph("Dimension", self.styles["table_header"]),
+                     Paragraph("Current", self.styles["table_header"]),
+                     Paragraph("Target", self.styles["table_header"]),
+                     Paragraph("Gap", self.styles["table_header"]),
                      Paragraph("TPI", self.styles["table_header"]),
                      Paragraph("Priority", self.styles["table_header"])]]
-            for phase in roadmap:
-                for item in phase.items:
-                    rows.append([
-                        Paragraph(_escape_xml(phase.phase_name), self.styles["table"]),
-                        Paragraph(_escape_xml(item.title), self.styles["table"]),
-                        Paragraph(_format_number(item.tpi_score, 1), self.styles["table"]),
-                        Paragraph(_escape_xml(_normalize_priority(item.priority)), self.styles["table"]),
-                    ])
-            if len(rows) == 1:
-                rows.append([Paragraph("No roadmap items", self.styles["table"]), "", "", ""])
-            roadmap_tab = Table(rows, colWidths=[40*mm, 80*mm, 25*mm, 25*mm], repeatRows=1)
-            roadmap_tab.setStyle(TableStyle([
-                ("BACKGROUND", (0,0), (-1,0), JESA_GREEN),
-                ("GRID", (0,0), (-1,-1), 0.35, GREY_200),
-                ("ROWBACKGROUNDS", (0,1), (-1,-1), [WHITE, GREY_100]),
-                ("VALIGN", (0,0), (-1,-1), "MIDDLE"),
-            ]))
-            story.append(roadmap_tab)
-        else:
+        for rank, pr in enumerate(sorted_priority, 1):
+            priority = _normalize_priority(pr.priority_category)
+            pri_rows.append([
+                Paragraph(str(rank), self.styles["table_cell"]),
+                Paragraph(_escape_xml(pr.dimension_name or pr.dimension_id), self.styles["table_cell"]),
+                Paragraph(_format_number(pr.current_score, 1), self.styles["table_cell"]),
+                Paragraph(_format_number(pr.target_score, 1), self.styles["table_cell"]),
+                Paragraph(_format_number(pr.gap, 1), self.styles["table_cell"]),
+                Paragraph(_format_number(pr.tpi_score, 2), self.styles["table_cell"]),
+                Paragraph(_escape_xml(priority or ""), self.styles["table_cell"]),
+            ])
+        if len(pri_rows) == 1:
+            pri_rows.append(["", Paragraph("No priorities", self.styles["table_cell"]), "", "", "", "", ""])
+        pri_tab = Table(pri_rows, colWidths=[12*mm, 50*mm, 20*mm, 20*mm, 20*mm, 20*mm, 20*mm], repeatRows=1)
+        pri_tab.setStyle(TableStyle([
+            ("BACKGROUND", (0,0), (-1,0), JESA_GREEN),
+            ("GRID", (0,0), (-1,-1), 0.35, GREY_200),
+            ("ROWBACKGROUNDS", (0,1), (-1,-1), [WHITE, GREY_100]),
+            ("VALIGN", (0,0), (-1,-1), "MIDDLE"),
+            ("ALIGN", (0,0), (0,-1), "CENTER"),
+            ("ALIGN", (2,1), (-1,-1), "CENTER"),
+        ]))
+        story.append(pri_tab)
+
+    def _build_indicator_details(self, story, results):
+        story.append(Paragraph("4. Indicator Details", self.styles["h1"]))
+        indicators = results.get("indicators", {})
+        if not indicators:
+            story.append(Paragraph("No indicators found.", self.styles["body"]))
+            return
+        rows = [[Paragraph("Indicator ID", self.styles["table_header"]),
+                 Paragraph("Indicator Name", self.styles["table_header"]),
+                 Paragraph("Score", self.styles["table_header"]),
+                 Paragraph("Level", self.styles["table_header"]),
+                 Paragraph("Parent ID", self.styles["table_header"])]]
+        for _, res in indicators.items():
+            rows.append([
+                Paragraph(_escape_xml(_get(res, "entity_id", "—")), self.styles["table_cell"]),
+                Paragraph(_escape_xml(_get(res, "entity_name", "—")), self.styles["table_cell"]),
+                Paragraph(_format_number(_get(res, "score"), 1), self.styles["table_cell"]),
+                Paragraph(_escape_xml(_get(res, "level_name", "—")), self.styles["table_cell"]),
+                Paragraph(_escape_xml(_get(res, "parent_id", "—")), self.styles["table_cell"]),
+            ])
+        tab = Table(rows, colWidths=[25*mm, 70*mm, 20*mm, 20*mm, 20*mm], repeatRows=1)
+        tab.setStyle(TableStyle([
+            ("BACKGROUND", (0,0), (-1,0), JESA_GREEN),
+            ("GRID", (0,0), (-1,-1), 0.35, GREY_200),
+            ("ROWBACKGROUNDS", (0,1), (-1,-1), [WHITE, GREY_100]),
+            ("VALIGN", (0,0), (-1,-1), "MIDDLE"),
+            ("ALIGN", (2,1), (-1,-1), "CENTER"),
+        ]))
+        story.append(tab)
+
+    def _build_recommendations(self, story, priority_results):
+        story.append(Paragraph("5. Recommendations", self.styles["h1"]))
+        if not priority_results:
+            story.append(Paragraph("No recommendations available.", self.styles["body"]))
+            return
+        rows = [[Paragraph("Dimension", self.styles["table_header"]),
+                 Paragraph("Priority", self.styles["table_header"]),
+                 Paragraph("Recommendation", self.styles["table_header"]),
+                 Paragraph("Effort", self.styles["table_header"]),
+                 Paragraph("Expected Impact", self.styles["table_header"])]]
+        for pr in priority_results:
+            for rec in pr.recommendations:
+                rows.append([
+                    Paragraph(_escape_xml(pr.dimension_name or pr.dimension_id), self.styles["table_cell"]),
+                    Paragraph(_escape_xml(_normalize_priority(pr.priority_category)), self.styles["table_cell"]),
+                    Paragraph(_escape_xml(rec.title or rec.recommendation_id), self.styles["table_cell"]),
+                    Paragraph(_escape_xml(rec.effort or ""), self.styles["table_cell"]),
+                    Paragraph(_escape_xml(rec.expected_impact or ""), self.styles["table_cell"]),
+                ])
+        if len(rows) == 1:
+            rows.append([Paragraph("No recommendations", self.styles["table_cell"]), "", "", "", ""])
+        tab = Table(rows, colWidths=[35*mm, 25*mm, 70*mm, 20*mm, 25*mm], repeatRows=1)
+        tab.setStyle(TableStyle([
+            ("BACKGROUND", (0,0), (-1,0), JESA_GREEN),
+            ("GRID", (0,0), (-1,-1), 0.35, GREY_200),
+            ("ROWBACKGROUNDS", (0,1), (-1,-1), [WHITE, GREY_100]),
+            ("VALIGN", (0,0), (-1,-1), "MIDDLE"),
+        ]))
+        story.append(tab)
+
+    def _build_roadmap(self, story, roadmap):
+        story.append(Paragraph("6. Transformation Roadmap", self.styles["h1"]))
+        if not roadmap:
             story.append(Paragraph("No roadmap available.", self.styles["body"]))
+            return
+        rows = [[Paragraph("Phase", self.styles["table_header"]),
+                 Paragraph("Action", self.styles["table_header"]),
+                 Paragraph("TPI", self.styles["table_header"]),
+                 Paragraph("Priority", self.styles["table_header"]),
+                 Paragraph("Effort", self.styles["table_header"])]]
+        for phase in roadmap:
+            for item in phase.items:
+                rows.append([
+                    Paragraph(_escape_xml(phase.phase_name), self.styles["table_cell"]),
+                    Paragraph(_escape_xml(item.title), self.styles["table_cell"]),
+                    Paragraph(_format_number(item.tpi_score, 1), self.styles["table_cell"]),
+                    Paragraph(_escape_xml(_normalize_priority(item.priority)), self.styles["table_cell"]),
+                    Paragraph(_escape_xml(item.effort or ""), self.styles["table_cell"]),
+                ])
+        if len(rows) == 1:
+            rows.append([Paragraph("No roadmap", self.styles["table_cell"]), "", "", "", ""])
+        tab = Table(rows, colWidths=[30*mm, 70*mm, 20*mm, 20*mm, 20*mm], repeatRows=1)
+        tab.setStyle(TableStyle([
+            ("BACKGROUND", (0,0), (-1,0), JESA_GREEN),
+            ("GRID", (0,0), (-1,-1), 0.35, GREY_200),
+            ("ROWBACKGROUNDS", (0,1), (-1,-1), [WHITE, GREY_100]),
+            ("VALIGN", (0,0), (-1,-1), "MIDDLE"),
+        ]))
+        story.append(tab)
+
+    def _build_metadata(self, story, results, assessment_id):
+        story.append(Paragraph("7. Assessment Metadata", self.styles["h1"]))
+        metadata = results.get("metadata", {})
+        rows = [
+            ["Assessment ID", assessment_id or metadata.get("assessment_id", "")],
+            ["Site Name", metadata.get("site_name", "")],
+            ["Assessment Date", metadata.get("assessment_date", "")],
+            ["Evaluator", metadata.get("evaluator", "")],
+            ["Total Indicators", metadata.get("total_indicators", 0)],
+            ["Total Subdimensions", metadata.get("total_subdimensions", 0)],
+            ["Total Dimensions", metadata.get("total_dimensions", 0)],
+            ["Total Pillars", metadata.get("total_pillars", 0)],
+            ["DMI Score", metadata.get("dmi_score", "")],
+            ["DMI Level", metadata.get("dmi_level", "")],
+            ["DMI Level Name", metadata.get("dmi_level_name", "")],
+        ]
+        data = [[Paragraph(field, self.styles["table_cell_bold"]), Paragraph(str(value), self.styles["table_cell"])] for field, value in rows]
+        tab = Table(data, colWidths=[70*mm, 120*mm])
+        tab.setStyle(TableStyle([
+            ("GRID", (0,0), (-1,-1), 0.5, GREY_200),
+            ("ROWBACKGROUNDS", (0,0), (-1,-1), [GREY_100, WHITE]),
+            ("VALIGN", (0,0), (-1,-1), "MIDDLE"),
+        ]))
+        story.append(tab)
 
 # ------------------------------------------------------------------------------
 # Public utilities
