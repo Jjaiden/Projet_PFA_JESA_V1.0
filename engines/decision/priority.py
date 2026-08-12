@@ -156,76 +156,96 @@ class PriorityEngine:
     # ========================================================================
 
     def build_priority_analysis(
-        self,
-        gap_results: list[GapResult],
-        tpi_results: Optional[list[TPIResult]] = None,
-        recommendations: Optional[
-            Mapping[str, list[RecommendationResult]]
-        ] = None,
-    ) -> list[PriorityResult]:
+    self,
+    gap_results: list[GapResult],
+    tpi_results: Optional[list[TPIResult]] = None,
+    recommendations: Optional[
+        Mapping[str, list[RecommendationResult]]
+    ] = None,
+) -> list[PriorityResult]:
 
-        if not isinstance(gap_results, list):
-          raise TypeError(
-              "gap_results doit être une liste."
-            )
+     if not isinstance(gap_results, list):
+        raise TypeError(
+            "gap_results doit être une liste."
+        )
 
-        tpi_by_dimension = {
-            result.dimension_id: result
-            for result in (tpi_results or [])
-         }
+     tpi_by_dimension = {
+        result.dimension_id: result
+        for result in (tpi_results or [])
+     }
 
-        recommendation_by_dimension = dict(
-            recommendations or {}
+     recommendation_by_dimension = dict(
+        recommendations or {}
+     )
+
+     results: list[PriorityResult] = []
+
+     for gap in gap_results:
+
+         if gap.entity_type != "dimension":
+            continue
+
+         tpi = tpi_by_dimension.get(
+            gap.entity_id
          )
 
-        results: list[PriorityResult] = []
+         if tpi is None:
+            continue
 
-        for gap in gap_results:
-            if gap.entity_type != "dimension":
-                  continue
-
-            tpi = tpi_by_dimension.get(
-                gap.entity_id
-                )
-            if tpi is None:
-                 continue
-
-        results.append(
+         results.append(
             PriorityResult(
                 dimension_id=gap.entity_id,
                 dimension_name=gap.entity_name,
+
                 current_score=gap.current_score,
                 target_score=gap.target_score,
                 gap=gap.gap,
-                tpi_score=float(tpi.tpi_score),
-                priority_category=tpi.priority_category,
+
+                tpi_score=float(
+                    tpi.tpi_score
+                ),
+
+                # IMPORTANT :
+                # priority vient directement du TPI
+                priority_category=(
+                    tpi.priority_category
+                ),
+
                 recommendations=(
                     recommendation_by_dimension.get(
                         gap.entity_id,
                         [],
                     )
                 ),
+
                 details={
                     "gap_priority": gap.priority,
                     "gap_percent": gap.gap_percent,
+
                     "current_level": (
                         gap.details or {}
-                    ).get("current_level"),
+                    ).get(
+                        "current_level"
+                    ),
+
                     "target_level": (
                         gap.details or {}
-                    ).get("target_level"),
+                    ).get(
+                        "target_level"
+                    ),
                 },
             )
         )
 
-        return sorted(
-           results,
-           key=lambda result: (
-            -(
-                float(result.tpi_score)
-                if result.tpi_score is not None
-                else -1.0
-            ),
+    # Classement UNIQUE par TPI décroissant
+     return sorted(
+        results,
+        key=lambda result: (
+            -float(
+                result.tpi_score
+            )
+            if result.tpi_score is not None
+            else float("inf"),
             result.dimension_id,
         ),
     )

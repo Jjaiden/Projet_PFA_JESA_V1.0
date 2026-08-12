@@ -1013,14 +1013,55 @@ class TPIEngine:
 
         if custom is None:
 
-            return [
-                (
-                    minimum,
-                    label,
-                )
-                for minimum, _, label, _
-                in constants.TPI_PRIORITY_THRESHOLDS
-            ]
+          thresholds = []
+
+          for item in constants.TPI_PRIORITY_THRESHOLDS:
+
+              # Format complet :
+              # (minimum, maximum, label, phase)
+            if len(item) == 4:
+
+               minimum, maximum, label, phase = item
+
+               thresholds.append(
+                  (
+                    float(minimum),
+                    str(label),
+                  )
+             )
+
+             # Format simplifié :
+             # (minimum, label)
+            elif len(item) == 2:
+
+                 minimum, label = item
+
+                 thresholds.append(
+                 (
+                    float(minimum),
+                    str(label),
+                 )
+             )
+
+            else:
+
+                 raise ValueError(
+                  "Format invalide dans "
+                  "TPI_PRIORITY_THRESHOLDS : "
+                  f"{item!r}. "
+                  "Chaque seuil doit contenir "
+                  "soit 2 valeurs "
+                  "(minimum, label), "
+                  "soit 4 valeurs "
+                  "(minimum, maximum, label, phase)."
+             )
+
+       # Highest threshold first
+        return sorted(
+          thresholds,
+          key=lambda item: item[0],
+          reverse=True,
+         )
 
         if not isinstance(
             custom,
@@ -1083,22 +1124,17 @@ class TPIEngine:
     # PRIORITY CATEGORY
     # ==========================================================================
 
-    def _get_priority_category(
-        self,
-        score: float,
-    ) -> str:
+def _get_priority_category(
+    self,
+    score: float,
+) -> str:
 
-     for minimum, maximum, category, _phase in self.priority_thresholds:
+    for minimum, label in self.priority_thresholds:
 
-        if minimum <= score < maximum:
-            return category
+        if score >= minimum:
+            return label
 
-    # Cas limite du score maximal
-        if math.isclose(score, 1.0):
-            return "Critique"
-
-     return "Très faible"
-
+    return "Très faible"
 # ==============================================================================
 # BACKWARD COMPATIBILITY
 # ==============================================================================
