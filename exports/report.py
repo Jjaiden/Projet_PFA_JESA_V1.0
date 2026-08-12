@@ -1,23 +1,31 @@
 """
-report.py — Structured report generation for JDMAF.
+report.py — Global assessment report orchestration for JDMAF.
 
 Responsibilities
 ----------------
 - Build the complete assessment report.
-- Aggregate assessment and decision results.
+- Aggregate already-computed assessment and decision results.
 - Generate an executive summary.
-- Serialize results to JSON.
+- Serialize the complete report to JSON.
 - Coordinate PDF and Excel exports.
 
-This module is an orchestration layer.
-It does NOT perform assessment calculations
-or presentation formatting.
+This module does NOT:
+- Calculate assessment scores.
+- Perform maturity calculations.
+- Perform gap analysis.
+- Calculate TPI.
+- Calculate priorities.
+- Build the transformation roadmap.
+- Perform presentation formatting.
+
+It acts as the orchestration layer between the
+assessment/decision engines and the export layer.
 """
 
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Mapping, Optional
@@ -26,9 +34,9 @@ from config import settings
 
 from engines.assessment.scoring import ScoreResult
 from engines.decision.gap import GapResult
-from engines.decision.tpi import TPIResult
 from engines.decision.priority import PriorityResult
 from engines.decision.roadmap import RoadmapPhase
+from engines.decision.tpi import TPIResult
 
 from exports.excel import ExcelExporter
 from exports.pdf import PDFExporter
@@ -47,7 +55,7 @@ logger = settings.get_logger(__name__)
 @dataclass
 class ReportMetadata:
     """
-    Metadata describing the generated report.
+    Metadata describing the generated global report.
     """
 
     report_id: str
@@ -61,7 +69,7 @@ class ReportMetadata:
 @dataclass
 class ExecutiveSummary:
     """
-    Executive-level summary of the assessment.
+    Executive-level summary of the complete assessment.
     """
 
     dmi_score: Optional[float]
@@ -78,7 +86,14 @@ class ExecutiveSummary:
 @dataclass
 class ReportData:
     """
-    Complete structured report data.
+    Complete structured global report data.
+
+    This object contains:
+    - report metadata,
+    - executive summary,
+    - assessment aggregation,
+    - decision-analysis results,
+    - raw serialized data.
     """
 
     metadata: ReportMetadata
@@ -103,7 +118,7 @@ class ReportData:
 
 class ReportGenerator:
     """
-    Unified report orchestrator.
+    Unified global report orchestrator.
 
     Coordinates:
 
@@ -138,9 +153,9 @@ class ReportGenerator:
             self.config
         )
 
-    # =========================================================================
+    # ========================================================================
     # MAIN API
-    # =========================================================================
+    # ========================================================================
 
     def generate_full_report(
         self,
@@ -156,13 +171,46 @@ class ReportGenerator:
         include_json: bool = True,
     ) -> Dict[str, Path]:
         """
-        Generate the complete assessment report.
+        Generate the complete global assessment report.
+
+        The calculations must already have been performed by the
+        assessment and decision engines.
+
+        Args:
+            aggregation_results:
+                Already-computed assessment aggregation results.
+
+            gap_results:
+                Already-computed gap analysis results.
+
+            tpi_results:
+                Already-computed TPI results.
+
+            priority_results:
+                Already-computed prioritization results.
+
+            roadmap:
+                Already-computed transformation roadmap.
+
+            output_dir:
+                Optional directory where generated files are stored.
+
+            assessment_id:
+                Optional assessment identifier.
+
+            include_pdf:
+                Whether to generate the PDF report.
+
+            include_excel:
+                Whether to generate the Excel report.
+
+            include_json:
+                Whether to generate the JSON report.
 
         Returns:
             Dictionary containing generated file paths.
 
         Example:
-
             {
                 "pdf": Path(...),
                 "excel": Path(...),
@@ -170,12 +218,26 @@ class ReportGenerator:
             }
         """
 
+        if not isinstance(
+            aggregation_results,
+            dict,
+        ):
+            raise TypeError(
+                "aggregation_results must be a dictionary."
+            )
+
         metadata = aggregation_results.get(
             "metadata",
-            {}
+            {},
         )
 
-        assessment_id = (
+        if not isinstance(
+            metadata,
+            Mapping,
+        ):
+            metadata = {}
+
+        resolved_assessment_id = (
             assessment_id
             or metadata.get(
                 "assessment_id",
@@ -188,9 +250,9 @@ class ReportGenerator:
             "N/A",
         )
 
-        # ---------------------------------------------------------------------
-        # Build structured report
-        # ---------------------------------------------------------------------
+        # ------------------------------------------------------------------
+        # Build structured global report
+        # ------------------------------------------------------------------
 
         report_data = self._build_report_data(
             aggregation_results=aggregation_results,
@@ -198,47 +260,46 @@ class ReportGenerator:
             tpi_results=tpi_results,
             priority_results=priority_results,
             roadmap=roadmap,
-            assessment_id=assessment_id,
-            site_name=site_name,
+            assessment_id=str(
+                resolved_assessment_id
+            ),
+            site_name=str(site_name),
         )
 
         outputs: Dict[str, Path] = {}
 
-        # ---------------------------------------------------------------------
+        # ------------------------------------------------------------------
         # PDF
-        # ---------------------------------------------------------------------
+        # ------------------------------------------------------------------
 
         if include_pdf:
-
             outputs["pdf"] = self._generate_pdf(
                 report_data=report_data,
                 output_dir=output_dir,
             )
 
-        # ---------------------------------------------------------------------
+        # ------------------------------------------------------------------
         # Excel
-        # ---------------------------------------------------------------------
+        # ------------------------------------------------------------------
 
         if include_excel:
-
             outputs["excel"] = self._generate_excel(
                 report_data=report_data,
                 output_dir=output_dir,
             )
 
-        # ---------------------------------------------------------------------
+        # ------------------------------------------------------------------
         # JSON
-        # ---------------------------------------------------------------------
+        # ------------------------------------------------------------------
 
         if include_json:
-
             outputs["json"] = self._generate_json(
                 report_data=report_data,
                 output_dir=output_dir,
             )
 
         logger.info(
-            "Complete report generated: %s",
+            "Complete global report generated: %s",
             ", ".join(
                 f"{key}={value}"
                 for key, value in outputs.items()
@@ -247,9 +308,9 @@ class ReportGenerator:
 
         return outputs
 
-    # =========================================================================
+    # ========================================================================
     # REPORT CONSTRUCTION
-    # =========================================================================
+    # ========================================================================
 
     def _build_report_data(
         self,
@@ -262,8 +323,12 @@ class ReportGenerator:
         site_name: str = "N/A",
     ) -> ReportData:
         """
-        Build the complete structured report.
+        Build the complete structured global report.
+
+        No assessment or decision calculations are performed here.
         """
+
+        generated_at = datetime.now().isoformat()
 
         report_metadata = ReportMetadata(
             report_id=(
@@ -272,15 +337,48 @@ class ReportGenerator:
             ),
             assessment_id=assessment_id,
             site_name=site_name,
-            generated_at=datetime.now().isoformat(),
+            generated_at=generated_at,
         )
 
         summary = self._build_executive_summary(
             aggregation_results=aggregation_results,
             gap_results=gap_results,
+            priority_results=priority_results,
         )
 
-        dmi = aggregation_results.get("dmi")
+        dmi = aggregation_results.get(
+            "dmi"
+        )
+
+        raw_data = {
+            "dmi": self._serialize_object(
+                dmi
+            ),
+            "indicators": self._serialize_score_results(
+                aggregation_results.get(
+                    "indicators",
+                    {},
+                )
+            ),
+            "subdimensions": self._serialize_score_results(
+                aggregation_results.get(
+                    "subdimensions",
+                    {},
+                )
+            ),
+            "dimensions": self._serialize_score_results(
+                aggregation_results.get(
+                    "dimensions",
+                    {},
+                )
+            ),
+            "pillars": self._serialize_score_results(
+                aggregation_results.get(
+                    "pillars",
+                    {},
+                )
+            ),
+        }
 
         return ReportData(
             metadata=report_metadata,
@@ -290,77 +388,60 @@ class ReportGenerator:
             tpi_results=tpi_results,
             priority_results=priority_results,
             roadmap=roadmap,
-            raw_data={
-                "dmi": (
-                    dmi.to_dict()
-                    if dmi is not None
-                    else None
-                ),
-                "indicators": self._serialize_score_results(
-                    aggregation_results.get(
-                        "indicators",
-                        {},
-                    )
-                ),
-                "subdimensions": self._serialize_score_results(
-                    aggregation_results.get(
-                        "subdimensions",
-                        {},
-                    )
-                ),
-                "dimensions": self._serialize_score_results(
-                    aggregation_results.get(
-                        "dimensions",
-                        {},
-                    )
-                ),
-                "pillars": self._serialize_score_results(
-                    aggregation_results.get(
-                        "pillars",
-                        {},
-                    )
-                ),
-            },
+            raw_data=raw_data,
         )
 
-    # =========================================================================
+    # ========================================================================
     # EXECUTIVE SUMMARY
-    # =========================================================================
+    # ========================================================================
 
     def _build_executive_summary(
         self,
         aggregation_results: Dict[str, Any],
         gap_results: Optional[List[GapResult]] = None,
+        priority_results: Optional[List[PriorityResult]] = None,
     ) -> ExecutiveSummary:
         """
         Build the executive summary.
 
-        No calculations related to maturity are performed here.
-        This only selects and summarizes already-computed results.
+        This method only selects and summarizes already-computed results.
+
+        No maturity or scoring calculations are performed here.
         """
 
-        dmi = aggregation_results.get("dmi")
+        dmi = aggregation_results.get(
+            "dmi"
+        )
 
-        # ---------------------------------------------------------------------
+        # ------------------------------------------------------------------
         # Dimensions
-        # ---------------------------------------------------------------------
+        # ------------------------------------------------------------------
 
         dimensions = aggregation_results.get(
             "dimensions",
-            {}
+            {},
         )
+
+        if not isinstance(
+            dimensions,
+            Mapping,
+        ):
+            dimensions = {}
 
         dim_scores: List[tuple[str, float]] = []
 
         for dim_id, result in dimensions.items():
 
             if (
-                isinstance(result, ScoreResult)
+                isinstance(
+                    result,
+                    ScoreResult,
+                )
                 and result.score is not None
             ):
                 dim_scores.append(
                     (
-                        dim_id,
+                        str(dim_id),
                         float(result.score),
                     )
                 )
@@ -379,9 +460,9 @@ class ReportGenerator:
             key=lambda item: item[1],
         )[:3]
 
-        # ---------------------------------------------------------------------
+        # ------------------------------------------------------------------
         # Critical / high gaps
-        # ---------------------------------------------------------------------
+        # ------------------------------------------------------------------
 
         critical_gaps = 0
 
@@ -391,43 +472,84 @@ class ReportGenerator:
                 1
                 for gap in gap_results
                 if self._normalize_priority(
-                    gap.priority
+                    getattr(
+                        gap,
+                        "priority",
+                        None,
+                    )
                 )
-                in {"Critical", "High"}
+                in {
+                    "Critical",
+                    "High",
+                }
             )
 
-        # ---------------------------------------------------------------------
+        # ------------------------------------------------------------------
         # Priority dimensions
-        # ---------------------------------------------------------------------
+        # ------------------------------------------------------------------
 
-        priority_dimensions = len(dim_scores)
+        if priority_results:
+
+            priority_dimensions = len(
+                priority_results
+            )
+
+        else:
+
+            priority_dimensions = 0
+
+        # ------------------------------------------------------------------
+        # DMI information
+        # ------------------------------------------------------------------
+
+        dmi_score: Optional[float] = None
+        dmi_level: Optional[int] = None
+        dmi_level_name = ""
+
+        if dmi is not None:
+
+            score = getattr(
+                dmi,
+                "score",
+                None,
+            )
+
+            level = getattr(
+                dmi,
+                "level",
+                None,
+            )
+
+            level_name = getattr(
+                dmi,
+                "level_name",
+                "",
+            )
+
+            if score is not None:
+                dmi_score = float(score)
+
+            if level is not None:
+                dmi_level = int(level)
+
+            if level_name is not None:
+                dmi_level_name = str(
+                    level_name
+                )
 
         return ExecutiveSummary(
-            dmi_score=(
-                float(dmi.score)
-                if dmi is not None
-                and dmi.score is not None
-                else None
-            ),
-            dmi_level=(
-                dmi.level
-                if dmi is not None
-                else None
-            ),
-            dmi_level_name=(
-                dmi.level_name
-                if dmi is not None
-                else ""
-            ),
+            dmi_score=dmi_score,
+            dmi_level=dmi_level,
+            dmi_level_name=dmi_level_name,
             top_strengths=top_strengths,
             top_weaknesses=top_weaknesses,
             critical_gaps=critical_gaps,
             priority_dimensions=priority_dimensions,
         )
 
-    # =========================================================================
+    # ========================================================================
     # PDF EXPORT
-    # =========================================================================
+    # ========================================================================
 
     def _generate_pdf(
         self,
@@ -435,7 +557,9 @@ class ReportGenerator:
         output_dir: Optional[Path] = None,
     ) -> Path:
         """
-        Generate the PDF using PDFExporter.
+        Generate the global assessment report as PDF.
+
+        PDFExporter is responsible only for PDF presentation.
         """
 
         filename = (
@@ -443,19 +567,10 @@ class ReportGenerator:
             f"{report_data.metadata.assessment_id}.pdf"
         )
 
-        if output_dir is not None:
-
-            ensure_directory(output_dir)
-
-            output_path = (
-                Path(output_dir) / filename
-            )
-
-        else:
-
-            output_path = build_output_path(
-                filename
-            )
+        output_path = self._resolve_output_path(
+            filename=filename,
+            output_dir=output_dir,
+        )
 
         return self.pdf_exporter.export_assessment_results(
             aggregation_results=(
@@ -471,9 +586,9 @@ class ReportGenerator:
             ),
         )
 
-    # =========================================================================
+    # ========================================================================
     # EXCEL EXPORT
-    # =========================================================================
+    # ========================================================================
 
     def _generate_excel(
         self,
@@ -481,7 +596,7 @@ class ReportGenerator:
         output_dir: Optional[Path] = None,
     ) -> Path:
         """
-        Generate the Excel workbook using ExcelExporter.
+        Generate the global assessment report as Excel.
         """
 
         filename = (
@@ -489,19 +604,10 @@ class ReportGenerator:
             f"{report_data.metadata.assessment_id}.xlsx"
         )
 
-        if output_dir is not None:
-
-            ensure_directory(output_dir)
-
-            output_path = (
-                Path(output_dir) / filename
-            )
-
-        else:
-
-            output_path = build_output_path(
-                filename
-            )
+        output_path = self._resolve_output_path(
+            filename=filename,
+            output_dir=output_dir,
+        )
 
         return self.excel_exporter.export_assessment_results(
             aggregation_results=(
@@ -517,9 +623,9 @@ class ReportGenerator:
             ),
         )
 
-    # =========================================================================
+    # ========================================================================
     # JSON EXPORT
-    # =========================================================================
+    # ========================================================================
 
     def _generate_json(
         self,
@@ -527,7 +633,7 @@ class ReportGenerator:
         output_dir: Optional[Path] = None,
     ) -> Path:
         """
-        Generate the JSON report.
+        Generate the complete structured report as JSON.
         """
 
         filename = (
@@ -535,19 +641,10 @@ class ReportGenerator:
             f"{report_data.metadata.assessment_id}.json"
         )
 
-        if output_dir is not None:
-
-            ensure_directory(output_dir)
-
-            output_path = (
-                Path(output_dir) / filename
-            )
-
-        else:
-
-            output_path = build_output_path(
-                filename
-            )
+        output_path = self._resolve_output_path(
+            filename=filename,
+            output_dir=output_dir,
+        )
 
         data = self._serialize_report_data(
             report_data
@@ -564,6 +661,7 @@ class ReportGenerator:
                 file,
                 indent=2,
                 ensure_ascii=False,
+                default=str,
             )
 
         logger.info(
@@ -573,9 +671,9 @@ class ReportGenerator:
 
         return output_path
 
-    # =========================================================================
+    # ========================================================================
     # SERIALIZATION
-    # =========================================================================
+    # ========================================================================
 
     def _serialize_report_data(
         self,
@@ -643,34 +741,40 @@ class ReportGenerator:
 
             "decision": {
                 "gaps": [
-                    gap.to_dict()
+                    self._serialize_object(gap)
                     for gap in (
                         report_data.gap_results or []
                     )
                 ],
 
                 "tpi": [
-                    tpi.to_dict()
+                    self._serialize_object(tpi)
                     for tpi in (
                         report_data.tpi_results or []
                     )
                 ],
 
                 "priorities": [
-                    priority.to_dict()
+                    self._serialize_object(priority)
                     for priority in (
                         report_data.priority_results or []
                     )
                 ],
 
                 "roadmap": [
-                    phase.to_dict()
+                    self._serialize_object(phase)
                     for phase in (
                         report_data.roadmap or []
                     )
                 ],
             },
+
+            "raw_data": report_data.raw_data,
         }
+
+    # ========================================================================
+    # AGGREGATION SERIALIZATION
+    # ========================================================================
 
     @staticmethod
     def _serialize_aggregation(
@@ -680,7 +784,9 @@ class ReportGenerator:
         Serialize aggregation results.
         """
 
-        dmi = results.get("dmi")
+        dmi = results.get(
+            "dmi"
+        )
 
         return {
             "indicators": (
@@ -720,24 +826,41 @@ class ReportGenerator:
             ),
 
             "dmi": (
-                dmi.to_dict()
+                ReportGenerator._serialize_object(
+                    dmi
+                )
                 if dmi is not None
                 else None
             ),
 
-            "metadata": results.get(
-                "metadata",
-                {},
+            "metadata": ReportGenerator._make_json_safe(
+                results.get(
+                    "metadata",
+                    {},
+                )
             ),
         }
 
+    # ========================================================================
+    # SCORE RESULT SERIALIZATION
+    # ========================================================================
+
     @staticmethod
     def _serialize_score_results(
-        results: Dict[str, Any],
+        results: Mapping[str, Any],
     ) -> Dict[str, Any]:
         """
         Serialize ScoreResult objects.
+
+        Already serialized dictionaries and JSON-compatible primitive
+        values are preserved.
         """
+
+        if not isinstance(
+            results,
+            Mapping,
+        ):
+            return {}
 
         serialized: Dict[str, Any] = {}
 
@@ -748,36 +871,192 @@ class ReportGenerator:
                 ScoreResult,
             ):
 
-                serialized[key] = (
+                serialized[str(key)] = (
                     result.to_dict()
                 )
 
             elif isinstance(
                 result,
-                dict,
+                Mapping,
             ):
 
-                serialized[key] = result
+                serialized[str(key)] = (
+                    ReportGenerator._make_json_safe(
+                        result
+                    )
+                )
 
             else:
 
-                # Keep JSON-compatible primitive values
-                # if they are already serialized.
-                try:
-
-                    json.dumps(result)
-
-                    serialized[key] = result
-
-                except TypeError:
-
-                    serialized[key] = str(result)
+                serialized[str(key)] = (
+                    ReportGenerator._make_json_safe(
+                        result
+                    )
+                )
 
         return serialized
 
-    # =========================================================================
-    # HELPERS
-    # =========================================================================
+    # ========================================================================
+    # GENERIC SERIALIZATION HELPERS
+    # ========================================================================
+
+    @staticmethod
+    def _serialize_object(
+        obj: Any,
+    ) -> Any:
+        """
+        Convert a project object into JSON-compatible data.
+
+        Priority:
+        1. to_dict()
+        2. dataclasses.asdict()
+        3. mappings
+        4. lists/tuples
+        5. primitive values
+        6. string fallback
+        """
+
+        if obj is None:
+            return None
+
+        # Project classes exposing to_dict()
+        if hasattr(
+            obj,
+            "to_dict",
+        ):
+
+            try:
+                return ReportGenerator._make_json_safe(
+                    obj.to_dict()
+                )
+            except Exception:
+                pass
+
+        # Dataclass objects
+        if hasattr(
+            obj,
+            "__dataclass_fields__",
+        ):
+
+            try:
+                return ReportGenerator._make_json_safe(
+                    asdict(obj)
+                )
+            except Exception:
+                pass
+
+        return ReportGenerator._make_json_safe(
+            obj
+        )
+
+    @staticmethod
+    def _make_json_safe(
+        value: Any,
+    ) -> Any:
+        """
+        Recursively convert values into JSON-compatible structures.
+        """
+
+        if value is None:
+            return None
+
+        if isinstance(
+            value,
+            (str, int, float, bool),
+        ):
+            return value
+
+        if isinstance(
+            value,
+            Path,
+        ):
+            return str(value)
+
+        if isinstance(
+            value,
+            Mapping,
+        ):
+            return {
+                str(key): ReportGenerator._make_json_safe(
+                    item
+                )
+                for key, item in value.items()
+            }
+
+        if isinstance(
+            value,
+            (list, tuple, set),
+        ):
+            return [
+                ReportGenerator._make_json_safe(
+                    item
+                )
+                for item in value
+            ]
+
+        if hasattr(
+            value,
+            "to_dict",
+        ):
+
+            try:
+                return ReportGenerator._make_json_safe(
+                    value.to_dict()
+                )
+            except Exception:
+                pass
+
+        if hasattr(
+            value,
+            "__dataclass_fields__",
+        ):
+
+            try:
+                return ReportGenerator._make_json_safe(
+                    asdict(value)
+                )
+            except Exception:
+                pass
+
+        try:
+            json.dumps(value)
+            return value
+
+        except TypeError:
+            return str(value)
+
+    # ========================================================================
+    # OUTPUT PATH
+    # ========================================================================
+
+    @staticmethod
+    def _resolve_output_path(
+        filename: str,
+        output_dir: Optional[Path] = None,
+    ) -> Path:
+        """
+        Resolve the final output path.
+        """
+
+        if output_dir is not None:
+
+            output_dir = Path(
+                output_dir
+            )
+
+            ensure_directory(
+                output_dir
+            )
+
+            return output_dir / filename
+
+        return build_output_path(
+            filename
+        )
+
+    # ========================================================================
+    # PRIORITY NORMALIZATION
+    # ========================================================================
 
     @staticmethod
     def _normalize_priority(
@@ -785,6 +1064,8 @@ class ReportGenerator:
     ) -> str:
         """
         Normalize priority labels.
+
+        Supports English and French labels.
         """
 
         if priority is None:
@@ -836,11 +1117,11 @@ def generate_report(
     formats: Optional[List[str]] = None,
 ) -> Dict[str, Path]:
     """
-    Quick utility to generate a complete report.
+    Quick utility to generate a complete global report.
 
     Args:
         aggregation_results:
-            Results from aggregation.
+            Results from assessment aggregation.
 
         gap_results:
             Gap analysis results.
@@ -867,7 +1148,7 @@ def generate_report(
                 "json"
 
     Returns:
-        Dictionary of generated paths.
+        Dictionary of generated file paths.
     """
 
     if formats is None:
@@ -882,6 +1163,28 @@ def generate_report(
         str(fmt).strip().lower()
         for fmt in formats
     }
+
+    supported_formats = {
+        "pdf",
+        "excel",
+        "json",
+    }
+
+    unsupported_formats = (
+        normalized_formats
+        - supported_formats
+    )
+
+    if unsupported_formats:
+
+        logger.warning(
+            "Unsupported report formats ignored: %s",
+            ", ".join(
+                sorted(
+                    unsupported_formats
+                )
+            ),
+        )
 
     generator = ReportGenerator()
 
@@ -908,24 +1211,143 @@ def generate_report(
 def generate_executive_summary(
     aggregation_results: Dict[str, Any],
     gap_results: Optional[List[GapResult]] = None,
+    priority_results: Optional[List[PriorityResult]] = None,
 ) -> Dict[str, Any]:
     """
     Generate a structured executive summary.
+
+    This utility does not generate a file.
+    It only returns the summary as a dictionary.
     """
 
-    generator = ReportGenerator()
-
-    summary = generator._build_executive_summary(
-        aggregation_results=aggregation_results,
-        gap_results=gap_results,
+    # Avoid unnecessary exporter initialization.
+    dimensions = aggregation_results.get(
+        "dimensions",
+        {},
     )
 
+    dmi = aggregation_results.get(
+        "dmi"
+    )
+
+    # ----------------------------------------------------------------------
+    # Dimension scores
+    # ----------------------------------------------------------------------
+
+    dim_scores: List[tuple[str, float]] = []
+
+    if isinstance(
+        dimensions,
+        Mapping,
+    ):
+
+        for dim_id, result in dimensions.items():
+
+            if (
+                isinstance(
+                    result,
+                    ScoreResult,
+                )
+                and result.score is not None
+            ):
+                dim_scores.append(
+                    (
+                        str(dim_id),
+                        float(result.score),
+                    )
+                )
+
+    dim_scores.sort(
+        key=lambda item: item[1],
+        reverse=True,
+    )
+
+    top_strengths = dim_scores[:3]
+
+    top_weaknesses = sorted(
+        dim_scores,
+        key=lambda item: item[1],
+    )[:3]
+
+    # ----------------------------------------------------------------------
+    # Critical gaps
+    # ----------------------------------------------------------------------
+
+    critical_gaps = 0
+
+    if gap_results:
+
+        critical_gaps = sum(
+            1
+            for gap in gap_results
+            if ReportGenerator._normalize_priority(
+                getattr(
+                    gap,
+                    "priority",
+                    None,
+                )
+            )
+            in {
+                "Critical",
+                "High",
+            }
+        )
+
+    # ----------------------------------------------------------------------
+    # Priority dimensions
+    # ----------------------------------------------------------------------
+
+    priority_dimensions = (
+        len(priority_results)
+        if priority_results
+        else 0
+    )
+
+    # ----------------------------------------------------------------------
+    # DMI
+    # ----------------------------------------------------------------------
+
+    dmi_score = None
+    dmi_level = None
+    dmi_level_name = ""
+
+    if dmi is not None:
+
+        if getattr(
+            dmi,
+            "score",
+            None,
+        ) is not None:
+
+            dmi_score = float(
+                dmi.score
+            )
+
+        if getattr(
+            dmi,
+            "level",
+            None,
+        ) is not None:
+
+            dmi_level = int(
+                dmi.level
+            )
+
+        dmi_level_name = str(
+            getattr(
+                dmi,
+                "level_name",
+                "",
+            )
+            or ""
+        )
+
     return {
-        "dmi_score": summary.dmi_score,
-        "dmi_level": summary.dmi_level,
-        "dmi_level_name": summary.dmi_level_name,
-        "top_strengths": summary.top_strengths,
-        "top_weaknesses": summary.top_weaknesses,
-        "critical_gaps": summary.critical_gaps,
-        "priority_dimensions": summary.priority_dimensions,
+        "dmi_score": dmi_score,
+        "dmi_level": dmi_level,
+        "dmi_level_name": dmi_level_name,
+        "top_strengths": top_strengths,
+        "top_weaknesses": top_weaknesses,
+        "critical_gaps": critical_gaps,
+        "priority_dimensions": priority_dimensions,
     }

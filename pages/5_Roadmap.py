@@ -365,7 +365,7 @@ def _render_export_section() -> None:
 
     format_meta = {
         "pdf": (
-            "DOWNLOAD PDF",
+            "DOWNLOAD Scoring Report",
             "application/pdf",
             "pdf",
         ),
@@ -375,7 +375,7 @@ def _render_export_section() -> None:
             "xlsx",
         ),
         "report": (
-            "DOWNLOAD REPORT",
+            "DOWNLOAD Global Report",
             "application/pdf",
             "pdf",
         ),

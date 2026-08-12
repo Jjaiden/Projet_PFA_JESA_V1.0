@@ -1,11 +1,24 @@
 """
 pdf.py
-------
+======
 
 Professional Industrial Digital Maturity Assessment PDF exporter.
 
+IMPORTANT
+---------
 This module ONLY formats and presents already-computed assessment results.
-It does NOT perform assessment calculations.
+
+It does NOT calculate:
+    - scores
+    - DMI
+    - gaps
+    - TPI
+    - priorities
+    - roadmap phases
+
+The PDF is intentionally SCORE-FOCUSED.
+
+The detailed report is handled separately by report.py.
 
 Expected input:
     aggregation_results
@@ -14,7 +27,10 @@ Expected input:
     priority_results
     roadmap
 
-The public API intentionally mirrors ExcelExporter.export_assessment_results().
+Public API:
+    PDFExporter.export_assessment_results()
+    export_to_pdf()
+    export_full_analysis()
 """
 
 from __future__ import annotations
@@ -24,18 +40,15 @@ from pathlib import Path
 from typing import Any, Dict, List, Mapping, Optional
 
 from reportlab.lib import colors
-from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
+from reportlab.lib.enums import TA_CENTER
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import mm
-from reportlab.pdfbase import pdfmetrics
-from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.platypus import (
     BaseDocTemplate,
     Frame,
     HRFlowable,
     Image,
-    KeepTogether,
     PageBreak,
     PageTemplate,
     Paragraph,
@@ -49,7 +62,7 @@ from utils.file_manager import ensure_directory, build_output_path
 
 
 # ============================================================================
-# BRAND SYSTEM
+# BRAND
 # ============================================================================
 
 JESA_GREEN = colors.HexColor("#007A4D")
@@ -72,8 +85,6 @@ HIGH_ORANGE = colors.HexColor("#EF6C00")
 MEDIUM_YELLOW = colors.HexColor("#F9A825")
 LOW_BLUE = colors.HexColor("#1976D2")
 VERY_LOW_GREY = colors.HexColor("#78909C")
-
-SUCCESS_GREEN = colors.HexColor("#2E7D32")
 
 PRIORITY_COLORS = {
     "Critical": CRITICAL_RED,
@@ -100,15 +111,70 @@ PHASE_ORDER = {
 
 
 # ============================================================================
+# PROJECT ROOT / LOGOS
+# ============================================================================
+
+def _project_root() -> Path:
+    """
+    Return the repository root.
+
+    pdf.py is located in:
+        <project_root>/exports/pdf.py
+
+    Therefore:
+        parent      = exports
+        parent.parent = project root
+    """
+    return Path(__file__).resolve().parent.parent
+
+
+def _find_logo(filename: str) -> Optional[Path]:
+    """
+    Locate a real project logo.
+
+    The repository currently stores the logos in:
+
+        assets/logos/logo_ensam.png
+        assets/logos/logo_jesa.png
+
+    The lookup is based on __file__, NOT on Path.cwd(), so it works
+    correctly when Streamlit is launched from another directory.
+    """
+
+    root = _project_root()
+
+    candidates = [
+        root / "assets" / "logos" / filename,
+        root / "assets" / "logo" / filename,
+        root / "assets" / filename,
+    ]
+
+    for path in candidates:
+        if path.is_file():
+            return path
+
+    return None
+
+
+ENSAM_LOGO = _find_logo("logo_ensam.png")
+JESA_LOGO = _find_logo("logo_jesa.png")
+
+
+# ============================================================================
 # SAFE HELPERS
 # ============================================================================
 
-def _get(obj: Any, key: str, default: Any = None) -> Any:
+def _get(
+    obj: Any,
+    key: str,
+    default: Any = None,
+) -> Any:
     """
     Read a value from either:
-        - a dictionary
+        - a dictionary / Mapping
         - an object attribute
     """
+
     if obj is None:
         return default
 
@@ -118,14 +184,20 @@ def _get(obj: Any, key: str, default: Any = None) -> Any:
     return getattr(obj, key, default)
 
 
-def _safe_str(value: Any, default: str = "") -> str:
+def _safe_str(
+    value: Any,
+    default: str = "",
+) -> str:
     if value is None:
         return default
 
     return str(value)
 
 
-def _safe_float(value: Any, default: float = 0.0) -> float:
+def _safe_float(
+    value: Any,
+    default: float = 0.0,
+) -> float:
     try:
         if value is None:
             return default
@@ -145,21 +217,15 @@ def _format_number(
 
     try:
         return f"{float(value):.{decimals}f}"
+
     except (TypeError, ValueError):
         return str(value)
 
 
-def _format_percent(value: Any) -> str:
-    if value is None:
-        return "—"
+def _normalize_priority(
+    priority: Any,
+) -> str:
 
-    try:
-        return f"{float(value):.1f}%"
-    except (TypeError, ValueError):
-        return str(value)
-
-
-def _normalize_priority(priority: Any) -> str:
     if priority is None:
         return ""
 
@@ -192,14 +258,52 @@ def _priority_color(priority: Any):
     )
 
 
+def _as_list(value: Any) -> List[Any]:
+    """
+    Safely convert common collection structures to a list.
+    """
+
+    if value is None:
+        return []
+
+    if isinstance(value, list):
+        return value
+
+    if isinstance(value, tuple):
+        return list(value)
+
+    if isinstance(value, Mapping):
+        return list(value.values())
+
+    return [value]
+
+
+def _escape_xml(value: Any) -> str:
+    """
+    Escape values inserted into ReportLab Paragraph markup.
+    """
+
+    text = _safe_str(value)
+
+    return (
+        text
+        .replace("&", "&amp;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
+    )
+
+
 # ============================================================================
 # PDF EXPORTER
 # ============================================================================
 
-
 class PDFExporter:
     """
-    Generate a professional Industrial Digital Maturity Assessment Report.
+    Professional score-focused PDF exporter.
+
+    This exporter presents already-computed results.
+
+    It never recalculates assessment values.
     """
 
     def __init__(
@@ -220,8 +324,6 @@ class PDFExporter:
 
         self.generated_at = datetime.now()
 
-        # IMPORTANT:
-        # _build_styles() exists in this class.
         self.styles = self._build_styles()
 
     # ========================================================================
@@ -238,19 +340,20 @@ class PDFExporter:
         output_path: Optional[Path] = None,
         assessment_id: Optional[str] = None,
     ) -> Path:
-        """
-        Generate the complete PDF report.
 
-        This method is intentionally compatible with ExcelExporter.
-        """
+        aggregation_results = (
+            aggregation_results
+            if isinstance(aggregation_results, Mapping)
+            else {}
+        )
 
-        gap_results = gap_results or []
-        tpi_results = tpi_results or []
-        priority_results = priority_results or []
-        roadmap = roadmap or []
+        gap_results = _as_list(gap_results)
+        tpi_results = _as_list(tpi_results)
+        priority_results = _as_list(priority_results)
+        roadmap = _as_list(roadmap)
 
         # ------------------------------------------------------------------
-        # Output path
+        # OUTPUT
         # ------------------------------------------------------------------
 
         if output_path is None:
@@ -273,7 +376,7 @@ class PDFExporter:
         ensure_directory(output_path.parent)
 
         # ------------------------------------------------------------------
-        # Metadata
+        # METADATA
         # ------------------------------------------------------------------
 
         metadata = aggregation_results.get(
@@ -281,8 +384,11 @@ class PDFExporter:
             {},
         )
 
+        if not isinstance(metadata, Mapping):
+            metadata = {}
+
         # ------------------------------------------------------------------
-        # Document
+        # DOCUMENT
         # ------------------------------------------------------------------
 
         doc = BaseDocTemplate(
@@ -292,9 +398,9 @@ class PDFExporter:
             leftMargin=16 * mm,
             topMargin=22 * mm,
             bottomMargin=18 * mm,
-            title="Industrial Digital Maturity Assessment Report",
+            title="Industrial Digital Maturity Assessment",
             author="JESA DMAT",
-            subject="Industrial Digital Maturity Assessment",
+            subject="Industrial Digital Maturity Assessment - Scoring",
         )
 
         frame = Frame(
@@ -306,7 +412,7 @@ class PDFExporter:
         )
 
         page_template = PageTemplate(
-            id="AssessmentReport",
+            id="AssessmentPDF",
             frames=frame,
             onPage=self._draw_page_header_footer,
         )
@@ -315,9 +421,9 @@ class PDFExporter:
 
         story: List[Any] = []
 
-        # ==================================================================
+        # ------------------------------------------------------------------
         # COVER
-        # ==================================================================
+        # ------------------------------------------------------------------
 
         story.extend(
             self._build_cover_page(
@@ -328,9 +434,9 @@ class PDFExporter:
 
         story.append(PageBreak())
 
-        # ==================================================================
-        # EXECUTIVE SUMMARY
-        # ==================================================================
+        # ------------------------------------------------------------------
+        # EXECUTIVE SCORING SUMMARY
+        # ------------------------------------------------------------------
 
         story.extend(
             self._build_executive_summary(
@@ -344,9 +450,9 @@ class PDFExporter:
 
         story.append(PageBreak())
 
-        # ==================================================================
-        # DMI OVERVIEW
-        # ==================================================================
+        # ------------------------------------------------------------------
+        # DMI
+        # ------------------------------------------------------------------
 
         story.extend(
             self._build_dmi_overview(
@@ -356,9 +462,9 @@ class PDFExporter:
 
         story.append(PageBreak())
 
-        # ==================================================================
+        # ------------------------------------------------------------------
         # PILLARS
-        # ==================================================================
+        # ------------------------------------------------------------------
 
         story.extend(
             self._build_pillar_assessment(
@@ -368,9 +474,9 @@ class PDFExporter:
 
         story.append(PageBreak())
 
-        # ==================================================================
+        # ------------------------------------------------------------------
         # DIMENSIONS
-        # ==================================================================
+        # ------------------------------------------------------------------
 
         story.extend(
             self._build_dimension_assessment(
@@ -380,9 +486,9 @@ class PDFExporter:
 
         story.append(PageBreak())
 
-        # ==================================================================
-        # GAP ANALYSIS
-        # ==================================================================
+        # ------------------------------------------------------------------
+        # GAPS
+        # ------------------------------------------------------------------
 
         story.extend(
             self._build_gap_analysis(
@@ -392,9 +498,9 @@ class PDFExporter:
 
         story.append(PageBreak())
 
-        # ==================================================================
+        # ------------------------------------------------------------------
         # TPI
-        # ==================================================================
+        # ------------------------------------------------------------------
 
         story.extend(
             self._build_tpi_prioritization(
@@ -404,9 +510,9 @@ class PDFExporter:
 
         story.append(PageBreak())
 
-        # ==================================================================
+        # ------------------------------------------------------------------
         # PRIORITY MATRIX
-        # ==================================================================
+        # ------------------------------------------------------------------
 
         story.extend(
             self._build_priority_matrix(
@@ -416,9 +522,9 @@ class PDFExporter:
 
         story.append(PageBreak())
 
-        # ==================================================================
-        # ROADMAP
-        # ==================================================================
+        # ------------------------------------------------------------------
+        # ROADMAP - SCORE SUMMARY ONLY
+        # ------------------------------------------------------------------
 
         story.extend(
             self._build_transformation_roadmap(
@@ -428,22 +534,22 @@ class PDFExporter:
 
         story.append(PageBreak())
 
-        # ==================================================================
-        # RECOMMENDATIONS
-        # ==================================================================
+        # ------------------------------------------------------------------
+        # SCORING CONCLUSION
+        # ------------------------------------------------------------------
 
         story.extend(
-            self._build_recommendations(
+            self._build_scoring_conclusion(
+                aggregation_results,
                 priority_results,
-                roadmap,
             )
         )
 
         story.append(PageBreak())
 
-        # ==================================================================
+        # ------------------------------------------------------------------
         # METADATA
-        # ==================================================================
+        # ------------------------------------------------------------------
 
         story.extend(
             self._build_metadata(
@@ -452,9 +558,9 @@ class PDFExporter:
             )
         )
 
-        # ==================================================================
+        # ------------------------------------------------------------------
         # BUILD
-        # ==================================================================
+        # ------------------------------------------------------------------
 
         doc.build(story)
 
@@ -465,9 +571,11 @@ class PDFExporter:
     # ========================================================================
 
     def _build_styles(self):
+
         styles = getSampleStyleSheet()
 
         return {
+
             "title": ParagraphStyle(
                 "ReportTitle",
                 parent=styles["Title"],
@@ -530,15 +638,6 @@ class PDFExporter:
                 textColor=GREY_600,
             ),
 
-            "small_white": ParagraphStyle(
-                "SmallWhite",
-                parent=styles["BodyText"],
-                fontName="Helvetica",
-                fontSize=7,
-                leading=9,
-                textColor=WHITE,
-            ),
-
             "kpi": ParagraphStyle(
                 "KPI",
                 parent=styles["BodyText"],
@@ -556,15 +655,6 @@ class PDFExporter:
                 fontSize=7.5,
                 leading=10,
                 textColor=GREY_600,
-                alignment=TA_CENTER,
-            ),
-
-            "center": ParagraphStyle(
-                "Center",
-                parent=styles["BodyText"],
-                fontName="Helvetica",
-                fontSize=7.5,
-                leading=10,
                 alignment=TA_CENTER,
             ),
 
@@ -586,10 +676,19 @@ class PDFExporter:
                 textColor=WHITE,
                 alignment=TA_CENTER,
             ),
+
+            "cover_label": ParagraphStyle(
+                "CoverLabel",
+                parent=styles["BodyText"],
+                fontName="Helvetica-Bold",
+                fontSize=8,
+                leading=10,
+                textColor=JESA_DARK,
+            ),
         }
 
     # ========================================================================
-    # PAGE HEADER / FOOTER
+    # HEADER / FOOTER
     # ========================================================================
 
     def _draw_page_header_footer(
@@ -602,7 +701,7 @@ class PDFExporter:
 
         width, height = A4
 
-        # Do not show header/footer on first page.
+        # Header: pages after cover
         if doc.page > 1:
 
             canvas.setStrokeColor(GREY_200)
@@ -667,7 +766,10 @@ class PDFExporter:
         canvas.drawString(
             16 * mm,
             6 * mm,
-            f"Generated {self.generated_at.strftime('%Y-%m-%d %H:%M')}",
+            (
+                "JESA DMAT • Generated "
+                f"{self.generated_at.strftime('%Y-%m-%d %H:%M')}"
+            ),
         )
 
         canvas.drawRightString(
@@ -690,14 +792,94 @@ class PDFExporter:
 
         story: List[Any] = []
 
-        story.append(Spacer(1, 25 * mm))
+        story.append(
+            Spacer(
+                1,
+                10 * mm,
+            )
+        )
 
-        # Logo block
-        logo_table = self._build_logo_table()
+        # ------------------------------------------------------------------
+        # REAL LOGOS
+        # ------------------------------------------------------------------
 
-        if logo_table:
-            story.append(logo_table)
-            story.append(Spacer(1, 18 * mm))
+        logo_cells = [
+            self._logo_or_empty(
+                ENSAM_LOGO,
+                width=43 * mm,
+                height=25 * mm,
+            ),
+            self._logo_or_empty(
+                JESA_LOGO,
+                width=43 * mm,
+                height=25 * mm,
+            ),
+        ]
+
+        logo_table = Table(
+            [logo_cells],
+            colWidths=[
+                75 * mm,
+                75 * mm,
+            ],
+            hAlign="CENTER",
+        )
+
+        logo_table.setStyle(
+            TableStyle(
+                [
+                    (
+                        "ALIGN",
+                        (0, 0),
+                        (-1, -1),
+                        "CENTER",
+                    ),
+                    (
+                        "VALIGN",
+                        (0, 0),
+                        (-1, -1),
+                        "MIDDLE",
+                    ),
+                    (
+                        "LEFTPADDING",
+                        (0, 0),
+                        (-1, -1),
+                        5,
+                    ),
+                    (
+                        "RIGHTPADDING",
+                        (0, 0),
+                        (-1, -1),
+                        5,
+                    ),
+                    (
+                        "TOPPADDING",
+                        (0, 0),
+                        (-1, -1),
+                        4,
+                    ),
+                    (
+                        "BOTTOMPADDING",
+                        (0, 0),
+                        (-1, -1),
+                        4,
+                    ),
+                ]
+            )
+        )
+
+        story.append(logo_table)
+
+        story.append(
+            Spacer(
+                1,
+                24 * mm,
+            )
+        )
+
+        # ------------------------------------------------------------------
+        # TITLE
+        # ------------------------------------------------------------------
 
         story.append(
             Paragraph(
@@ -707,8 +889,15 @@ class PDFExporter:
         )
 
         story.append(
+            Spacer(
+                1,
+                5 * mm,
+            )
+        )
+
+        story.append(
             Paragraph(
-                "Professional Assessment Report",
+                "Digital Maturity Assessment Tool",
                 self.styles["subtitle"],
             )
         )
@@ -716,83 +905,94 @@ class PDFExporter:
         story.append(
             Spacer(
                 1,
-                10 * mm,
+                14 * mm,
             )
         )
 
-        site_name = _safe_str(
-            metadata.get("site_name", ""),
-            "Industrial Site",
+        # ------------------------------------------------------------------
+        # INFO
+        # ------------------------------------------------------------------
+
+        site_name = _get(
+            metadata,
+            "site_name",
+            "Industrial Plant",
         )
 
-        assessment_date = _safe_str(
-            metadata.get("assessment_date", ""),
-            self.generated_at.strftime("%Y-%m-%d"),
-        )
-
-        evaluator = _safe_str(
-            metadata.get("evaluator", ""),
-            "—",
-        )
-
-        assessment_id_value = (
+        identifier = (
             assessment_id
-            or metadata.get("assessment_id", "")
-            or "—"
+            or _get(
+                metadata,
+                "assessment_id",
+                "N/A",
+            )
         )
 
-        data = [
+        assessment_date = _get(
+            metadata,
+            "assessment_date",
+            self.generated_at.strftime("%d %B %Y"),
+        )
+
+        info_data = [
+
             [
                 Paragraph(
-                    "<b>Site</b>",
-                    self.styles["body"],
+                    "Assessment ID",
+                    self.styles["cover_label"],
                 ),
                 Paragraph(
-                    site_name,
+                    _escape_xml(identifier),
                     self.styles["body"],
                 ),
             ],
+
             [
                 Paragraph(
-                    "<b>Assessment ID</b>",
-                    self.styles["body"],
+                    "Site",
+                    self.styles["cover_label"],
                 ),
                 Paragraph(
-                    assessment_id_value,
+                    _escape_xml(site_name),
                     self.styles["body"],
                 ),
             ],
+
             [
                 Paragraph(
-                    "<b>Assessment Date</b>",
-                    self.styles["body"],
+                    "Assessment Date",
+                    self.styles["cover_label"],
                 ),
                 Paragraph(
-                    assessment_date,
+                    _escape_xml(assessment_date),
                     self.styles["body"],
                 ),
             ],
+
             [
                 Paragraph(
-                    "<b>Evaluator</b>",
-                    self.styles["body"],
+                    "Generated",
+                    self.styles["cover_label"],
                 ),
                 Paragraph(
-                    evaluator,
+                    self.generated_at.strftime(
+                        "%d %B %Y"
+                    ),
                     self.styles["body"],
                 ),
             ],
         ]
 
-        table = Table(
-            data,
+        info_table = Table(
+            info_data,
             colWidths=[
                 45 * mm,
-                100 * mm,
+                95 * mm,
             ],
+            hAlign="CENTER",
         )
 
-        table.setStyle(
+        info_table.setStyle(
             TableStyle(
                 [
                     (
@@ -802,20 +1002,7 @@ class PDFExporter:
                         JESA_LIGHT,
                     ),
                     (
-                        "BACKGROUND",
-                        (1, 0),
-                        (1, -1),
-                        GREY_100,
-                    ),
-                    (
-                        "BOX",
-                        (0, 0),
-                        (-1, -1),
-                        0.6,
-                        GREY_200,
-                    ),
-                    (
-                        "INNERGRID",
+                        "GRID",
                         (0, 0),
                         (-1, -1),
                         0.4,
@@ -831,264 +1018,102 @@ class PDFExporter:
                         "LEFTPADDING",
                         (0, 0),
                         (-1, -1),
-                        8,
+                        7,
                     ),
                     (
                         "RIGHTPADDING",
                         (0, 0),
                         (-1, -1),
-                        8,
+                        7,
                     ),
                     (
                         "TOPPADDING",
                         (0, 0),
                         (-1, -1),
-                        7,
+                        6,
                     ),
                     (
                         "BOTTOMPADDING",
                         (0, 0),
                         (-1, -1),
-                        7,
+                        6,
                     ),
                 ]
             )
         )
 
-        story.append(table)
+        story.append(info_table)
 
         story.append(
             Spacer(
                 1,
-                35 * mm,
+                30 * mm,
+            )
+        )
+
+        story.append(
+            HRFlowable(
+                width="80%",
+                thickness=1,
+                color=JESA_GREEN,
+                hAlign="CENTER",
+            )
+        )
+
+        story.append(
+            Spacer(
+                1,
+                5 * mm,
             )
         )
 
         story.append(
             Paragraph(
-                "JESA Digital Maturity Assessment Tool",
+                "Scoring & Digital Maturity Assessment Results",
                 self.styles["subtitle"],
-            )
-        )
-
-        story.append(
-            Paragraph(
-                "Confidential Assessment Report",
-                self.styles["small"],
             )
         )
 
         return story
 
     # ========================================================================
-    # LOGOS
+    # LOGO HELPER
     # ========================================================================
 
-    def _build_logo_table(self):
-        logo_dir = self._get_logo_directory()
-
-        jesa_path = self._find_logo(
-            logo_dir,
-            [
-                "jesa_logo.png",
-                "JESA_logo.png",
-                "jesa.png",
-                "JESA.png",
-            ],
-        )
-
-        ensam_path = self._find_logo(
-            logo_dir,
-            [
-                "ensam_logo.png",
-                "ENSAM_logo.png",
-                "ensam.png",
-                "ENSAM.png",
-            ],
-        )
-
-        cells = []
-
-        if jesa_path:
-
-            try:
-                image = Image(
-                    str(jesa_path),
-                    width=48 * mm,
-                    height=18 * mm,
-                )
-
-                image.hAlign = "CENTER"
-
-                cells.append(image)
-
-            except Exception:
-                cells.append(
-                    Paragraph(
-                        "JESA",
-                        self.styles["h2"],
-                    )
-                )
-
-        else:
-            cells.append(
-                Paragraph(
-                    "JESA",
-                    self.styles["h2"],
-                )
-            )
-
-        if ensam_path:
-
-            try:
-                image = Image(
-                    str(ensam_path),
-                    width=42 * mm,
-                    height=18 * mm,
-                )
-
-                image.hAlign = "CENTER"
-
-                cells.append(image)
-
-            except Exception:
-                cells.append(
-                    Paragraph(
-                        "ENSAM",
-                        self.styles["h2"],
-                    )
-                )
-
-        else:
-            cells.append(
-                Paragraph(
-                    "ENSAM",
-                    self.styles["h2"],
-                )
-            )
-
-        table = Table(
-            [cells],
-            colWidths=[
-                75 * mm,
-                75 * mm,
-            ],
-        )
-
-        table.setStyle(
-            TableStyle(
-                [
-                    (
-                        "VALIGN",
-                        (0, 0),
-                        (-1, -1),
-                        "MIDDLE",
-                    ),
-                    (
-                        "ALIGN",
-                        (0, 0),
-                        (-1, -1),
-                        "CENTER",
-                    ),
-                ]
-            )
-        )
-
-        return table
-
-    def _get_logo_directory(self) -> Path:
-
-        try:
-
-            frontend = getattr(
-                settings,
-                "frontend",
-                None,
-            )
-
-            if frontend is not None:
-
-                logo_dir = getattr(
-                    frontend,
-                    "LOGO_DIR",
-                    None,
-                )
-
-                if logo_dir:
-                    return Path(logo_dir)
-
-        except Exception:
-            pass
-
-        try:
-
-            backend = getattr(
-                settings,
-                "backend",
-                None,
-            )
-
-            if backend is not None:
-
-                base_dir = getattr(
-                    backend,
-                    "BASE_DIR",
-                    None,
-                )
-
-                if base_dir:
-
-                    return (
-                        Path(base_dir)
-                        / "assets"
-                        / "logo"
-                    )
-
-        except Exception:
-            pass
-
-        return (
-            Path.cwd()
-            / "assets"
-            / "logo"
-        )
-
     @staticmethod
-    def _find_logo(
-        directory: Path,
-        candidates: List[str],
-    ) -> Optional[Path]:
+    def _logo_or_empty(
+        path: Optional[Path],
+        width: float,
+        height: float,
+    ):
 
-        if not directory.exists():
-            return None
-
-        for filename in candidates:
-
-            path = directory / filename
-
-            if path.exists():
-                return path
-
-        candidate_names = {
-            name.lower()
-            for name in candidates
-        }
+        if path is None:
+            # IMPORTANT:
+            # Do NOT write "ENSAM" / "JESA" as fake logos.
+            # If the real file cannot be found, leave the cell empty.
+            return Spacer(
+                width,
+                height,
+            )
 
         try:
 
-            for path in directory.iterdir():
+            image = Image(
+                str(path),
+                width=width,
+                height=height,
+                kind="proportional",
+            )
 
-                if (
-                    path.is_file()
-                    and path.name.lower()
-                    in candidate_names
-                ):
-                    return path
+            image.hAlign = "CENTER"
 
-        except OSError:
-            return None
+            return image
 
-        return None
+        except Exception:
+            return Spacer(
+                width,
+                height,
+            )
 
     # ========================================================================
     # EXECUTIVE SUMMARY
@@ -1107,22 +1132,24 @@ class PDFExporter:
 
         story.append(
             Paragraph(
-                "1. Executive Summary",
+                "1. Executive Scoring Summary",
                 self.styles["h1"],
             )
         )
 
         story.append(
             Paragraph(
-                "This section provides an executive-level overview "
-                "of the assessed site's digital maturity and the "
-                "main transformation priorities identified by the "
-                "assessment.",
+                "This section presents the principal scoring results "
+                "generated by the Digital Maturity Assessment Tool. "
+                "All values shown below are already-computed assessment "
+                "results.",
                 self.styles["body"],
             )
         )
 
-        dmi = aggregation_results.get("dmi")
+        dmi = aggregation_results.get(
+            "dmi"
+        )
 
         dmi_score = _get(
             dmi,
@@ -1149,6 +1176,9 @@ class PDFExporter:
             {},
         )
 
+        if not isinstance(metadata, Mapping):
+            metadata = {}
+
         total_indicators = metadata.get(
             "total_indicators",
             len(
@@ -1156,6 +1186,7 @@ class PDFExporter:
                     "indicators",
                     {},
                 )
+                or {}
             ),
         )
 
@@ -1166,6 +1197,7 @@ class PDFExporter:
                     "dimensions",
                     {},
                 )
+                or {}
             ),
         )
 
@@ -1176,6 +1208,7 @@ class PDFExporter:
                     "pillars",
                     {},
                 )
+                or {}
             ),
         )
 
@@ -1213,17 +1246,23 @@ class PDFExporter:
             == "High"
         )
 
-        roadmap_count = sum(
-            len(
-                _get(
-                    phase,
-                    "items",
-                    [],
-                )
-                or []
+        roadmap_count = 0
+
+        for phase in roadmap:
+
+            items = _get(
+                phase,
+                "items",
+                [],
             )
-            for phase in roadmap
-        )
+
+            roadmap_count += len(
+                _as_list(items)
+            )
+
+        # ------------------------------------------------------------------
+        # KPI CARDS
+        # ------------------------------------------------------------------
 
         kpis = [
             [
@@ -1234,35 +1273,42 @@ class PDFExporter:
                     ),
                     self.styles["kpi"],
                 ),
+
                 Paragraph(
-                    _safe_str(
+                    _escape_xml(
                         dmi_level,
                         "—",
                     ),
                     self.styles["kpi"],
                 ),
+
                 Paragraph(
                     str(total_indicators),
                     self.styles["kpi"],
                 ),
+
                 Paragraph(
                     str(total_dimensions),
                     self.styles["kpi"],
                 ),
             ],
+
             [
                 Paragraph(
                     "Digital Maturity Index",
                     self.styles["kpi_label"],
                 ),
+
                 Paragraph(
                     "Maturity Level",
                     self.styles["kpi_label"],
                 ),
+
                 Paragraph(
                     "Indicators",
                     self.styles["kpi_label"],
                 ),
+
                 Paragraph(
                     "Dimensions",
                     self.styles["kpi_label"],
@@ -1330,21 +1376,27 @@ class PDFExporter:
         story.append(
             Spacer(
                 1,
-                7 * mm,
+                8 * mm,
             )
         )
 
-        summary_rows = [
+        # ------------------------------------------------------------------
+        # SUMMARY TABLE
+        # ------------------------------------------------------------------
+
+        rows = [
+
             [
                 Paragraph(
-                    "<b>Metric</b>",
+                    "Metric",
                     self.styles["table_header"],
                 ),
                 Paragraph(
-                    "<b>Value</b>",
+                    "Value",
                     self.styles["table_header"],
                 ),
             ],
+
             [
                 Paragraph(
                     "Pillars assessed",
@@ -1355,6 +1407,7 @@ class PDFExporter:
                     self.styles["table"],
                 ),
             ],
+
             [
                 Paragraph(
                     "Critical priorities",
@@ -1365,6 +1418,7 @@ class PDFExporter:
                     self.styles["table"],
                 ),
             ],
+
             [
                 Paragraph(
                     "High priorities",
@@ -1375,9 +1429,10 @@ class PDFExporter:
                     self.styles["table"],
                 ),
             ],
+
             [
                 Paragraph(
-                    "Roadmap actions",
+                    "Transformation actions",
                     self.styles["table"],
                 ),
                 Paragraph(
@@ -1388,7 +1443,7 @@ class PDFExporter:
         ]
 
         table = Table(
-            summary_rows,
+            rows,
             colWidths=[
                 90 * mm,
                 80 * mm,
@@ -1468,12 +1523,14 @@ class PDFExporter:
 
         story.append(
             Paragraph(
-                "2. Digital Maturity Overview",
+                "2. Digital Maturity Index",
                 self.styles["h1"],
             )
         )
 
-        dmi = aggregation_results.get("dmi")
+        dmi = aggregation_results.get(
+            "dmi"
+        )
 
         if dmi is None:
 
@@ -1481,6 +1538,9 @@ class PDFExporter:
                 "metadata",
                 {},
             )
+
+            if not isinstance(metadata, Mapping):
+                metadata = {}
 
             score = metadata.get(
                 "dmi_score",
@@ -1515,10 +1575,18 @@ class PDFExporter:
                 ),
             )
 
+        story.append(
+            Paragraph(
+                "Overall digital maturity score",
+                self.styles["h2"],
+            )
+        )
+
         data = [
+
             [
                 Paragraph(
-                    "Digital Maturity Index",
+                    "Indicator",
                     self.styles["table_header"],
                 ),
                 Paragraph(
@@ -1530,11 +1598,13 @@ class PDFExporter:
                     self.styles["table_header"],
                 ),
             ],
+
             [
                 Paragraph(
-                    "DMI",
+                    "Digital Maturity Index (DMI)",
                     self.styles["table"],
                 ),
+
                 Paragraph(
                     _format_number(
                         score,
@@ -1542,8 +1612,9 @@ class PDFExporter:
                     ),
                     self.styles["table"],
                 ),
+
                 Paragraph(
-                    _safe_str(level),
+                    _escape_xml(level),
                     self.styles["table"],
                 ),
             ],
@@ -1568,17 +1639,17 @@ class PDFExporter:
                         JESA_GREEN,
                     ),
                     (
+                        "BACKGROUND",
+                        (0, 1),
+                        (-1, 1),
+                        GREY_100,
+                    ),
+                    (
                         "GRID",
                         (0, 0),
                         (-1, -1),
                         0.5,
                         GREY_200,
-                    ),
-                    (
-                        "BACKGROUND",
-                        (0, 1),
-                        (-1, 1),
-                        GREY_100,
                     ),
                     (
                         "VALIGN",
@@ -1589,7 +1660,7 @@ class PDFExporter:
                     (
                         "ALIGN",
                         (1, 1),
-                        (1, -1),
+                        (-1, -1),
                         "CENTER",
                     ),
                 ]
@@ -1613,25 +1684,29 @@ class PDFExporter:
 
         story.append(
             Paragraph(
-                "3. Pillar Assessment",
+                "3. Pillar Scoring",
                 self.styles["h1"],
             )
         )
 
         rows = [
+
             [
                 Paragraph(
                     "Pillar",
                     self.styles["table_header"],
                 ),
+
                 Paragraph(
                     "Score",
                     self.styles["table_header"],
                 ),
+
                 Paragraph(
                     "Level",
                     self.styles["table_header"],
                 ),
+
                 Paragraph(
                     "Applicability",
                     self.styles["table_header"],
@@ -1647,15 +1722,16 @@ class PDFExporter:
         iterable = (
             pillars.values()
             if isinstance(pillars, Mapping)
-            else pillars
+            else _as_list(pillars)
         )
 
         for result in iterable:
 
             rows.append(
                 [
+
                     Paragraph(
-                        _safe_str(
+                        _escape_xml(
                             _get(
                                 result,
                                 "entity_name",
@@ -1668,6 +1744,7 @@ class PDFExporter:
                         ),
                         self.styles["table"],
                     ),
+
                     Paragraph(
                         _format_number(
                             _get(
@@ -1678,8 +1755,9 @@ class PDFExporter:
                         ),
                         self.styles["table"],
                     ),
+
                     Paragraph(
-                        _safe_str(
+                        _escape_xml(
                             _get(
                                 result,
                                 "level_name",
@@ -1692,8 +1770,9 @@ class PDFExporter:
                         ),
                         self.styles["table"],
                     ),
+
                     Paragraph(
-                        _safe_str(
+                        _escape_xml(
                             _get(
                                 result,
                                 "applicability",
@@ -1726,7 +1805,7 @@ class PDFExporter:
                 30 * mm,
                 40 * mm,
                 30 * mm,
-                ],
+            ],
             repeatRows=1,
         )
 
@@ -1785,29 +1864,34 @@ class PDFExporter:
 
         story.append(
             Paragraph(
-                "4. Dimension Assessment",
+                "4. Dimension Scoring",
                 self.styles["h1"],
             )
         )
 
         rows = [
+
             [
                 Paragraph(
                     "ID",
                     self.styles["table_header"],
                 ),
+
                 Paragraph(
                     "Dimension",
                     self.styles["table_header"],
                 ),
+
                 Paragraph(
                     "Score",
                     self.styles["table_header"],
                 ),
+
                 Paragraph(
                     "Level",
                     self.styles["table_header"],
                 ),
+
                 Paragraph(
                     "Pillar",
                     self.styles["table_header"],
@@ -1823,15 +1907,16 @@ class PDFExporter:
         iterable = (
             dimensions.values()
             if isinstance(dimensions, Mapping)
-            else dimensions
+            else _as_list(dimensions)
         )
 
         for result in iterable:
 
             rows.append(
                 [
+
                     Paragraph(
-                        _safe_str(
+                        _escape_xml(
                             _get(
                                 result,
                                 "entity_id",
@@ -1844,8 +1929,9 @@ class PDFExporter:
                         ),
                         self.styles["table"],
                     ),
+
                     Paragraph(
-                        _safe_str(
+                        _escape_xml(
                             _get(
                                 result,
                                 "entity_name",
@@ -1858,6 +1944,7 @@ class PDFExporter:
                         ),
                         self.styles["table"],
                     ),
+
                     Paragraph(
                         _format_number(
                             _get(
@@ -1868,8 +1955,9 @@ class PDFExporter:
                         ),
                         self.styles["table"],
                     ),
+
                     Paragraph(
-                        _safe_str(
+                        _escape_xml(
                             _get(
                                 result,
                                 "level_name",
@@ -1882,8 +1970,9 @@ class PDFExporter:
                         ),
                         self.styles["table"],
                     ),
+
                     Paragraph(
-                        _safe_str(
+                        _escape_xml(
                             _get(
                                 result,
                                 "parent_id",
@@ -1988,28 +2077,42 @@ class PDFExporter:
             )
         )
 
+        story.append(
+            Paragraph(
+                "Comparison between current maturity scores and "
+                "target scores.",
+                self.styles["body"],
+            )
+        )
+
         rows = [
+
             [
                 Paragraph(
                     "Entity",
                     self.styles["table_header"],
                 ),
+
                 Paragraph(
                     "Type",
                     self.styles["table_header"],
                 ),
+
                 Paragraph(
                     "Current",
                     self.styles["table_header"],
                 ),
+
                 Paragraph(
                     "Target",
                     self.styles["table_header"],
                 ),
+
                 Paragraph(
                     "Gap",
                     self.styles["table_header"],
                 ),
+
                 Paragraph(
                     "Priority",
                     self.styles["table_header"],
@@ -2029,8 +2132,9 @@ class PDFExporter:
 
             rows.append(
                 [
+
                     Paragraph(
-                        _safe_str(
+                        _escape_xml(
                             _get(
                                 gap,
                                 "entity_name",
@@ -2039,8 +2143,9 @@ class PDFExporter:
                         ),
                         self.styles["table"],
                     ),
+
                     Paragraph(
-                        _safe_str(
+                        _escape_xml(
                             _get(
                                 gap,
                                 "entity_type",
@@ -2049,6 +2154,7 @@ class PDFExporter:
                         ),
                         self.styles["table"],
                     ),
+
                     Paragraph(
                         _format_number(
                             _get(
@@ -2059,6 +2165,7 @@ class PDFExporter:
                         ),
                         self.styles["table"],
                     ),
+
                     Paragraph(
                         _format_number(
                             _get(
@@ -2069,6 +2176,7 @@ class PDFExporter:
                         ),
                         self.styles["table"],
                     ),
+
                     Paragraph(
                         _format_number(
                             _get(
@@ -2079,8 +2187,11 @@ class PDFExporter:
                         ),
                         self.styles["table"],
                     ),
+
                     Paragraph(
-                        priority or "—",
+                        _escape_xml(
+                            priority or "—"
+                        ),
                         self.styles["table"],
                     ),
                 ]
@@ -2115,13 +2226,14 @@ class PDFExporter:
             repeatRows=1,
         )
 
-        style_commands = [
+        commands = [
             (
                 "BACKGROUND",
                 (0, 0),
                 (-1, 0),
                 JESA_GREEN,
             ),
+
             (
                 "GRID",
                 (0, 0),
@@ -2129,18 +2241,21 @@ class PDFExporter:
                 0.4,
                 GREY_200,
             ),
+
             (
                 "ROWBACKGROUNDS",
                 (0, 1),
                 (-1, -1),
                 [WHITE, GREY_100],
             ),
+
             (
                 "VALIGN",
                 (0, 0),
                 (-1, -1),
                 "MIDDLE",
             ),
+
             (
                 "ALIGN",
                 (2, 1),
@@ -2149,14 +2264,14 @@ class PDFExporter:
             ),
         ]
 
-        # Priority cell backgrounds
-        for row_index in range(1, len(rows)):
+        for row_index, gap in enumerate(
+            gap_results,
+            start=1,
+        ):
 
             priority = _normalize_priority(
                 _get(
-                    gap_results[row_index - 1]
-                    if row_index - 1 < len(gap_results)
-                    else None,
+                    gap,
                     "priority",
                     "",
                 )
@@ -2164,7 +2279,7 @@ class PDFExporter:
 
             if priority:
 
-                style_commands.append(
+                commands.append(
                     (
                         "BACKGROUND",
                         (5, row_index),
@@ -2175,7 +2290,7 @@ class PDFExporter:
 
                 if priority != "Medium":
 
-                    style_commands.append(
+                    commands.append(
                         (
                             "TEXTCOLOR",
                             (5, row_index),
@@ -2184,17 +2299,8 @@ class PDFExporter:
                         )
                     )
 
-                style_commands.append(
-                    (
-                        "FONTNAME",
-                        (5, row_index),
-                        (5, row_index),
-                        "Helvetica-Bold",
-                    )
-                )
-
         table.setStyle(
-            TableStyle(style_commands)
+            TableStyle(commands)
         )
 
         story.append(table)
@@ -2214,7 +2320,7 @@ class PDFExporter:
 
         story.append(
             Paragraph(
-                "6. TPI Prioritization",
+                "6. Transformation Priority Index",
                 self.styles["h1"],
             )
         )
@@ -2222,15 +2328,12 @@ class PDFExporter:
         story.append(
             Paragraph(
                 "Transformation opportunities ranked according "
-                "to their Transformation Priority Index (TPI).",
+                "to the already-computed Transformation Priority "
+                "Index (TPI).",
                 self.styles["body"],
             )
         )
 
-        # IMPORTANT:
-        # Sorting is ONLY based on TPI score here.
-        # Priority labels are displayed from the already-computed
-        # decision engine result and are NOT recomputed in PDF.
         sorted_results = sorted(
             tpi_results,
             key=lambda item: _safe_float(
@@ -2244,23 +2347,28 @@ class PDFExporter:
         )
 
         rows = [
+
             [
                 Paragraph(
                     "#",
                     self.styles["table_header"],
                 ),
+
                 Paragraph(
                     "Dimension",
                     self.styles["table_header"],
                 ),
+
                 Paragraph(
                     "TPI",
                     self.styles["table_header"],
                 ),
+
                 Paragraph(
                     "Priority",
                     self.styles["table_header"],
                 ),
+
                 Paragraph(
                     "Gap",
                     self.styles["table_header"],
@@ -2287,12 +2395,14 @@ class PDFExporter:
 
             rows.append(
                 [
+
                     Paragraph(
                         str(rank),
                         self.styles["table"],
                     ),
+
                     Paragraph(
-                        _safe_str(
+                        _escape_xml(
                             _get(
                                 item,
                                 "dimension_name",
@@ -2305,6 +2415,7 @@ class PDFExporter:
                         ),
                         self.styles["table"],
                     ),
+
                     Paragraph(
                         _format_number(
                             _get(
@@ -2315,10 +2426,14 @@ class PDFExporter:
                         ),
                         self.styles["table"],
                     ),
+
                     Paragraph(
-                        priority or "—",
+                        _escape_xml(
+                            priority or "—"
+                        ),
                         self.styles["table"],
                     ),
+
                     Paragraph(
                         _format_number(
                             _get(
@@ -2359,13 +2474,14 @@ class PDFExporter:
             repeatRows=1,
         )
 
-        style_commands = [
+        commands = [
             (
                 "BACKGROUND",
                 (0, 0),
                 (-1, 0),
                 JESA_GREEN,
             ),
+
             (
                 "GRID",
                 (0, 0),
@@ -2373,24 +2489,28 @@ class PDFExporter:
                 0.4,
                 GREY_200,
             ),
+
             (
                 "ROWBACKGROUNDS",
                 (0, 1),
                 (-1, -1),
                 [WHITE, GREY_100],
             ),
+
             (
                 "VALIGN",
                 (0, 0),
                 (-1, -1),
                 "MIDDLE",
             ),
+
             (
                 "ALIGN",
                 (0, 0),
                 (0, -1),
                 "CENTER",
             ),
+
             (
                 "ALIGN",
                 (2, 1),
@@ -2418,7 +2538,7 @@ class PDFExporter:
 
             if priority:
 
-                style_commands.append(
+                commands.append(
                     (
                         "BACKGROUND",
                         (3, row_index),
@@ -2429,7 +2549,7 @@ class PDFExporter:
 
                 if priority != "Medium":
 
-                    style_commands.append(
+                    commands.append(
                         (
                             "TEXTCOLOR",
                             (3, row_index),
@@ -2438,17 +2558,8 @@ class PDFExporter:
                         )
                     )
 
-                style_commands.append(
-                    (
-                        "FONTNAME",
-                        (3, row_index),
-                        (3, row_index),
-                        "Helvetica-Bold",
-                    )
-                )
-
         table.setStyle(
-            TableStyle(style_commands)
+            TableStyle(commands)
         )
 
         story.append(table)
@@ -2473,7 +2584,15 @@ class PDFExporter:
             )
         )
 
-        # Priority order first, TPI second.
+        story.append(
+            Paragraph(
+                "Priorities are presented exactly as produced by "
+                "the decision engine. No priority is recalculated "
+                "by the PDF exporter.",
+                self.styles["body"],
+            )
+        )
+
         sorted_results = sorted(
             priority_results,
             key=lambda item: (
@@ -2491,6 +2610,7 @@ class PDFExporter:
                     ),
                     99,
                 ),
+
                 -_safe_float(
                     _get(
                         item,
@@ -2498,6 +2618,7 @@ class PDFExporter:
                         0,
                     )
                 ),
+
                 -_safe_float(
                     _get(
                         item,
@@ -2509,31 +2630,38 @@ class PDFExporter:
         )
 
         rows = [
+
             [
                 Paragraph(
                     "Rank",
                     self.styles["table_header"],
                 ),
+
                 Paragraph(
                     "Dimension",
                     self.styles["table_header"],
                 ),
+
                 Paragraph(
                     "Current",
                     self.styles["table_header"],
                 ),
+
                 Paragraph(
                     "Target",
                     self.styles["table_header"],
                 ),
+
                 Paragraph(
                     "Gap",
                     self.styles["table_header"],
                 ),
+
                 Paragraph(
                     "TPI",
                     self.styles["table_header"],
                 ),
+
                 Paragraph(
                     "Priority",
                     self.styles["table_header"],
@@ -2560,12 +2688,14 @@ class PDFExporter:
 
             rows.append(
                 [
+
                     Paragraph(
                         str(rank),
                         self.styles["table"],
                     ),
+
                     Paragraph(
-                        _safe_str(
+                        _escape_xml(
                             _get(
                                 result,
                                 "dimension_name",
@@ -2578,6 +2708,7 @@ class PDFExporter:
                         ),
                         self.styles["table"],
                     ),
+
                     Paragraph(
                         _format_number(
                             _get(
@@ -2588,6 +2719,7 @@ class PDFExporter:
                         ),
                         self.styles["table"],
                     ),
+
                     Paragraph(
                         _format_number(
                             _get(
@@ -2598,6 +2730,7 @@ class PDFExporter:
                         ),
                         self.styles["table"],
                     ),
+
                     Paragraph(
                         _format_number(
                             _get(
@@ -2608,6 +2741,7 @@ class PDFExporter:
                         ),
                         self.styles["table"],
                     ),
+
                     Paragraph(
                         _format_number(
                             _get(
@@ -2618,8 +2752,11 @@ class PDFExporter:
                         ),
                         self.styles["table"],
                     ),
+
                     Paragraph(
-                        priority or "—",
+                        _escape_xml(
+                            priority or "—"
+                        ),
                         self.styles["table"],
                     ),
                 ]
@@ -2656,13 +2793,14 @@ class PDFExporter:
             repeatRows=1,
         )
 
-        style_commands = [
+        commands = [
             (
                 "BACKGROUND",
                 (0, 0),
                 (-1, 0),
                 JESA_GREEN,
             ),
+
             (
                 "GRID",
                 (0, 0),
@@ -2670,24 +2808,28 @@ class PDFExporter:
                 0.4,
                 GREY_200,
             ),
+
             (
                 "ROWBACKGROUNDS",
                 (0, 1),
                 (-1, -1),
                 [WHITE, GREY_100],
             ),
+
             (
                 "VALIGN",
                 (0, 0),
                 (-1, -1),
                 "MIDDLE",
             ),
+
             (
                 "ALIGN",
                 (0, 0),
                 (0, -1),
                 "CENTER",
             ),
+
             (
                 "ALIGN",
                 (2, 1),
@@ -2715,7 +2857,7 @@ class PDFExporter:
 
             if priority:
 
-                style_commands.append(
+                commands.append(
                     (
                         "BACKGROUND",
                         (6, row_index),
@@ -2726,7 +2868,7 @@ class PDFExporter:
 
                 if priority != "Medium":
 
-                    style_commands.append(
+                    commands.append(
                         (
                             "TEXTCOLOR",
                             (6, row_index),
@@ -2735,17 +2877,8 @@ class PDFExporter:
                         )
                     )
 
-                style_commands.append(
-                    (
-                        "FONTNAME",
-                        (6, row_index),
-                        (6, row_index),
-                        "Helvetica-Bold",
-                    )
-                )
-
         table.setStyle(
-            TableStyle(style_commands)
+            TableStyle(commands)
         )
 
         story.append(table)
@@ -2765,8 +2898,17 @@ class PDFExporter:
 
         story.append(
             Paragraph(
-                "8. Transformation Roadmap",
+                "8. Transformation Roadmap — Scoring View",
                 self.styles["h1"],
+            )
+        )
+
+        story.append(
+            Paragraph(
+                "This section provides a concise scoring-oriented "
+                "view of the transformation roadmap. Detailed "
+                "implementation descriptions belong to the full Report.",
+                self.styles["body"],
             )
         )
 
@@ -2815,9 +2957,11 @@ class PDFExporter:
 
             story.append(
                 Paragraph(
-                    f"{phase_name}"
+                    _escape_xml(
+                        phase_name
+                    )
                     + (
-                        f" — {horizon}"
+                        f" — {_escape_xml(horizon)}"
                         if horizon
                         else ""
                     ),
@@ -2825,32 +2969,34 @@ class PDFExporter:
                 )
             )
 
-            items = _get(
-                phase,
-                "items",
-                [],
-            ) or []
+            items = _as_list(
+                _get(
+                    phase,
+                    "items",
+                    [],
+                )
+            )
 
             rows = [
+
                 [
                     Paragraph(
                         "Action",
                         self.styles["table_header"],
                     ),
+
                     Paragraph(
                         "Dimension",
                         self.styles["table_header"],
                     ),
+
                     Paragraph(
                         "Priority",
                         self.styles["table_header"],
                     ),
+
                     Paragraph(
                         "TPI",
-                        self.styles["table_header"],
-                    ),
-                    Paragraph(
-                        "Impact",
                         self.styles["table_header"],
                     ),
                 ]
@@ -2862,36 +3008,54 @@ class PDFExporter:
                     _get(
                         item,
                         "priority",
-                        "",
+                        _get(
+                            item,
+                            "priority_category",
+                            "",
+                        ),
                     )
                 )
 
                 rows.append(
                     [
+
                         Paragraph(
-                            _safe_str(
+                            _escape_xml(
                                 _get(
                                     item,
                                     "title",
-                                    "—",
+                                    _get(
+                                        item,
+                                        "action",
+                                        "—",
+                                    ),
                                 )
                             ),
                             self.styles["table"],
                         ),
+
                         Paragraph(
-                            _safe_str(
+                            _escape_xml(
                                 _get(
                                     item,
                                     "dimension_id",
-                                    "—",
+                                    _get(
+                                        item,
+                                        "dimension_name",
+                                        "—",
+                                    ),
                                 )
                             ),
                             self.styles["table"],
                         ),
+
                         Paragraph(
-                            priority or "—",
+                            _escape_xml(
+                                priority or "—"
+                            ),
                             self.styles["table"],
                         ),
+
                         Paragraph(
                             _format_number(
                                 _get(
@@ -2899,16 +3063,6 @@ class PDFExporter:
                                     "tpi_score",
                                 ),
                                 1,
-                            ),
-                            self.styles["table"],
-                        ),
-                        Paragraph(
-                            _safe_str(
-                                _get(
-                                    item,
-                                    "expected_impact",
-                                    "—",
-                                )
                             ),
                             self.styles["table"],
                         ),
@@ -2926,58 +3080,99 @@ class PDFExporter:
                         "",
                         "",
                         "",
-                        "",
                     ]
                 )
 
             table = Table(
                 rows,
                 colWidths=[
-                    72 * mm,
-                    27 * mm,
-                    27 * mm,
-                    22 * mm,
-                    32 * mm,
+                    82 * mm,
+                    30 * mm,
+                    30 * mm,
+                    28 * mm,
                 ],
                 repeatRows=1,
             )
 
-            table.setStyle(
-                TableStyle(
-                    [
+            commands = [
+                (
+                    "BACKGROUND",
+                    (0, 0),
+                    (-1, 0),
+                    JESA_GREEN,
+                ),
+
+                (
+                    "GRID",
+                    (0, 0),
+                    (-1, -1),
+                    0.4,
+                    GREY_200,
+                ),
+
+                (
+                    "ROWBACKGROUNDS",
+                    (0, 1),
+                    (-1, -1),
+                    [WHITE, GREY_100],
+                ),
+
+                (
+                    "VALIGN",
+                    (0, 0),
+                    (-1, -1),
+                    "MIDDLE",
+                ),
+
+                (
+                    "ALIGN",
+                    (1, 1),
+                    (-1, -1),
+                    "CENTER",
+                ),
+            ]
+
+            for row_index, item in enumerate(
+                items,
+                start=1,
+            ):
+
+                priority = _normalize_priority(
+                    _get(
+                        item,
+                        "priority",
+                        _get(
+                            item,
+                            "priority_category",
+                            "",
+                        ),
+                    )
+                )
+
+                if priority:
+
+                    commands.append(
                         (
                             "BACKGROUND",
-                            (0, 0),
-                            (-1, 0),
-                            JESA_GREEN,
-                        ),
-                        (
-                            "GRID",
-                            (0, 0),
-                            (-1, -1),
-                            0.4,
-                            GREY_200,
-                        ),
-                        (
-                            "ROWBACKGROUNDS",
-                            (0, 1),
-                            (-1, -1),
-                            [WHITE, GREY_100],
-                        ),
-                        (
-                            "VALIGN",
-                            (0, 0),
-                            (-1, -1),
-                            "MIDDLE",
-                        ),
-                        (
-                            "ALIGN",
-                            (1, 1),
-                            (3, -1),
-                            "CENTER",
-                        ),
-                    ]
-                )
+                            (2, row_index),
+                            (2, row_index),
+                            _priority_color(priority),
+                        )
+                    )
+
+                    if priority != "Medium":
+
+                        commands.append(
+                            (
+                                "TEXTCOLOR",
+                                (2, row_index),
+                                (2, row_index),
+                                WHITE,
+                            )
+                        )
+
+            table.setStyle(
+                TableStyle(commands)
             )
 
             story.append(table)
@@ -2992,199 +3187,131 @@ class PDFExporter:
         return story
 
     # ========================================================================
-    # RECOMMENDATIONS
+    # SCORING CONCLUSION
     # ========================================================================
 
-    def _build_recommendations(
+    def _build_scoring_conclusion(
         self,
+        aggregation_results: Dict[str, Any],
         priority_results: List[Any],
-        roadmap: List[Any],
     ) -> List[Any]:
 
         story: List[Any] = []
 
         story.append(
             Paragraph(
-                "9. Recommendations",
+                "9. Scoring Conclusion",
                 self.styles["h1"],
             )
         )
 
-        recommendation_count = 0
+        dmi = aggregation_results.get(
+            "dmi"
+        )
 
-        for priority in priority_results:
+        score = _get(
+            dmi,
+            "score",
+            aggregation_results.get(
+                "dmi_score"
+            ),
+        )
 
-            recommendations = _get(
-                priority,
-                "recommendations",
-                [],
-            ) or []
+        level = _get(
+            dmi,
+            "level_name",
+            aggregation_results.get(
+                "dmi_level_name",
+                aggregation_results.get(
+                    "dmi_level",
+                    "—",
+                ),
+            ),
+        )
 
-            if not recommendations:
-                continue
-
-            dimension_name = _safe_str(
+        critical = sum(
+            1
+            for item in priority_results
+            if _normalize_priority(
                 _get(
-                    priority,
-                    "dimension_name",
-                    _get(
-                        priority,
-                        "dimension_id",
-                        "Dimension",
-                    ),
-                )
-            )
-
-            priority_category = _normalize_priority(
-                _get(
-                    priority,
+                    item,
                     "priority_category",
                     _get(
-                        priority,
+                        item,
                         "priority",
                         "",
                     ),
                 )
             )
+            == "Critical"
+        )
 
-            story.append(
-                Paragraph(
-                    dimension_name,
-                    self.styles["h2"],
+        high = sum(
+            1
+            for item in priority_results
+            if _normalize_priority(
+                _get(
+                    item,
+                    "priority_category",
+                    _get(
+                        item,
+                        "priority",
+                        "",
+                    ),
                 )
             )
+            == "High"
+        )
 
-            for recommendation in recommendations:
-
-                recommendation_count += 1
-
-                title = _safe_str(
-                    _get(
-                        recommendation,
-                        "title",
-                        "Recommendation",
-                    )
-                )
-
-                effort = _safe_str(
-                    _get(
-                        recommendation,
-                        "effort",
-                        "—",
-                    )
-                )
-
-                impact = _safe_str(
-                    _get(
-                        recommendation,
-                        "expected_impact",
-                        "—",
-                    )
-                )
-
-                detailed_actions = _get(
-                    recommendation,
-                    "detailed_actions",
-                    [],
-                ) or []
-
-                content = (
-                    f"<b>{recommendation_count}. "
-                    f"{title}</b><br/>"
-                    f"<b>Priority:</b> "
-                    f"{priority_category or '—'}"
-                    f"<br/>"
-                    f"<b>Effort:</b> {effort}"
-                    f"<br/>"
-                    f"<b>Expected Impact:</b> {impact}"
-                )
-
-                if detailed_actions:
-
-                    content += (
-                        "<br/><b>Actions:</b><br/>"
-                    )
-
-                    content += "<br/>".join(
-                        f"• {_safe_str(action)}"
-                        for action in detailed_actions
-                    )
-
-                story.append(
-                    Paragraph(
-                        content,
-                        self.styles["body"],
-                    )
-                )
-
-                story.append(
-                    HRFlowable(
-                        width="100%",
-                        thickness=0.4,
-                        color=GREY_200,
-                        spaceBefore=2,
-                        spaceAfter=5,
-                    )
-                )
-
-        # Fallback to roadmap recommendations.
-        if recommendation_count == 0:
-
-            for phase in roadmap:
-
-                items = _get(
-                    phase,
-                    "items",
-                    [],
-                ) or []
-
-                for item in items:
-
-                    title = _safe_str(
-                        _get(
-                            item,
-                            "title",
-                            "",
-                        )
-                    )
-
-                    if not title:
-                        continue
-
-                    recommendation_count += 1
-
-                    priority = _normalize_priority(
-                        _get(
-                            item,
-                            "priority",
-                            "",
-                        )
-                    )
-
-                    story.append(
-                        Paragraph(
-                            f"<b>{recommendation_count}. "
-                            f"{title}</b><br/>"
-                            f"<b>Phase:</b> "
-                            f"{_safe_str(_get(phase, 'phase_name', '—'))}"
-                            f"<br/>"
-                            f"<b>Priority:</b> "
-                            f"{priority or '—'}"
-                            f"<br/>"
-                            f"<b>Expected Impact:</b> "
-                            f"{_safe_str(_get(item, 'expected_impact', '—'))}",
-                            self.styles["body"],
-                        )
-                    )
-
-        if recommendation_count == 0:
-
-            story.append(
-                Paragraph(
-                    "No recommendations are available.",
-                    self.styles["body"],
-                )
+        story.append(
+            Paragraph(
+                (
+                    "The assessed site achieved a Digital "
+                    "Maturity Index of "
+                    f"<b>{_escape_xml(_format_number(score, self.decimal_precision))}</b> "
+                    f"with a maturity level of "
+                    f"<b>{_escape_xml(level)}</b>."
+                ),
+                self.styles["body"],
             )
+        )
+
+        story.append(
+            Paragraph(
+                (
+                    f"The decision analysis identifies "
+                    f"<b>{critical}</b> critical-priority "
+                    f"opportunities and <b>{high}</b> "
+                    "high-priority opportunities."
+                ),
+                self.styles["body"],
+            )
+        )
+
+        story.append(
+            Spacer(
+                1,
+                5 * mm,
+            )
+        )
+
+        story.append(
+            Paragraph(
+                "Important:",
+                self.styles["h2"],
+            )
+        )
+
+        story.append(
+            Paragraph(
+                "This PDF presents the scoring and prioritization "
+                "results of the assessment. Detailed recommendations, "
+                "implementation explanations, action descriptions and "
+                "supporting analysis are intentionally reserved for "
+                "the detailed Report document.",
+                self.styles["body"],
+            )
+        )
 
         return story
 
@@ -3212,12 +3339,17 @@ class PDFExporter:
             {},
         )
 
+        if not isinstance(metadata, Mapping):
+            metadata = {}
+
         rows = [
+
             [
                 Paragraph(
                     "Field",
                     self.styles["table_header"],
                 ),
+
                 Paragraph(
                     "Value",
                     self.styles["table_header"],
@@ -3226,6 +3358,7 @@ class PDFExporter:
         ]
 
         fields = [
+
             (
                 "Assessment ID",
                 assessment_id
@@ -3234,6 +3367,7 @@ class PDFExporter:
                     "—",
                 ),
             ),
+
             (
                 "Site ID",
                 metadata.get(
@@ -3241,6 +3375,7 @@ class PDFExporter:
                     "—",
                 ),
             ),
+
             (
                 "Site Name",
                 metadata.get(
@@ -3248,6 +3383,7 @@ class PDFExporter:
                     "—",
                 ),
             ),
+
             (
                 "Assessment Date",
                 metadata.get(
@@ -3255,6 +3391,7 @@ class PDFExporter:
                     "—",
                 ),
             ),
+
             (
                 "Evaluator",
                 metadata.get(
@@ -3262,6 +3399,7 @@ class PDFExporter:
                     "—",
                 ),
             ),
+
             (
                 "Report Version",
                 metadata.get(
@@ -3269,12 +3407,14 @@ class PDFExporter:
                     "1.0",
                 ),
             ),
+
             (
                 "Generated At",
                 self.generated_at.strftime(
                     "%Y-%m-%d %H:%M"
                 ),
             ),
+
             (
                 "Total Indicators",
                 metadata.get(
@@ -3282,6 +3422,7 @@ class PDFExporter:
                     0,
                 ),
             ),
+
             (
                 "Total Subdimensions",
                 metadata.get(
@@ -3289,6 +3430,7 @@ class PDFExporter:
                     0,
                 ),
             ),
+
             (
                 "Total Dimensions",
                 metadata.get(
@@ -3296,6 +3438,7 @@ class PDFExporter:
                     0,
                 ),
             ),
+
             (
                 "Total Pillars",
                 metadata.get(
@@ -3303,6 +3446,7 @@ class PDFExporter:
                     0,
                 ),
             ),
+
             (
                 "DMI Score",
                 metadata.get(
@@ -3310,6 +3454,7 @@ class PDFExporter:
                     "—",
                 ),
             ),
+
             (
                 "DMI Level",
                 metadata.get(
@@ -3317,6 +3462,7 @@ class PDFExporter:
                     "—",
                 ),
             ),
+
             (
                 "DMI Level Name",
                 metadata.get(
@@ -3330,12 +3476,14 @@ class PDFExporter:
 
             rows.append(
                 [
+
                     Paragraph(
-                        _safe_str(field),
+                        _escape_xml(field),
                         self.styles["table"],
                     ),
+
                     Paragraph(
-                        _safe_str(value),
+                        _escape_xml(value),
                         self.styles["table"],
                     ),
                 ]
@@ -3359,6 +3507,7 @@ class PDFExporter:
                         (-1, 0),
                         JESA_GREEN,
                     ),
+
                     (
                         "GRID",
                         (0, 0),
@@ -3366,17 +3515,47 @@ class PDFExporter:
                         0.4,
                         GREY_200,
                     ),
+
                     (
                         "ROWBACKGROUNDS",
                         (0, 1),
                         (-1, -1),
                         [WHITE, GREY_100],
                     ),
+
                     (
                         "VALIGN",
                         (0, 0),
                         (-1, -1),
                         "MIDDLE",
+                    ),
+
+                    (
+                        "LEFTPADDING",
+                        (0, 0),
+                        (-1, -1),
+                        6,
+                    ),
+
+                    (
+                        "RIGHTPADDING",
+                        (0, 0),
+                        (-1, -1),
+                        6,
+                    ),
+
+                    (
+                        "TOPPADDING",
+                        (0, 0),
+                        (-1, -1),
+                        5,
+                    ),
+
+                    (
+                        "BOTTOMPADDING",
+                        (0, 0),
+                        (-1, -1),
+                        5,
                     ),
                 ]
             )
@@ -3393,7 +3572,7 @@ class PDFExporter:
 
         story.append(
             Paragraph(
-                "End of Report",
+                "End of Scoring Assessment",
                 self.styles["subtitle"],
             )
         )
@@ -3404,7 +3583,6 @@ class PDFExporter:
 # ============================================================================
 # PUBLIC UTILITY FUNCTIONS
 # ============================================================================
-
 
 def export_to_pdf(
     results: Dict[str, Any],
@@ -3434,7 +3612,7 @@ def export_full_analysis(
     assessment_id: Optional[str] = None,
 ) -> Path:
     """
-    Export the complete assessment and decision analysis to PDF.
+    Export the complete score-focused assessment to PDF.
     """
 
     exporter = PDFExporter()
@@ -3447,4 +3625,4 @@ def export_full_analysis(
         roadmap=roadmap,
         output_path=output_path,
         assessment_id=assessment_id,
-    ) 
+    )
