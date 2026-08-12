@@ -1,16 +1,3 @@
-"""
-Digital Maturity Dashboard for JESA DMAT.
-
-Professional industrial dashboard focused on:
-- Executive maturity snapshot
-- Current vs target maturity position
-- Radar maturity profile
-- Pillar performance
-- Transformation gaps
-- Diagnostic insights
-- Decision transition
-"""
-
 from __future__ import annotations
 
 from html import escape
@@ -482,7 +469,6 @@ st.html(
 # HELPERS
 # ==============================================================================
 
-
 def _get_largest_gap(dimensions: list[dict]) -> dict | None:
     """Return the dimension with the largest negative gap."""
 
@@ -610,7 +596,11 @@ with kpi_col1:
         f"""
         <div class="dmat-kpi-card">
             <div class="dmat-kpi-label">Digital Maturity Index</div>
-            <div class="dmat-kpi-value">{dmi:.1f}%</div>
+
+            <div class="dmat-kpi-value">
+                {dmi:.1f}%
+            </div>
+
             <div class="dmat-kpi-description">
                 Current maturity score
             </div>
@@ -624,12 +614,14 @@ with kpi_col2:
         f"""
         <div class="dmat-kpi-card">
             <div class="dmat-kpi-label">Maturity Level</div>
+
             <div
                 class="dmat-kpi-value maturity"
                 style="color:{maturity_color};"
             >
                 {escape(maturity_level)}
             </div>
+
             <div class="dmat-kpi-description">
                 Current maturity stage
             </div>
@@ -645,9 +637,11 @@ with kpi_col3:
         f"""
         <div class="dmat-kpi-card {'danger' if dmi_gap < 0 else 'success'}">
             <div class="dmat-kpi-label">Overall Gap</div>
+
             <div class="dmat-kpi-value {gap_class}">
                 {dmi_gap:+.1f} pts
             </div>
+
             <div class="dmat-kpi-description">
                 Current maturity versus target
             </div>
@@ -661,9 +655,11 @@ with kpi_col4:
         f"""
         <div class="dmat-kpi-card {'danger' if attention_count else 'success'}">
             <div class="dmat-kpi-label">Attention Areas</div>
+
             <div class="dmat-kpi-value">
                 {attention_count}
             </div>
+
             <div class="dmat-kpi-description">
                 Dimensions requiring attention
             </div>
@@ -679,8 +675,12 @@ with kpi_col4:
 st.html(
     """
     <div class="dmat-dashboard-section">
-        <div class="dmat-section-heading">Overall Maturity Position</div>
+        <div class="dmat-section-heading">
+            Overall Maturity Position
+        </div>
+
         <div class="dmat-section-line"></div>
+
         <div class="dmat-section-subtitle">
             Current maturity against the strategic target.
         </div>
@@ -737,34 +737,43 @@ with position_col2:
     st.html(
         f"""
         <div class="dmat-position-card">
+
             <div class="dmat-position-label">
                 Current DMI
             </div>
+
             <div class="dmat-position-value current">
                 {dmi:.1f}%
             </div>
+
         </div>
 
         <div style="height:0.65rem;"></div>
 
         <div class="dmat-position-card">
+
             <div class="dmat-position-label">
                 Target DMI
             </div>
+
             <div class="dmat-position-value target">
                 {target_dmi:.1f}%
             </div>
+
         </div>
 
         <div style="height:0.65rem;"></div>
 
         <div class="dmat-position-card">
+
             <div class="dmat-position-label">
                 Remaining Gap
             </div>
+
             <div class="dmat-position-value gap">
                 {dmi_gap:+.1f} pts
             </div>
+
         </div>
         """
     )
@@ -777,8 +786,12 @@ with position_col2:
 st.html(
     """
     <div class="dmat-dashboard-section">
-        <div class="dmat-section-heading">Maturity Profile</div>
+        <div class="dmat-section-heading">
+            Maturity Profile
+        </div>
+
         <div class="dmat-section-line"></div>
+
         <div class="dmat-section-subtitle">
             Compare the current digital maturity profile with the strategic target.
         </div>
@@ -815,17 +828,23 @@ with radar_col1:
     st.html(
         """
         <div class="dmat-radar-card">
+
             <div class="dmat-radar-header">
+
                 <div class="dmat-radar-title">
                     Current Maturity
                 </div>
+
                 <div class="dmat-radar-subtitle">
                     Current performance across all digital dimensions.
                 </div>
+
                 <span class="dmat-radar-badge current">
                     CURRENT
                 </span>
+
             </div>
+
         </div>
         """
     )
@@ -833,6 +852,10 @@ with radar_col1:
     current_radar = RadarChart(
         categories=dim_names,
         values=current_scores,
+
+        # FIX: explicit empty title prevents "undefined"
+        title="",
+
         fill=True,
         fill_color="rgba(37, 99, 235, 0.16)",
         line_color=PRIMARY,
@@ -868,17 +891,23 @@ with radar_col2:
     st.html(
         """
         <div class="dmat-radar-card">
+
             <div class="dmat-radar-header">
+
                 <div class="dmat-radar-title">
                     Target Maturity
                 </div>
+
                 <div class="dmat-radar-subtitle">
                     Strategic target across all digital dimensions.
                 </div>
+
                 <span class="dmat-radar-badge target">
                     TARGET
                 </span>
+
             </div>
+
         </div>
         """
     )
@@ -886,6 +915,10 @@ with radar_col2:
     target_radar = RadarChart(
         categories=dim_names,
         values=target_scores,
+
+        # FIX: explicit empty title prevents "undefined"
+        title="",
+
         fill=True,
         fill_color="rgba(15, 157, 148, 0.12)",
         line_color=TEAL,
@@ -919,8 +952,12 @@ with radar_col2:
 st.html(
     """
     <div class="dmat-dashboard-section">
-        <div class="dmat-section-heading">Pillar Performance</div>
+        <div class="dmat-section-heading">
+            Pillar Performance
+        </div>
+
         <div class="dmat-section-line"></div>
+
         <div class="dmat-section-subtitle">
             Performance of the main digital transformation pillars.
         </div>
@@ -937,6 +974,7 @@ sorted_pillars = sorted(
     reverse=True,
 )
 
+
 pillar_names = [
     str(pillar.get("name", "Unknown"))
     for pillar in sorted_pillars
@@ -951,6 +989,10 @@ pillar_scores = [
 pillar_chart = BarChart(
     categories=pillar_names,
     values=pillar_scores,
+
+    # FIX: explicit empty title prevents "undefined"
+    title="",
+
     orientation="horizontal",
     show_values=True,
     text_position="outside",
@@ -965,6 +1007,7 @@ pillar_chart = BarChart(
     width=1100,
     height=420,
 )
+
 
 st.plotly_chart(
     pillar_chart.create(),
@@ -983,8 +1026,12 @@ st.plotly_chart(
 st.html(
     """
     <div class="dmat-dashboard-section">
-        <div class="dmat-section-heading">Transformation Gaps</div>
+        <div class="dmat-section-heading">
+            Transformation Gaps
+        </div>
+
         <div class="dmat-section-line"></div>
+
         <div class="dmat-section-subtitle">
             Dimensions with the largest distance from the strategic target.
         </div>
@@ -1010,6 +1057,7 @@ for index, dimension in enumerate(gap_dimensions[:6]):
     gap = float(dimension.get("gap", 0))
 
     gap_class = "negative" if gap < 0 else "neutral"
+
     fill_width = _gap_width(gap)
 
     card_html = f"""
@@ -1028,24 +1076,36 @@ for index, dimension in enumerate(gap_dimensions[:6]):
             </div>
 
             <div class="dmat-gap-track">
+
                 <div
                     class="dmat-gap-fill"
                     style="width:{fill_width:.1f}%;">
                 </div>
+
             </div>
 
             <div class="dmat-gap-meta">
-                <span>Current: {current:.1f}%</span>
-                <span>Target: {target:.1f}%</span>
+
+                <span>
+                    Current: {current:.1f}%
+                </span>
+
+                <span>
+                    Target: {target:.1f}%
+                </span>
+
             </div>
 
         </div>
     """
 
     if index % 2 == 0:
+
         with gap_col1:
             st.html(card_html)
+
     else:
+
         with gap_col2:
             st.html(card_html)
 
@@ -1057,11 +1117,17 @@ for index, dimension in enumerate(gap_dimensions[:6]):
 st.html(
     """
     <div class="dmat-dashboard-section">
-        <div class="dmat-section-heading">Diagnostic Insights</div>
+
+        <div class="dmat-section-heading">
+            Diagnostic Insights
+        </div>
+
         <div class="dmat-section-line"></div>
+
         <div class="dmat-section-subtitle">
             Key observations derived from the maturity assessment.
         </div>
+
     </div>
     """
 )
@@ -1069,21 +1135,43 @@ st.html(
 
 insights = data.get("insights", [])
 
+
 if insights:
 
     insight_col1, insight_col2 = st.columns(2)
 
     for index, insight in enumerate(insights):
 
-        insight_type = str(insight.get("type", "warning"))
+        insight_type = str(
+            insight.get("type", "warning")
+        )
 
-        if insight_type not in {"danger", "warning", "success"}:
+        if insight_type not in {
+            "danger",
+            "warning",
+            "success",
+        }:
             insight_type = "warning"
 
         icon = _insight_icon(insight_type)
 
-        title = escape(str(insight.get("title", "Insight")))
-        text = escape(str(insight.get("text", "")))
+        title = escape(
+            str(
+                insight.get(
+                    "title",
+                    "Insight",
+                )
+            )
+        )
+
+        text = escape(
+            str(
+                insight.get(
+                    "text",
+                    "",
+                )
+            )
+        )
 
         insight_html = f"""
             <div class="dmat-insight-card">
@@ -1093,6 +1181,7 @@ if insights:
                 </div>
 
                 <div>
+
                     <div class="dmat-insight-title">
                         {title}
                     </div>
@@ -1100,15 +1189,19 @@ if insights:
                     <div class="dmat-insight-text">
                         {text}
                     </div>
+
                 </div>
 
             </div>
         """
 
         if index % 2 == 0:
+
             with insight_col1:
                 st.html(insight_html)
+
         else:
+
             with insight_col2:
                 st.html(insight_html)
 
@@ -1117,16 +1210,24 @@ else:
     st.html(
         """
         <div class="dmat-insight-card">
-            <div class="dmat-insight-icon success">✓</div>
+
+            <div class="dmat-insight-icon success">
+                ✓
+            </div>
+
             <div>
+
                 <div class="dmat-insight-title">
                     No additional diagnostic insight
                 </div>
+
                 <div class="dmat-insight-text">
-                    The assessment does not currently provide additional
-                    interpretation messages.
+                    The assessment does not currently provide
+                    additional interpretation messages.
                 </div>
+
             </div>
+
         </div>
         """
     )
@@ -1139,11 +1240,17 @@ else:
 st.html(
     """
     <div class="dmat-dashboard-section">
-        <div class="dmat-section-heading">Next Decision</div>
+
+        <div class="dmat-section-heading">
+            Next Decision
+        </div>
+
         <div class="dmat-section-line"></div>
+
         <div class="dmat-section-subtitle">
             Move from diagnosis to transformation prioritisation.
         </div>
+
     </div>
 
     <div class="dmat-decision-card">
@@ -1153,9 +1260,9 @@ st.html(
         </div>
 
         <div class="dmat-decision-text">
-            The current maturity position and transformation gaps have been
-            established. The next step is to identify and prioritise the
-            actions with the highest business impact.
+            The current maturity position and transformation gaps
+            have been established. The next step is to identify
+            and prioritise the actions with the highest business impact.
         </div>
 
     </div>
@@ -1166,7 +1273,10 @@ st.html(
 st.html("<div style='height:0.7rem;'></div>")
 
 
-button_col1, button_col2, button_col3 = st.columns([1, 2, 1])
+button_col1, button_col2, button_col3 = st.columns(
+    [1, 2, 1]
+)
+
 
 with button_col2:
 
@@ -1176,7 +1286,10 @@ with button_col2:
         use_container_width=True,
         type="primary",
     ):
-        st.switch_page("pages/4_Decision_analysis.py")
+
+        st.switch_page(
+            "pages/4_Decision_analysis.py"
+        )
 
 
 # ==============================================================================

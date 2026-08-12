@@ -264,25 +264,36 @@ class _BasePDFExporter:
         }
 
     def _locate_logos(self) -> Dict[str, Optional[Path]]:
-        """Locate JESA and ENSAM logos."""
-        base_dir = Path(settings.backend.BASE_DIR)
-        # Search in assets/logos/ first, then fallback to other possible directories
-        logo_dirs = [
-            base_dir / "assets" / "logos",
-            base_dir / "assets" / "logo",
-            base_dir / "assets",
+      """Locate JESA and ENSAM logos."""
+      base_dir = Path(settings.backend.BASE_DIR)
+      logo_dirs = [
+          base_dir / "assets" / "logos",
+          base_dir / "assets" / "logo",
+          base_dir / "assets",
         ]
-        jesa_path = None
-        ensam_path = None
-        for d in logo_dirs:
-            if not d.exists():
-                continue
-            if jesa_path is None:
-                jesa_path = _find_logo(d, ["jesa_logo.png", "JESA_logo.png", "jesa.png", "JESA.png"])
-            if ensam_path is None:
-                ensam_path = _find_logo(d, ["ensam_logo.png", "ENSAM_logo.png", "ensam.png", "ENSAM.png"])
-        return {"jesa": jesa_path, "ensam": ensam_path}
+      jesa_path = None
+      ensam_path = None
 
+      for d in logo_dirs:
+           if not d.exists():
+              continue
+
+           if jesa_path is None:
+            jesa_path = _find_logo(
+                d,
+                ["jesa_logo.png", "JESA_logo.png", "jesa.png", "JESA.png"]
+            )
+
+           if ensam_path is None:
+                ensam_path = _find_logo(
+                d,
+                ["ensam_logo.png", "ENSAM_logo.png", "ensam.png", "ENSAM.png"]
+            )
+
+      return {
+        "jesa": jesa_path,
+        "ensam": ensam_path,
+    }
     def _draw_header_footer(self, canvas, doc, title_prefix=""):
         """Standard header/footer with logos and page numbers."""
         canvas.saveState()
