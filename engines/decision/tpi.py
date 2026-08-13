@@ -1,12 +1,9 @@
 """
-TPI Engine
-==========
-
 Transformation Priority Index (TPI) engine for the JESA Digital
 Maturity Assessment Tool.
 
-Responsibilities
-----------------
+## Responsibilities
+
 - Receive native decision values from the Decision Analysis UI.
 - Validate the values and their real-world units.
 - Normalize heterogeneous parameters internally to [0, 1].
@@ -16,17 +13,17 @@ Responsibilities
 - Provide roadmap phase grouping.
 - Provide TPI summary information.
 
-Important
----------
+## Important
+
 The user NEVER enters normalized values.
 
 Examples of native values:
 
-    Business Impact        = 70 %
-    Strategic Importance   = 85 %
-    Expected ROI           = 30 %
-    Implementation Cost   = 2_500_000 MAD
-    Implementation Effort = 180 person-days
+Business Impact        = 70 %
+Strategic Importance   = 85 %
+Expected ROI           = 30 %
+Implementation Cost    = 2_500_000 MAD
+Implementation Effort  = 180 person-days
 
 These values are normalized internally only for mathematical aggregation.
 
@@ -34,12 +31,11 @@ The final TPI is internally represented in [0, 1].
 
 Example:
 
-    0.64 -> 64.0 %
+0.64 -> 64.0 %
+
 """
 
-
 from __future__ import annotations
-
 
 import math
 
@@ -47,9 +43,7 @@ from dataclasses import dataclass
 
 from typing import Any, Mapping, Optional
 
-
 import pandas as pd
-
 
 from config import constants
 
@@ -68,7 +62,6 @@ from engines.decision.gap import GapResult
 #
 # The engine normalizes them internally before calculating TPI.
 # =============================================================================
-
 
 DECISION_CRITERIA = [
     {
@@ -147,7 +140,6 @@ DECISION_CRITERIA = [
     },
 ]
 
-
 DECISION_CRITERIA_BY_ID = {
     criterion["id"]: criterion
     for criterion in DECISION_CRITERIA
@@ -157,7 +149,6 @@ DECISION_CRITERIA_BY_ID = {
 # =============================================================================
 # TPI RESULT
 # =============================================================================
-
 
 @dataclass
 class TPIResult:
@@ -228,7 +219,6 @@ class TPIResult:
 # =============================================================================
 # TPI ENGINE
 # =============================================================================
-
 
 class TPIEngine:
     """
@@ -399,17 +389,17 @@ class TPIEngine:
         decision_inputs:
             Dictionary indexed by dimension ID.
 
-            Example:
+        Example:
 
-                {
-                    "D1": {
-                        "business_impact": 70,
-                        "strategic_importance": 80,
-                        "expected_roi": 40,
-                        "implementation_cost": 2500000,
-                        "implementation_difficulty": 180,
-                    }
+            {
+                "D1": {
+                    "business_impact": 70,
+                    "strategic_importance": 80,
+                    "expected_roi": 40,
+                    "implementation_cost": 2500000,
+                    "implementation_difficulty": 180,
                 }
+            }
 
         weights:
             Optional TPI weights.
@@ -425,8 +415,8 @@ class TPIEngine:
             Mapping,
         ):
             raise TypeError(
-                "decision_inputs doit être un dictionnaire "
-                "indexé par dimension."
+                "decision_inputs must be a dictionary "
+                "indexed by dimension."
             )
 
         active_weights = self._validate_weights(
@@ -462,13 +452,13 @@ class TPIEngine:
 
             if not math.isfinite(gap):
                 raise ValueError(
-                    f"Gap invalide pour "
+                    f"Invalid gap for "
                     f"{gap_result.entity_id}."
                 )
 
             if gap < 0:
                 raise ValueError(
-                    f"Écart négatif invalide pour "
+                    f"Invalid negative gap for "
                     f"{gap_result.entity_id}."
                 )
 
@@ -490,7 +480,7 @@ class TPIEngine:
 
             if inputs is None:
                 raise ValueError(
-                    "Paramètres TPI manquants pour la dimension "
+                    "TPI parameters are missing for dimension "
                     f"{dimension_id}."
                 )
 
@@ -574,7 +564,7 @@ class TPIEngine:
                 else:
 
                     raise ValueError(
-                        f"Direction invalide pour "
+                        f"Invalid direction for "
                         f"{parameter_name}: "
                         f"{criterion['direction']}"
                     )
@@ -811,13 +801,13 @@ class TPIEngine:
 
                     "Dimension": tpi.dimension_id,
 
-                    "Nom": tpi.dimension_name,
+                    "Name": tpi.dimension_name,
 
-                    "Score actuel": current_score,
+                    "Current Score": current_score,
 
-                    "Niveau actuel": current_level,
+                    "Current Level": current_level,
 
-                    "Écart": tpi.gap,
+                    "Gap": tpi.gap,
 
                     "TPI": tpi.tpi_score,
 
@@ -826,7 +816,7 @@ class TPIEngine:
                         1,
                     ),
 
-                    "Priorité": (
+                    "Priority": (
                         tpi.priority_category
                     ),
 
@@ -838,11 +828,11 @@ class TPIEngine:
 
                     "ROI (%)": tpi.expected_roi,
 
-                    "Coût (MAD)": (
+                    "Cost (MAD)": (
                         tpi.implementation_cost
                     ),
 
-                    "Complexité (person-days)": (
+                    "Complexity (person-days)": (
                         tpi.implementation_difficulty
                     ),
                 }
@@ -870,11 +860,11 @@ class TPIEngine:
         """
 
         default_mapping = {
-            "Critical": "Phase 1 (< 6 mois)",
-            "High": "Phase 1-2 (6-12 mois)",
-            "Medium": "Phase 2 (12-24 mois)",
-            "Low": "Phase 3-4 (> 24 mois)",
-            "Very Low": "Non prioritaire",
+            "Critical": "Phase 1 (< 6 months)",
+            "High": "Phase 1-2 (6-12 months)",
+            "Medium": "Phase 2 (12-24 months)",
+            "Low": "Phase 3-4 (> 24 months)",
+            "Very Low": "Not prioritized",
         }
 
         # --------------------------------------------------------------
@@ -912,7 +902,7 @@ class TPIEngine:
 
             phase = mapping.get(
                 priority,
-                "Phase 4 (> 24 mois)",
+                "Phase 4 (> 24 months)",
             )
 
             phases.setdefault(
@@ -1071,9 +1061,9 @@ class TPIEngine:
             Mapping,
         ):
             raise TypeError(
-                f"Les paramètres TPI de "
-                f"{dimension_id} doivent être "
-                "un dictionnaire."
+                f"TPI parameters for "
+                f"{dimension_id} must be "
+                "a dictionary."
             )
 
         missing = (
@@ -1084,8 +1074,8 @@ class TPIEngine:
         if missing:
 
             raise ValueError(
-                f"Paramètres TPI manquants pour "
-                f"{dimension_id} : "
+                f"TPI parameters missing for "
+                f"{dimension_id}: "
                 f"{sorted(missing)}"
             )
 
@@ -1114,7 +1104,7 @@ class TPIEngine:
             ):
                 raise ValueError(
                     f"{dimension_id}/{name} "
-                    "doit être numérique."
+                    "must be numeric."
                 )
 
             # --------------------------------------------------------------
@@ -1134,7 +1124,7 @@ class TPIEngine:
 
                 raise ValueError(
                     f"{dimension_id}/{name} "
-                    "doit être numérique."
+                    "must be numeric."
                 ) from exc
 
             # --------------------------------------------------------------
@@ -1147,7 +1137,7 @@ class TPIEngine:
 
                 raise ValueError(
                     f"{dimension_id}/{name} "
-                    "doit être une valeur finie."
+                    "must be a finite value."
                 )
 
             # --------------------------------------------------------------
@@ -1165,7 +1155,7 @@ class TPIEngine:
 
                 raise ValueError(
                     f"{dimension_id}/{name} "
-                    f"doit être >= {minimum} "
+                    f"must be >= {minimum} "
                     f"{criterion['unit']}."
                 )
 
@@ -1184,7 +1174,7 @@ class TPIEngine:
 
                 raise ValueError(
                     f"{dimension_id}/{name} "
-                    f"doit être <= {maximum} "
+                    f"must be <= {maximum} "
                     f"{criterion['unit']}."
                 )
 
@@ -1211,8 +1201,8 @@ class TPIEngine:
         if maximum <= minimum:
 
             raise ValueError(
-                "La borne maximale doit être "
-                "strictement supérieure à la borne minimale."
+                "The maximum bound must be "
+                "strictly greater than the minimum bound."
             )
 
         normalized = (
@@ -1263,7 +1253,7 @@ class TPIEngine:
             ) as exc:
 
                 raise ValueError(
-                    "Chaque critère TPI doit contenir un champ 'id'."
+                    "Each TPI criterion must contain an 'id' field."
                 ) from exc
 
         # --------------------------------------------------------------
@@ -1276,8 +1266,8 @@ class TPIEngine:
         ):
 
             raise TypeError(
-                "decision_criteria doit être "
-                "une liste ou un dictionnaire."
+                "decision_criteria must be "
+                "a list or a dictionary."
             )
 
         expected = set(
@@ -1301,9 +1291,9 @@ class TPIEngine:
         if missing or extra:
 
             raise ValueError(
-                "Schéma des paramètres TPI invalide "
-                f"(manquants={sorted(missing)}, "
-                f"en trop={sorted(extra)})."
+                "Invalid TPI parameter schema "
+                f"(missing={sorted(missing)}, "
+                f"extra={sorted(extra)})."
             )
 
         validated: dict[
@@ -1335,13 +1325,13 @@ class TPIEngine:
             ):
 
                 raise ValueError(
-                    f"Bornes manquantes pour {name}."
+                    f"Missing bounds for {name}."
                 )
 
             if float(maximum) <= float(minimum):
 
                 raise ValueError(
-                    f"Bornes invalides pour {name}."
+                    f"Invalid bounds for {name}."
                 )
 
             if direction not in {
@@ -1350,7 +1340,7 @@ class TPIEngine:
             }:
 
                 raise ValueError(
-                    f"Direction invalide pour {name}: "
+                    f"Invalid direction for {name}: "
                     f"{direction!r}"
                 )
 
@@ -1383,8 +1373,8 @@ class TPIEngine:
         ):
 
             raise TypeError(
-                "Les poids TPI doivent être "
-                "un dictionnaire."
+                "TPI weights must be "
+                "a dictionary."
             )
 
         missing = (
@@ -1400,9 +1390,9 @@ class TPIEngine:
         if missing or extra:
 
             raise ValueError(
-                "Clés de poids invalides "
-                f"(manquantes={sorted(missing)}, "
-                f"en trop={sorted(extra)})."
+                "Invalid weight keys "
+                f"(missing={sorted(missing)}, "
+                f"extra={sorted(extra)})."
             )
 
         weights: dict[
@@ -1424,7 +1414,7 @@ class TPIEngine:
             ) as exc:
 
                 raise ValueError(
-                    f"Poids TPI invalide pour "
+                    f"Invalid TPI weight for "
                     f"{name}: {values[name]!r}"
                 ) from exc
 
@@ -1434,7 +1424,7 @@ class TPIEngine:
             ):
 
                 raise ValueError(
-                    f"Poids TPI invalide pour "
+                    f"Invalid TPI weight for "
                     f"{name}: {value!r}"
                 )
 
@@ -1459,9 +1449,9 @@ class TPIEngine:
         ) > tolerance:
 
             raise ValueError(
-                "La somme des poids TPI doit "
-                "être égale à 1.0. "
-                f"Somme actuelle: {total:.6f}"
+                "The sum of TPI weights must "
+                "be equal to 1.0. "
+                f"Current sum: {total:.6f}"
             )
 
         return weights
@@ -1567,8 +1557,8 @@ class TPIEngine:
             ):
 
                 raise TypeError(
-                    "priority_thresholds doit être "
-                    "un dictionnaire, une liste ou un tuple."
+                    "priority_thresholds must be "
+                    "a dictionary, list, or tuple."
                 )
 
             for item in custom:
@@ -1579,8 +1569,8 @@ class TPIEngine:
                 ):
 
                     raise ValueError(
-                        "Chaque seuil TPI doit être "
-                        "une liste ou un tuple."
+                        "Each TPI threshold must be "
+                        "a list or tuple."
                     )
 
                 # ----------------------------------------------------------
@@ -1606,11 +1596,11 @@ class TPIEngine:
                 else:
 
                     raise ValueError(
-                        "Format invalide dans "
-                        "TPI_PRIORITY_THRESHOLDS : "
+                        "Invalid format in "
+                        "TPI_PRIORITY_THRESHOLDS: "
                         f"{item!r}. "
-                        "Utilisez (minimum, label) "
-                        "ou (minimum, maximum, label, phase)."
+                        "Use (minimum, label) "
+                        "or (minimum, maximum, label, phase)."
                     )
 
                 minimum = self._normalize_threshold_value(
@@ -1667,9 +1657,9 @@ class TPIEngine:
             ):
 
                 raise ValueError(
-                    "Les seuils TPI doivent être "
-                    "compris entre 0 et 1 "
-                    "après normalisation."
+                    "TPI thresholds must be "
+                    "between 0 and 1 "
+                    "after normalization."
                 )
 
         return thresholds
@@ -1700,7 +1690,7 @@ class TPIEngine:
         ):
 
             raise ValueError(
-                f"Seuil TPI invalide: {value}"
+                f"Invalid TPI threshold: {value}"
             )
 
         # Percentage form.
@@ -1713,7 +1703,7 @@ class TPIEngine:
             else:
 
                 raise ValueError(
-                    f"Seuil TPI hors plage: {value}"
+                    f"TPI threshold out of range: {value}"
                 )
 
         return max(
@@ -1763,7 +1753,7 @@ class TPIEngine:
         ) as exc:
 
             raise ValueError(
-                f"TPI score invalide: {score!r}"
+                f"Invalid TPI score: {score!r}"
             ) from exc
 
         if not math.isfinite(
@@ -1771,7 +1761,7 @@ class TPIEngine:
         ):
 
             raise ValueError(
-                f"TPI score non fini: {score!r}"
+                f"Non-finite TPI score: {score!r}"
             )
 
         # ------------------------------------------------------------------
@@ -1790,7 +1780,7 @@ class TPIEngine:
             else:
 
                 raise ValueError(
-                    f"TPI score hors plage [0,100]: {score}"
+                    f"TPI score out of range [0,100]: {score}"
                 )
 
         score = max(
@@ -1897,10 +1887,9 @@ class TPIEngine:
 #
 # Existing imports such as:
 #
-#     from engines.decision.tpi import TPICalculator
+# from engines.decision.tpi import TPICalculator
 #
 # will continue to work.
 # =============================================================================
-
 
 TPICalculator = TPIEngine

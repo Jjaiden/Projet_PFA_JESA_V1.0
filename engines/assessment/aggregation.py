@@ -1,29 +1,29 @@
 """
-aggregation.py — Moteur d'agrégation du JDMAF.
+aggregation.py — JDMAF Aggregation Engine.
 
-Responsabilité :
-    Orchestrer le calcul complet :
+Responsibility:
+Orchestrate the complete scoring calculation:
 
-        indicateurs
-              ↓
-        sous-dimensions
-              ↓
-        dimensions
-              ↓
-        piliers
-              ↓
-        DMI
+    indicators
+          ↓
+    subdimensions
+          ↓
+    dimensions
+          ↓
+    pillars
+          ↓
+    DMI
 
-Ce module appartient exclusivement au backend.
-Il ne contient aucune interface frontend.
+This module belongs exclusively to the backend.
+It contains no frontend interface logic.
 
-Architecture utilisée :
-    data.loader.load_referentiel() -> Referentiel
-    data.loader.load_assessment()  -> Assessment
+Architecture used:
+data.loader.load_referentiel() -> Referentiel
+data.loader.load_assessment()  -> Assessment
 
-Le moteur travaille directement avec les objets définis dans
-data/models.py. Il n'utilise pas de DataFrame pandas et ne dépend
-pas d'un ReferenceLoader.
+The engine works directly with the objects defined in
+data/models.py. It does not use pandas DataFrames and
+does not depend on a ReferenceLoader.
 """
 
 from __future__ import annotations
@@ -41,12 +41,12 @@ logger = settings.get_logger(__name__)
 
 class AggregationEngine:
     """
-    Moteur d'agrégation du modèle d'évaluation.
+    Engine responsible for aggregating the assessment model.
 
-    Le moteur reçoit un Referentiel déjà chargé par data.loader
-    et utilise le ScoringEngine pour effectuer les calculs.
+    The engine receives a Referentiel already loaded by data.loader
+    and uses the ScoringEngine to perform the calculations.
 
-    Hiérarchie :
+    Hierarchy:
 
         Indicator
             ↓
@@ -65,23 +65,24 @@ class AggregationEngine:
         config: Optional[Dict[str, Any]] = None,
     ):
         """
-        Initialise le moteur.
+        Initialize the aggregation engine.
 
         Args:
             referentiel:
-                Objet Referentiel retourné par load_referentiel().
+                Referentiel object returned by load_referentiel().
 
             config:
-                Configuration optionnelle du moteur de scoring.
+                Optional scoring engine configuration.
         """
 
         if not isinstance(referentiel, Referentiel):
             raise TypeError(
-                "referentiel doit être une instance de Referentiel."
+                "referentiel must be an instance of Referentiel."
             )
 
         self.referentiel = referentiel
         self.config = config or {}
+
         self.validate_before_aggregation = self.config.get(
             "validate_before_aggregation",
             True,
@@ -90,8 +91,8 @@ class AggregationEngine:
         self.scoring_engine = ScoringEngine(self.config)
 
         logger.info(
-            "AggregationEngine initialisé : "
-            "%d piliers, %d dimensions, %d sous-dimensions, %d indicateurs.",
+            "AggregationEngine initialized: "
+            "%d pillars, %d dimensions, %d subdimensions, %d indicators.",
             len(self.referentiel.pillars),
             len(self.referentiel.dimensions),
             len(self.referentiel.subdimensions),
@@ -99,7 +100,7 @@ class AggregationEngine:
         )
 
     # ========================================================================
-    # API PRINCIPALE
+    # MAIN API
     # ========================================================================
 
     def aggregate_scores(
@@ -107,14 +108,14 @@ class AggregationEngine:
         assessment: Assessment,
     ) -> Dict[str, Any]:
         """
-        Calcule l'intégralité de l'évaluation.
+        Calculate the complete assessment.
 
         Args:
             assessment:
-                Objet Assessment retourné par load_assessment().
+                Assessment object returned by load_assessment().
 
         Returns:
-            Dictionnaire contenant :
+            Dictionary containing:
 
                 indicators
                 subdimensions
@@ -126,7 +127,7 @@ class AggregationEngine:
 
         if not isinstance(assessment, Assessment):
             raise TypeError(
-                "assessment doit être une instance de Assessment."
+                "assessment must be an instance of Assessment."
             )
 
         if self.validate_before_aggregation:
@@ -134,15 +135,16 @@ class AggregationEngine:
                 assessment,
                 self.referentiel,
             )
+
             ensure_valid(validation_report)
 
         logger.info(
-            "Début de l'agrégation de l'évaluation %s.",
+            "Starting aggregation for assessment %s.",
             assessment.metadata.assessment_id,
         )
 
         # ------------------------------------------------------------------
-        # 1. Indicateurs
+        # 1. Indicators
         # ------------------------------------------------------------------
 
         indicator_results = self._calculate_indicator_scores(
@@ -150,7 +152,7 @@ class AggregationEngine:
         )
 
         # ------------------------------------------------------------------
-        # 2. Sous-dimensions
+        # 2. Subdimensions
         # ------------------------------------------------------------------
 
         subdimension_results = self._calculate_subdimension_scores(
@@ -166,7 +168,7 @@ class AggregationEngine:
         )
 
         # ------------------------------------------------------------------
-        # 4. Piliers
+        # 4. Pillars
         # ------------------------------------------------------------------
 
         pillar_results = self._calculate_pillar_scores(
@@ -214,7 +216,7 @@ class AggregationEngine:
         }
 
         logger.info(
-            "Agrégation terminée : DMI=%s.",
+            "Aggregation completed: DMI=%s.",
             (
                 dmi_result.score
                 if dmi_result is not None
@@ -225,7 +227,7 @@ class AggregationEngine:
         return results
 
     # ========================================================================
-    # INDICATEURS
+    # INDICATORS
     # ========================================================================
 
     def _calculate_indicator_scores(
@@ -233,14 +235,14 @@ class AggregationEngine:
         assessment: Assessment,
     ) -> Dict[str, ScoreResult]:
         """
-        Calcule les scores individuels des indicateurs.
+        Calculate individual indicator scores.
 
-        Un indicateur Non Applicable est exclu des agrégations
-        supérieures selon la logique définie dans le ScoringEngine.
+        A Not Applicable indicator is excluded from higher-level
+        aggregations according to the logic defined in ScoringEngine.
 
-        Un score manquant pour un indicateur Applicable bloque
-        le calcul si settings.ALLOW_MISSING_SCORE_ON_APPLICABLE
-        est False.
+        A missing score for an Applicable indicator blocks the
+        calculation if settings.ALLOW_MISSING_SCORE_ON_APPLICABLE
+        is False.
         """
 
         results: Dict[str, ScoreResult] = {}
@@ -251,7 +253,7 @@ class AggregationEngine:
             indicator_id = str(indicator_id).strip()
 
             # --------------------------------------------------------------
-            # Vérification de l'existence de l'indicateur
+            # Check indicator existence
             # --------------------------------------------------------------
 
             indicator = self.referentiel.indicators.get(
@@ -260,12 +262,12 @@ class AggregationEngine:
 
             if indicator is None:
                 raise ValueError(
-                    f"Indicateur inconnu dans l'évaluation : "
+                    f"Unknown indicator in assessment: "
                     f"{indicator_id}"
                 )
 
             # --------------------------------------------------------------
-            # Applicabilité
+            # Applicability
             # --------------------------------------------------------------
 
             applicability = (
@@ -277,8 +279,10 @@ class AggregationEngine:
                 applicability
             ).strip()
 
-            if applicability == constants.APPLICABILITY_NOT_APPLICABLE:
-
+            if (
+                applicability
+                == constants.APPLICABILITY_NOT_APPLICABLE
+            ):
                 results[indicator_id] = (
                     self.scoring_engine.calculate_indicator_score(
                         indicator_id=indicator_id,
@@ -292,14 +296,17 @@ class AggregationEngine:
 
                 continue
 
-            if applicability != constants.APPLICABILITY_APPLICABLE:
+            if (
+                applicability
+                != constants.APPLICABILITY_APPLICABLE
+            ):
                 raise ValueError(
-                    f"{indicator_id} : Applicability invalide : "
+                    f"{indicator_id}: Invalid applicability: "
                     f"{applicability!r}"
                 )
 
             # --------------------------------------------------------------
-            # Score manquant
+            # Missing score
             # --------------------------------------------------------------
 
             selected_score = indicator_score.selected_score
@@ -308,18 +315,19 @@ class AggregationEngine:
 
                 if settings.ALLOW_MISSING_SCORE_ON_APPLICABLE:
                     logger.warning(
-                        "%s : score manquant mais autorisé par settings.",
+                        "%s: score is missing but allowed by settings.",
                         indicator_id,
                     )
+
                     continue
 
                 raise ValueError(
-                    f"{indicator_id} : indicateur applicable "
-                    "mais Selected_Score est vide."
+                    f"{indicator_id}: indicator is applicable "
+                    "but Selected_Score is empty."
                 )
 
             # --------------------------------------------------------------
-            # Normalisation du score
+            # Score normalization
             # --------------------------------------------------------------
 
             selected_score = self._normalize_score(
@@ -328,7 +336,7 @@ class AggregationEngine:
             )
 
             # --------------------------------------------------------------
-            # Grille de scoring
+            # Scoring grid
             # --------------------------------------------------------------
 
             scoring_grid = self._get_scoring_grid(
@@ -337,7 +345,7 @@ class AggregationEngine:
             )
 
             # --------------------------------------------------------------
-            # Calcul du score indicateur
+            # Calculate indicator score
             # --------------------------------------------------------------
 
             results[indicator_id] = (
@@ -354,7 +362,7 @@ class AggregationEngine:
         return results
 
     # ========================================================================
-    # SOUS-DIMENSIONS
+    # SUBDIMENSIONS
     # ========================================================================
 
     def _calculate_subdimension_scores(
@@ -362,11 +370,11 @@ class AggregationEngine:
         indicator_results: Dict[str, ScoreResult],
     ) -> Dict[str, ScoreResult]:
         """
-        Agrège les indicateurs vers les sous-dimensions.
+        Aggregate indicators into subdimensions.
 
-        Les sous-dimensions sont récupérées directement depuis
-        le Referentiel afin de ne perdre aucune sous-dimension,
-        même lorsqu'elle contient uniquement des indicateurs N/A.
+        Subdimensions are retrieved directly from the Referentiel
+        so that no subdimension is lost, even when it contains
+        only Not Applicable indicators.
         """
 
         results: Dict[str, ScoreResult] = {}
@@ -409,7 +417,7 @@ class AggregationEngine:
         subdimension_results: Dict[str, ScoreResult],
     ) -> Dict[str, ScoreResult]:
         """
-        Agrège les sous-dimensions vers les dimensions.
+        Aggregate subdimensions into dimensions.
         """
 
         results: Dict[str, ScoreResult] = {}
@@ -434,7 +442,7 @@ class AggregationEngine:
                     )
 
             weights = self._get_weights_for_level(
-                level="Sous-dimension",
+                level="Subdimension",
                 parent_id=dimension_id,
             )
 
@@ -452,7 +460,7 @@ class AggregationEngine:
         return results
 
     # ========================================================================
-    # PILIERS
+    # PILLARS
     # ========================================================================
 
     def _calculate_pillar_scores(
@@ -460,7 +468,7 @@ class AggregationEngine:
         dimension_results: Dict[str, ScoreResult],
     ) -> Dict[str, ScoreResult]:
         """
-        Agrège les dimensions vers les piliers.
+        Aggregate dimensions into pillars.
         """
 
         results: Dict[str, ScoreResult] = {}
@@ -509,7 +517,7 @@ class AggregationEngine:
         pillar_results: Dict[str, ScoreResult],
     ) -> Optional[ScoreResult]:
         """
-        Calcule le DMI à partir des piliers.
+        Calculate the DMI from the pillars.
         """
 
         if not pillar_results:
@@ -520,7 +528,7 @@ class AggregationEngine:
         )
 
         weights = self._get_weights_for_level(
-            level="Pilier",
+            level="Pillar",
             parent_id="DMI",
         )
 
@@ -530,7 +538,7 @@ class AggregationEngine:
         )
 
     # ========================================================================
-    # OUTILS INDICATEURS
+    # INDICATOR UTILITIES
     # ========================================================================
 
     def _normalize_score(
@@ -539,29 +547,30 @@ class AggregationEngine:
         selected_score: Any,
     ) -> int:
         """
-        Convertit le score en entier valide.
+        Convert a score into a valid integer.
 
-        Excel peut par exemple fournir 3.0 alors que la valeur
-        métier attendue est 3.
+        Excel may provide a value such as 3.0 while the
+        expected business value is 3.
         """
 
         try:
             numeric_score = float(
                 selected_score
             )
+
         except (
             TypeError,
             ValueError,
         ) as exc:
             raise ValueError(
-                f"{indicator_id} : score invalide "
+                f"{indicator_id}: invalid score "
                 f"{selected_score!r}."
             ) from exc
 
         if not numeric_score.is_integer():
             raise ValueError(
-                f"{indicator_id} : le score "
-                f"{numeric_score} n'est pas entier."
+                f"{indicator_id}: score "
+                f"{numeric_score} is not an integer."
             )
 
         score = int(
@@ -570,14 +579,14 @@ class AggregationEngine:
 
         if score < 0 or score > 5:
             raise ValueError(
-                f"{indicator_id} : score hors limites "
-                f"(0-5) : {score}."
+                f"{indicator_id}: score out of range "
+                f"(0-5): {score}."
             )
 
         return score
 
     # ========================================================================
-    # GRILLE DE SCORING
+    # SCORING GRID
     # ========================================================================
 
     def _get_scoring_grid(
@@ -586,10 +595,10 @@ class AggregationEngine:
         selected_score: int,
     ) -> Dict[str, Any]:
         """
-        Retourne la ligne de grille correspondant à un indicateur
-        et à son score.
+        Return the scoring grid entry corresponding to an
+        indicator and its selected score.
 
-        Le Referentiel contient directement :
+        The Referentiel directly contains:
 
             indicator_scoring_grids[
                 indicator_id
@@ -604,8 +613,8 @@ class AggregationEngine:
 
         if indicator_grids is None:
             raise ValueError(
-                f"Aucune grille de scoring trouvée "
-                f"pour l'indicateur {indicator_id}."
+                f"No scoring grid found "
+                f"for indicator {indicator_id}."
             )
 
         grid_entry = indicator_grids.get(
@@ -614,11 +623,11 @@ class AggregationEngine:
 
         if grid_entry is None:
             raise ValueError(
-                f"Grille de scoring absente pour "
+                f"Scoring grid entry missing for "
                 f"{indicator_id}, score {selected_score}."
             )
 
-        # Le ScoringEngine peut recevoir un dictionnaire.
+        # The ScoringEngine can receive a dictionary.
         return {
             "Indicator_ID": grid_entry.indicator_id,
             "Score": grid_entry.score,
@@ -644,7 +653,7 @@ class AggregationEngine:
         }
 
     # ========================================================================
-    # PONDERATIONS
+    # WEIGHTS
     # ========================================================================
 
     def _get_weights_for_level(
@@ -653,16 +662,16 @@ class AggregationEngine:
         parent_id: str,
     ) -> Optional[Dict[str, float]]:
         """
-        Récupère les pondérations depuis Referentiel.weights.
+        Retrieve weights from Referentiel.weights.
 
-        Structure :
+        Structure:
 
             referentiel.weights[
                 hierarchy_level
             ][component_id] -> WeightEntry
 
-        La recherche utilise également parent_id afin de ne
-        conserver que les composants appartenant au parent demandé.
+        The lookup also uses parent_id to retain only the
+        components belonging to the requested parent.
         """
 
         level_weights = self.referentiel.weights.get(
@@ -671,16 +680,17 @@ class AggregationEngine:
 
         if not level_weights:
             logger.warning(
-                "Aucune pondération trouvée pour le niveau %s.",
+                "No weights found for hierarchy level %s.",
                 level,
             )
+
             return None
 
         weights: Dict[str, float] = {}
 
         for component_id, entry in level_weights.items():
 
-            # Vérification du parent.
+            # Check parent.
             if entry.parent_id != parent_id:
                 continue
 
@@ -688,7 +698,7 @@ class AggregationEngine:
 
             if weight < 0:
                 raise ValueError(
-                    f"Poids négatif pour {component_id} : "
+                    f"Negative weight for {component_id}: "
                     f"{weight}"
                 )
 
@@ -698,12 +708,13 @@ class AggregationEngine:
 
         if not weights:
             logger.warning(
-                "Aucune pondération trouvée pour "
-                "%s/%s. Les poids par défaut du "
-                "ScoringEngine seront utilisés.",
+                "No weights found for "
+                "%s/%s. Default weights from "
+                "ScoringEngine will be used.",
                 level,
                 parent_id,
             )
+
             return None
 
         total = sum(
@@ -715,8 +726,8 @@ class AggregationEngine:
         ) > constants.WEIGHT_SUM_TOLERANCE:
 
             message = (
-                f"Somme des poids invalide pour "
-                f"{level}/{parent_id} : "
+                f"Invalid weight sum for "
+                f"{level}/{parent_id}: "
                 f"{total:.6f}"
             )
 
@@ -726,7 +737,7 @@ class AggregationEngine:
                 )
 
             logger.warning(
-                "%s. Normalisation automatique.",
+                "%s. Automatic normalization applied.",
                 message,
             )
 
@@ -739,7 +750,7 @@ class AggregationEngine:
         return weights
 
     # ========================================================================
-    # RESUME
+    # SUMMARY
     # ========================================================================
 
     def get_summary(
@@ -747,10 +758,10 @@ class AggregationEngine:
         results: Dict[str, Any],
     ) -> Dict[str, Any]:
         """
-        Produit un résumé backend facilement exploitable
-        par les futures pages frontend.
+        Produce a backend summary that can easily be consumed
+        by future frontend pages.
 
-        Cette méthode ne contient aucune logique frontend.
+        This method contains no frontend logic.
         """
 
         dmi = results.get(
@@ -782,7 +793,7 @@ class AggregationEngine:
         }
 
         # ------------------------------------------------------------------
-        # Piliers
+        # Pillars
         # ------------------------------------------------------------------
 
         for pillar_id, result in results.get(
@@ -812,7 +823,7 @@ class AggregationEngine:
             }
 
         # ------------------------------------------------------------------
-        # Forces / faiblesses
+        # Strengths / weaknesses
         # ------------------------------------------------------------------
 
         dimension_scores = [

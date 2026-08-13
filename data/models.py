@@ -1,24 +1,11 @@
 """
 models.py — Structures de données du référentiel JDMAF et d'une évaluation.
-
-Deux familles de modèles, correspondant aux deux classeurs Excel du projet :
-
-1. Référentiel (statique, fourni par JESA — REFERENTIEL_GRILLES_MATURITE_DIGITALE_JESA.xlsx) :
-   Pillar, Dimension, Subdimension, Indicator, MaturityLevelDescription,
-   DimensionMaturityLevel, IndicatorScoringGridEntry, EvidenceCatalogEntry,
-   WeightEntry -> regroupés dans Referentiel.
-
-2. Évaluation (dynamique, une par site/campagne — Assessment.xlsx) :
-   AssessmentMetadata, IndicatorScore -> regroupés dans Assessment.
-
-Ces classes ne portent AUCUNE logique de calcul (ça vit dans engines/).
-Elles ne font que représenter fidèlement les données lues par loader.py.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Optional
+from typing import Any, Optional
 
 
 # ---------------------------------------------------------------------------
@@ -41,9 +28,6 @@ class Dimension:
     name: str
     objective: str = ""
     subdimension_ids: tuple[str, ...] = field(default_factory=tuple)
-    # Niveaux cibles : valeurs par défaut du référentiel, éventuellement
-    # surchargées par l'évaluateur (TARGET_LEVELS). Chargées ici pour que
-    # le référentiel soit auto-suffisant ; gap.py utilisera effective_target_level.
     target_level_default: Optional[int] = None
     target_level_user: Optional[int] = None
     effective_target_level: Optional[int] = None
@@ -84,8 +68,6 @@ class Indicator:
 
 @dataclass(frozen=True)
 class MaturityLevelDescription:
-    """Une ligne de GENERIC_MATURITY_SCALE — la définition générique du niveau N."""
-
     level: int
     name: str
     generic_description: str = ""
@@ -95,8 +77,6 @@ class MaturityLevelDescription:
 
 @dataclass(frozen=True)
 class DimensionMaturityLevel:
-    """Une ligne de DIMENSION_MATURITY_MATRICES — le niveau N vu pour UNE dimension."""
-
     dimension_id: str
     level: int
     level_name: str
@@ -111,8 +91,6 @@ class DimensionMaturityLevel:
 
 @dataclass(frozen=True)
 class IndicatorScoringGridEntry:
-    """Une ligne de INDICATOR_SCORING_GRIDS — le niveau N vu pour UN indicateur."""
-
     indicator_id: str
     score: int
     score_label: str = ""
@@ -122,6 +100,8 @@ class IndicatorScoringGridEntry:
     disqualifying_conditions: str = ""
     evaluator_guidance: str = ""
     next_score_requirement: str = ""
+    source_reference: str = ""               # <-- AJOUTÉ
+    expert_validation_status: str = ""       # <-- AJOUTÉ
 
 
 @dataclass(frozen=True)
@@ -138,9 +118,7 @@ class EvidenceCatalogEntry:
 
 @dataclass
 class WeightEntry:
-    """Une ligne de WEIGHTS_CONFIGURATION — le poids d'un composant à un niveau donné."""
-
-    hierarchy_level: str  # "Pilier" | "Dimension" | "Sous-dimension"
+    hierarchy_level: str
     parent_id: str
     component_id: str
     component_name: str
@@ -153,7 +131,6 @@ class WeightEntry:
 
     @property
     def resolved_weight(self) -> float:
-        """Poids à utiliser réellement : effectif > utilisateur > défaut."""
         if self.effective_weight is not None:
             return self.effective_weight
         if self.user_defined_weight is not None:
@@ -163,42 +140,32 @@ class WeightEntry:
 
 @dataclass
 class Referentiel:
-    """Agrégat complet du classeur référentiel — retourné par loader.load_referentiel()."""
-
     version: str = ""
     pillars: dict[str, Pillar] = field(default_factory=dict)
     dimensions: dict[str, Dimension] = field(default_factory=dict)
     subdimensions: dict[str, Subdimension] = field(default_factory=dict)
     indicators: dict[str, Indicator] = field(default_factory=dict)
     maturity_scale: dict[int, MaturityLevelDescription] = field(default_factory=dict)
-    # dimension_id -> {level -> DimensionMaturityLevel}
-    dimension_maturity_matrices: dict[str, dict[int, DimensionMaturityLevel]] = field(
-        default_factory=dict
-    )
-    # indicator_id -> {level -> IndicatorScoringGridEntry}
-    indicator_scoring_grids: dict[str, dict[int, IndicatorScoringGridEntry]] = field(
-        default_factory=dict
-    )
+    dimension_maturity_matrices: dict[str, dict[int, DimensionMaturityLevel]] = field(default_factory=dict)
+    indicator_scoring_grids: dict[str, dict[int, IndicatorScoringGridEntry]] = field(default_factory=dict)
     evidence_catalog: dict[str, EvidenceCatalogEntry] = field(default_factory=dict)
-    # weights[hierarchy_level][component_id] -> WeightEntry
     weights: dict[str, dict[str, WeightEntry]] = field(default_factory=dict)
+    target_levels: dict[str, int] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
     def get_weight(self, hierarchy_level: str, component_id: str, default: float = 0.0) -> float:
-        """Poids résolu d'un composant (pilier/dimension/sous-dimension) donné."""
         level_weights = self.weights.get(hierarchy_level, {})
         entry = level_weights.get(component_id)
         return entry.resolved_weight if entry else default
 
 
 # ---------------------------------------------------------------------------
-# 2. MODÈLES D'UNE ÉVALUATION (dynamique, une campagne = un site)
+# 2. MODÈLES D'UNE ÉVALUATION (dynamique)
 # ---------------------------------------------------------------------------
 
 
 @dataclass
 class AssessmentMetadata:
-    """Correspond à la feuille ASSESSMENT_METADATA d'un classeur Assessment.xlsx."""
-
     assessment_id: str
     site_id: Optional[str] = None
     site_name: Optional[str] = None
@@ -215,18 +182,16 @@ class AssessmentMetadata:
 
 @dataclass
 class IndicatorScore:
-    """Une ligne de QUESTIONNAIRE_TEMPLATE une fois remplie par l'évaluateur."""
-
     indicator_id: str
     pillar_id: str
     dimension_id: str
     subdimension_id: str
     question: str = ""
-    selected_score: Optional[int] = None  # None tant que non renseigné
+    selected_score: Optional[int] = None
     evidence_reference: Optional[str] = None
     evaluator_comment: Optional[str] = None
     confidence_level: Optional[str] = None
-    applicability: str = "Applicable"  # "Applicable" | "Non applicable"
+    applicability: str = "Applicable"
     validation_status: str = "Brouillon"
 
     @property
@@ -240,18 +205,12 @@ class IndicatorScore:
 
 @dataclass
 class Assessment:
-    """Agrégat complet d'une campagne d'évaluation — retourné par loader.load_assessment()."""
-
     metadata: AssessmentMetadata
     indicator_scores: dict[str, IndicatorScore] = field(default_factory=dict)
-    # Cibles éventuellement surchargées par l'évaluateur, indépendamment du
-    # référentiel par défaut (issu de TARGET_LEVELS, colonne Target_Level_User).
     target_level_overrides: dict[str, int] = field(default_factory=dict)
 
     def scores_for_subdimension(self, subdimension_id: str) -> list[IndicatorScore]:
-        return [
-            s for s in self.indicator_scores.values() if s.subdimension_id == subdimension_id
-        ]
+        return [s for s in self.indicator_scores.values() if s.subdimension_id == subdimension_id]
 
     def scores_for_dimension(self, dimension_id: str) -> list[IndicatorScore]:
         return [s for s in self.indicator_scores.values() if s.dimension_id == dimension_id]

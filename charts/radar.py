@@ -112,10 +112,16 @@ def _validate_non_negative_int(name: str, value: object) -> None:
 
 
 def _validate_str(name: str, value: object) -> None:
-    """Raise TypeError if ``value`` is not a string."""
-    if not isinstance(value, str):
+    """
+    Raise TypeError if ``value`` is neither a string nor None.
+
+    Args:
+        name: Parameter name for error messages.
+        value: Value to validate.
+    """
+    if value is not None and not isinstance(value, str):
         raise TypeError(
-            f"{name} must be str, got {type(value).__name__}"
+            f"{name} must be str or None, got {type(value).__name__}"
         )
 
 

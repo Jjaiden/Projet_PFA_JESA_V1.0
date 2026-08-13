@@ -1,24 +1,26 @@
 """
-settings.py — Configuration globale de l'application JESA DMAT.
+settings.py — Global configuration for the JESA DMAT application.
 
-Ce module centralise tous les paramètres de l'application:
+This module centralizes all application parameters:
 
 BACKEND (Sections 1–6):
-- Chemins des fichiers et dossiers (référentiel, assessment, sorties)
-- Précision numérique (scores, DMI, TPI)
-- Comportement du moteur (validation des poids, scores manquants)
-- Configuration du logging (console)
+
+- File and directory paths (reference framework, assessment, outputs)
+- Numerical precision (scores, DMI, TPI)
+- Engine behavior (weight validation, missing scores)
+- Logging configuration (console)
 
 FRONTEND (Sections 7–11):
-- Métadonnées de l'application (nom, version, auteur)
-- Configuration Streamlit (layout, sidebar, icônes)
-- Configuration des exports (PDF, Excel)
-- Gestion des sessions et uploads
-- Paramètres de cache et debug
 
-Les fichiers sont résolus via des variables d'environnement (backend)
-et des chemins statiques (frontend). Utilisez l'instance globale `settings`
-pour accéder à tous les paramètres.
+- Application metadata (name, version, author)
+- Streamlit configuration (layout, sidebar, icons)
+- Export configuration (PDF, Excel)
+- Session and upload management
+- Cache and debug parameters
+
+Files are resolved through environment variables (backend)
+and static paths (frontend). Use the global `settings` instance
+to access all parameters.
 """
 
 from __future__ import annotations
@@ -29,7 +31,9 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import ClassVar
 
-# ── Chemins racines du projet ──────────────────────────────────────────────
+
+# ── Project root paths ──────────────────────────────────────────────────────
+
 _ROOT_DIR = Path(__file__).resolve().parent.parent
 
 
@@ -41,17 +45,17 @@ _ROOT_DIR = Path(__file__).resolve().parent.parent
 @dataclass(frozen=True)
 class BackendSettings:
     """
-    Configuration du backend JDMAF.
+    Backend configuration for JESA DMAT.
 
-    Tous les attributs sont figés après instanciation (frozen=True) pour
-    éviter toute modification accidentelle en cours d'exécution.
+    All attributes are frozen after instantiation (frozen=True) to
+    prevent accidental modifications during runtime.
     """
 
     # ========================================================================
-    # 1. CHEMINS DU PROJET (BACKEND)
+    # 1. PROJECT PATHS (BACKEND)
     # ========================================================================
 
-    # Structure attendue :
+    # Expected structure:
     # JESA_DMAT/
     # ├── app.py
     # ├── config/
@@ -62,23 +66,23 @@ class BackendSettings:
     # └── outputs/
 
     BASE_DIR: Path = _ROOT_DIR
-    """Racine du projet JESA_DMAT/."""
+    """Root directory of the JESA_DMAT project."""
 
     DATA_DIR: Path = _ROOT_DIR / "data"
-    """Dossier des données (référentiels, assessments)."""
+    """Directory containing data files (reference frameworks, assessments)."""
 
     ASSESSMENT_DIR: Path = _ROOT_DIR / "data" / "assessment"
-    """Dossier contenant les fichiers d'évaluation."""
+    """Directory containing assessment files."""
 
     KNOWLEDGE_BASE_DIR: Path = _ROOT_DIR / "data" / "knowledge_base"
-    """Dossier contenant la base de connaissances (recommandations)."""
+    """Directory containing the knowledge base (recommendations)."""
 
     # ========================================================================
-    # 2. FICHIERS EXCEL (BACKEND)
+    # 2. EXCEL FILES (BACKEND)
     # ========================================================================
 
-    # Référentiel JESA.
-    # Contient : HIERARCHY, GENERIC_MATURITY_SCALE, INDICATORS,
+    # JESA reference framework.
+    # Contains: HIERARCHY, GENERIC_MATURITY_SCALE, INDICATORS,
     # INDICATOR_SCORING_GRIDS, QUESTIONNAIRE_TEMPLATE, etc.
 
     REFERENTIEL_FILE: Path = Path(
@@ -93,8 +97,8 @@ class BackendSettings:
         )
     )
 
-    # Base de connaissances utilisée par les moteurs décisionnels :
-    # recommandations, roadmap, dépendances, best practices, etc.
+    # Knowledge base used by the decision engines:
+    # recommendations, roadmap, dependencies, best practices, etc.
 
     RECOMMENDATIONS_FILE: Path = Path(
         os.environ.get(
@@ -108,9 +112,9 @@ class BackendSettings:
         )
     )
 
-    # Fichier d'évaluation.
-    # Contient les réponses / scores de l'évaluation.
-    # En production, ce fichier peut être fourni par l'utilisateur.
+    # Assessment file.
+    # Contains assessment responses / scores.
+    # In production, this file can be provided by the user.
 
     ASSESSMENT_FILE: Path = Path(
         os.environ.get(
@@ -120,11 +124,12 @@ class BackendSettings:
     )
 
     # ========================================================================
-    # 3. DOSSIER DE SORTIE (BACKEND)
+    # 3. OUTPUT DIRECTORY (BACKEND)
     # ========================================================================
 
-    # Tous les fichiers générés par le backend sont regroupés ici.
-    # Exemple :
+    # All files generated by the backend are grouped here.
+    #
+    # Example:
     # outputs/
     # ├── assessment_results.json
     # ├── assessment_report.pdf
@@ -138,39 +143,39 @@ class BackendSettings:
     )
 
     # ========================================================================
-    # 4. PRÉCISION NUMÉRIQUE (BACKEND)
+    # 4. NUMERICAL PRECISION (BACKEND)
     # ========================================================================
 
-    # Scores de maturité : échelle 0-5.
+    # Maturity scores: 0–5 scale.
     SCORE_DECIMAL_PRECISION: int = 3
 
-    # DMI : score exprimé en pourcentage (ex: 62.4 %).
+    # DMI: score expressed as a percentage (e.g. 62.4%).
     DMI_DECIMAL_PRECISION: int = 1
 
-    # TPI : indice compris entre 0 et 1.
+    # TPI: index between 0 and 1.
     TPI_DECIMAL_PRECISION: int = 3
 
     # ========================================================================
-    # 5. COMPORTEMENT DU MOTEUR (BACKEND)
+    # 5. ENGINE BEHAVIOR (BACKEND)
     # ========================================================================
 
-    # 5.1 Validation des pondérations
-    # True : une somme de poids invalide provoque une erreur.
-    # False : le moteur journalise un warning et normalise les poids.
+    # 5.1 Weight validation
+    # True: an invalid weight sum raises an error.
+    # False: the engine logs a warning and normalizes the weights.
     STRICT_WEIGHT_VALIDATION: bool = True
 
-    # 5.2 Niveau cible inférieur au niveau actuel
-    # Autorise une cible inférieure au niveau actuel (décision volontaire).
+    # 5.2 Target level below current level
+    # Allows a target level lower than the current level (intentional decision).
     ALLOW_TARGET_BELOW_CURRENT: bool = True
 
-    # 5.3 Indicateurs non applicables
-    # Applicability = "Non applicable" exclut l'indicateur du calcul.
-    # Les poids des éléments restants sont renormalisés.
+    # 5.3 Non-applicable indicators
+    # Applicability = "Not applicable" excludes the indicator from the calculation.
+    # The weights of the remaining elements are renormalized.
     RENORMALIZE_WEIGHTS_ON_NA: bool = True
 
-    # 5.4 Score manquant
-    # Applicability = "Applicable" mais Selected_Score vide :
-    # l'évaluation est considérée comme incomplète.
+    # 5.4 Missing score
+    # Applicability = "Applicable" but Selected_Score is empty:
+    # the assessment is considered incomplete.
     ALLOW_MISSING_SCORE_ON_APPLICABLE: bool = False
 
     # ========================================================================
@@ -184,13 +189,13 @@ class BackendSettings:
 
     def get_logger(self, name: str) -> logging.Logger:
         """
-        Retourne un logger configuré de manière homogène pour le backend.
+        Return a consistently configured backend logger.
 
         Args:
-            name: Nom du module appelant.
+            name: Name of the calling module.
 
         Returns:
-            Instance de logging.Logger.
+            Configured logging.Logger instance.
         """
         logger = logging.getLogger(name)
 
@@ -215,98 +220,101 @@ class BackendSettings:
 @dataclass(frozen=True)
 class FrontendSettings:
     """
-    Configuration de l'interface utilisateur et des exports JESA DMAT.
+    User interface and export configuration for JESA DMAT.
 
-    Tous les attributs sont figés après instanciation (frozen=True) pour
-    éviter toute modification accidentelle en cours d'exécution.
+    All attributes are frozen after instantiation (frozen=True) to
+    prevent accidental modifications during runtime.
     """
 
     # ========================================================================
-    # 7. MÉTADONNÉES DE L'APPLICATION (FRONTEND)
+    # 7. APPLICATION METADATA (FRONTEND)
     # ========================================================================
 
     APP_NAME: str = "JESA DMAT"
-    """Nom complet de l'application."""
+    """Full application name."""
 
     APP_VERSION: str = "1.0.0"
-    """Version actuelle (semver)."""
+    """Current application version (semver)."""
 
     APP_AUTHOR: str = "JESA"
-    """Auteur / équipe de développement."""
+    """Application author / development team."""
 
     APP_COMPANY: str = "JESA"
-    """Entreprise propriétaire de l'outil."""
+    """Company owning the tool."""
 
     APP_DESCRIPTION: str = (
-        "Outil d'évaluation de la maturité digitale "
-        "basé sur le référentiel Industry 5.0."
+        "Digital Maturity Assessment Tool "
+        "based on the Industry 5.0 framework."
     )
-    """Description affichée dans l'interface et les exports."""
+    """Description displayed in the interface and exports."""
 
     # ========================================================================
-    # 8. CONFIGURATION STREAMLIT (FRONTEND)
+    # 8. STREAMLIT CONFIGURATION (FRONTEND)
     # ========================================================================
 
     PAGE_TITLE: str = "JESA DMAT"
-    """Titre de la page web (onglet navigateur)."""
+    """Web page title displayed in the browser tab."""
 
-    PAGE_ICON: str = str(_ROOT_DIR / "assets" / "logo" / "jesa_logo.png")
-    """Icône de la page (chemin vers le logo). Accepte aussi un emoji."""
+    PAGE_ICON: str = str(
+        _ROOT_DIR / "assets" / "logo" / "jesa_logo.png"
+    )
+    """Page icon (path to the logo). An emoji can also be used."""
 
     LAYOUT: str = "wide"
-    """Disposition Streamlit : 'centered' ou 'wide'."""
+    """Streamlit layout: 'centered' or 'wide'."""
 
     SIDEBAR_STATE: str = "expanded"
-    """État initial de la sidebar : 'auto', 'expanded', 'collapsed'."""
+    """Initial sidebar state: 'auto', 'expanded', or 'collapsed'."""
 
     WIDE_MODE_MAX_WIDTH: int = 1400
-    """Largeur maximale du contenu en mode wide (px)."""
+    """Maximum content width in wide mode (px)."""
 
     # ========================================================================
-    # 9. DOSSIERS D'EXPORT (FRONTEND)
+    # 9. EXPORT DIRECTORIES (FRONTEND)
     # ========================================================================
 
     EXPORTS_DIR: Path = _ROOT_DIR / "exports"
-    """Dossier racine des exports."""
+    """Root directory for exports."""
 
     EXPORT_PDF_DIR: Path = _ROOT_DIR / "exports" / "pdf"
-    """Dossier des exports PDF."""
+    """Directory for PDF exports."""
 
     EXPORT_EXCEL_DIR: Path = _ROOT_DIR / "exports" / "excel"
-    """Dossier des exports Excel."""
+    """Directory for Excel exports."""
 
     EXPORT_REPORT_DIR: Path = _ROOT_DIR / "exports" / "report"
-    """Dossier des rapports générés."""
+    """Directory for generated reports."""
 
     # ========================================================================
-    # 10. RESSOURCES STATIQUES (FRONTEND)
+    # 10. STATIC RESOURCES (FRONTEND)
     # ========================================================================
 
     ASSETS_DIR: Path = _ROOT_DIR / "assets"
-    """Dossier des ressources statiques."""
+    """Directory containing static resources."""
 
     LOGO_DIR: Path = _ROOT_DIR / "assets" / "logo"
-    """Dossier contenant les logos."""
+    """Directory containing logos."""
 
     IMAGES_DIR: Path = _ROOT_DIR / "assets" / "images"
-    """Dossier des images (illustrations, schémas)."""
+    """Directory containing images (illustrations, diagrams)."""
 
     STYLES_DIR: Path = _ROOT_DIR / "assets" / "styles"
-    """Dossier des feuilles de style CSS."""
+    """Directory containing CSS stylesheets."""
 
     UPLOAD_DIR: Path = _ROOT_DIR / "uploads"
-    """Dossier des fichiers téléversés par l'utilisateur."""
+    """Directory containing user-uploaded files."""
 
     # ========================================================================
-    # 11. CONFIGURATION DES EXPORTS (FRONTEND)
+    # 11. EXPORT CONFIGURATION (FRONTEND)
     # ========================================================================
 
     # 11.1 PDF
+
     PDF_PAGE_SIZE: str = "A4"
-    """Format de page pour les rapports PDF."""
+    """Page size for PDF reports."""
 
     PDF_ORIENTATION: str = "portrait"
-    """Orientation : 'portrait' ou 'landscape'."""
+    """PDF orientation: 'portrait' or 'landscape'."""
 
     PDF_MARGIN_TOP: float = 15.0
     PDF_MARGIN_BOTTOM: float = 15.0
@@ -314,90 +322,95 @@ class FrontendSettings:
     PDF_MARGIN_RIGHT: float = 12.0
 
     PDF_FONT_FAMILY: str = "Inter"
-    """Police principale utilisée dans les PDF."""
+    """Main font used in PDF reports."""
 
     PDF_FONT_SIZE_BODY: int = 10
-    """Taille du texte courant dans les PDF."""
+    """Body text size in PDF reports."""
 
     # 11.2 Excel
-    EXCEL_SHEET_OVERVIEW: str = "Vue d'ensemble"
-    EXCEL_SHEET_DETAIL: str = "Détail par pilier"
+
+    EXCEL_SHEET_OVERVIEW: str = "Overview"
+    EXCEL_SHEET_DETAIL: str = "Detail by Pillar"
     EXCEL_TABLE_STYLE: str = "TableStyleMedium2"
 
     # ========================================================================
-    # 12. CONFIGURATION DES GRAPHIQUES (FRONTEND)
+    # 12. CHART CONFIGURATION (FRONTEND)
     # ========================================================================
 
     PLOTLY_TEMPLATE: str = "plotly_white"
-    """Template Plotly par défaut."""
+    """Default Plotly template."""
 
     PLOTLY_DISPLAY_MODE_BAR: bool = False
-    """Afficher la barre de mode Plotly."""
+    """Display the Plotly mode bar."""
 
     # ========================================================================
-    # 13. SAUVEGARDE DES SESSIONS (FRONTEND)
+    # 13. SESSION PERSISTENCE (FRONTEND)
     # ========================================================================
 
     SESSION_SAVE_ENABLED: bool = True
-    """Activer la sauvegarde automatique des sessions."""
+    """Enable automatic session saving."""
 
     SESSION_SAVE_DIR: Path = _ROOT_DIR / "data" / "sessions"
-    """Dossier des sessions sauvegardées."""
+    """Directory containing saved sessions."""
 
     SESSION_SAVE_FORMAT: str = "json"
-    """Format de sauvegarde des sessions."""
+    """Session storage format."""
 
     # ========================================================================
-    # 14. UPLOADS UTILISATEUR (FRONTEND)
+    # 14. USER UPLOADS (FRONTEND)
     # ========================================================================
 
     UPLOAD_ENABLED: bool = False
-    """Activer les uploads utilisateur."""
+    """Enable user file uploads."""
 
     UPLOAD_MAX_SIZE_MB: int = 50
-    """Taille maximale des fichiers uploadés (Mo)."""
+    """Maximum uploaded file size (MB)."""
 
-    UPLOAD_ALLOWED_EXTENSIONS: tuple[str, ...] = ("csv", "xlsx", "json")
-    """Extensions de fichiers autorisées pour les uploads."""
+    UPLOAD_ALLOWED_EXTENSIONS: tuple[str, ...] = (
+        "csv",
+        "xlsx",
+        "json",
+    )
+    """Allowed file extensions for uploads."""
 
     # ========================================================================
-    # 15. LOGS APPLICATIFS (FRONTEND)
+    # 15. APPLICATION LOGGING (FRONTEND)
     # ========================================================================
 
     LOG_ENABLED: bool = True
-    """Activer la journalisation des événements."""
+    """Enable event logging."""
 
     LOG_DIR: Path = _ROOT_DIR / "logs"
-    """Dossier contenant les fichiers de log."""
+    """Directory containing log files."""
 
     LOG_FILENAME: str = "jesa_dmat.log"
-    """Nom du fichier de log principal."""
+    """Main log file name."""
 
     LOG_LEVEL_FRONTEND: str = "INFO"
-    """Niveau de log par défaut (DEBUG, INFO, WARNING, ERROR, CRITICAL)."""
+    """Default log level (DEBUG, INFO, WARNING, ERROR, CRITICAL)."""
 
     LOG_FORMAT: str = "%(asctime)s [%(levelname)s] %(name)s: %(message)s"
-    """Format des entrées de log."""
+    """Log entry format."""
 
-    LOG_MAX_BYTES: int = 5 * 1024 * 1024  # 5 Mo
-    """Taille maximale d'un fichier de log avant rotation."""
+    LOG_MAX_BYTES: int = 5 * 1024 * 1024  # 5 MB
+    """Maximum log file size before rotation."""
 
     LOG_BACKUP_COUNT: int = 3
-    """Nombre de fichiers de log de sauvegarde à conserver."""
+    """Number of backup log files to retain."""
 
     # ========================================================================
-    # 16. DEBUG & DÉVELOPPEMENT (FRONTEND)
+    # 16. DEBUG & DEVELOPMENT (FRONTEND)
     # ========================================================================
 
     DEBUG: bool = False
-    """Mode debug (affichage des erreurs détaillées)."""
+    """Debug mode (detailed error display)."""
 
     # ========================================================================
-    # 17. PARAMÈTRES DE SESSION (FRONTEND)
+    # 17. SESSION PARAMETERS (FRONTEND)
     # ========================================================================
 
     SESSION_TIMEOUT_SECONDS: int = 3600
-    """Timeout des sessions Streamlit (secondes)."""
+    """Streamlit session timeout (seconds)."""
 
     SESSION_STATE_KEYS: ClassVar[tuple[str, ...]] = (
         "selected_company",
@@ -413,26 +426,28 @@ class FrontendSettings:
         "uploaded_file",
         "maturity_scores",
     )
-    """Clés de session Streamlit à préserver / initialiser."""
+    """Streamlit session state keys to preserve / initialize."""
 
     # ========================================================================
-    # 18. PARAMÈTRES DE CACHE (FRONTEND)
+    # 18. CACHE PARAMETERS (FRONTEND)
     # ========================================================================
 
     CACHE_TTL_SECONDS: int = 600
-    """Durée de vie du cache (secondes)."""
+    """Cache lifetime (seconds)."""
 
     CACHE_MAX_ENTRIES: int = 50
-    """Nombre maximal d'entrées dans le cache."""
+    """Maximum number of cache entries."""
 
 
-# ── Instance globale unique ─────────────────────────────────────────────────
+# ── Single global instance ──────────────────────────────────────────────────
+
+
 class Settings:
     """
-    Configuration globale de JESA DMAT.
+    Global configuration for JESA DMAT.
 
-    Regroupe les configurations backend et frontend en une seule instance.
-    Utilisez l'instance globale `settings` pour accéder à tous les paramètres.
+    Combines backend and frontend configurations into a single instance.
+    Use the global `settings` instance to access all parameters.
     """
 
     def __init__(self):
@@ -440,8 +455,17 @@ class Settings:
         self.frontend = FrontendSettings()
 
     def __setattr__(self, name, value):
-        backend_fields = getattr(BackendSettings, "__dataclass_fields__", {})
-        frontend_fields = getattr(FrontendSettings, "__dataclass_fields__", {})
+        backend_fields = getattr(
+            BackendSettings,
+            "__dataclass_fields__",
+            {},
+        )
+
+        frontend_fields = getattr(
+            FrontendSettings,
+            "__dataclass_fields__",
+            {},
+        )
 
         if name in {"backend", "frontend"}:
             object.__setattr__(self, name, value)
@@ -451,7 +475,11 @@ class Settings:
             object.__setattr__(
                 self,
                 "backend",
-                self._replace_dataclass_value(self.backend, name, value),
+                self._replace_dataclass_value(
+                    self.backend,
+                    name,
+                    value,
+                ),
             )
             return
 
@@ -459,7 +487,11 @@ class Settings:
             object.__setattr__(
                 self,
                 "frontend",
-                self._replace_dataclass_value(self.frontend, name, value),
+                self._replace_dataclass_value(
+                    self.frontend,
+                    name,
+                    value,
+                ),
             )
             return
 
@@ -468,15 +500,16 @@ class Settings:
     @staticmethod
     def _replace_dataclass_value(instance, name, value):
         from dataclasses import replace
-        from pathlib import Path
 
         current = getattr(instance, name)
+
         if isinstance(current, Path) and not isinstance(value, Path):
             value = Path(value)
+
         return replace(instance, **{name: value})
 
     # ========================================================================
-    # Délégation des attributs backend
+    # Backend attribute delegation
     # ========================================================================
 
     @property
@@ -544,11 +577,11 @@ class Settings:
         return self.backend.LOG_LEVEL
 
     def get_logger(self, name: str) -> logging.Logger:
-        """Délégation à BackendSettings.get_logger."""
+        """Delegate to BackendSettings.get_logger."""
         return self.backend.get_logger(name)
 
     # ========================================================================
-    # Délégation des attributs frontend
+    # Frontend attribute delegation
     # ========================================================================
 
     @property
@@ -752,9 +785,11 @@ class Settings:
         return self.frontend.CACHE_MAX_ENTRIES
 
 
-# ── Instance globale unique ─────────────────────────────────────────────────
+# ── Single global instance ──────────────────────────────────────────────────
+
 settings = Settings()
 
+
 # ============================================================================
-# FIN DU MODULE
+# END OF MODULE
 # ============================================================================

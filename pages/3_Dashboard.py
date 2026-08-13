@@ -853,8 +853,8 @@ with radar_col1:
         categories=dim_names,
         values=current_scores,
 
-        # FIX: explicit empty title prevents "undefined"
-        title="",
+        # CORRECTION : utiliser None au lieu d'une chaîne vide
+        title=None,
 
         fill=True,
         fill_color="rgba(37, 99, 235, 0.16)",
@@ -916,8 +916,8 @@ with radar_col2:
         categories=dim_names,
         values=target_scores,
 
-        # FIX: explicit empty title prevents "undefined"
-        title="",
+        # CORRECTION : utiliser None au lieu d'une chaîne vide
+        title=None,
 
         fill=True,
         fill_color="rgba(15, 157, 148, 0.12)",
@@ -990,8 +990,8 @@ pillar_chart = BarChart(
     categories=pillar_names,
     values=pillar_scores,
 
-    # FIX: explicit empty title prevents "undefined"
-    title="",
+    # CORRECTION : utiliser None au lieu d'une chaîne vide
+    title=None,
 
     orientation="horizontal",
     show_values=True,

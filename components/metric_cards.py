@@ -1,49 +1,51 @@
 # JESA_DMAT/components/metric_cards.py
+
 """
-Composants de métriques spécialisés pour le Dashboard DMAT.
+Specialized metric components for the JESA DMAT Dashboard.
 
-Ce module fournit des composants UI pour afficher les indicateurs clés
-de maturité digitale, tels que le score global, les scores par pilier,
-et les tendances d'évolution.
+This module provides UI components for displaying key digital maturity
+indicators, such as the overall maturity score, pillar scores,
+and performance trends.
 
-Ces composants sont destinés au Dashboard et aux pages d'analyse,
-et utilisent le design system JESA DMAT.
+These components are intended for the Dashboard and analysis pages,
+and use the JESA DMAT design system.
 
-Ils se distinguent des cartes génériques de `cards.py` par leur
-spécialisation pour des métriques de maturité (score, niveau, tendance).
+They differ from the generic components in `cards.py` because they are
+specifically designed for maturity metrics (score, level, trend).
 
-Utilisation typique:
-    from components.metric_cards import (
-        render_maturity_metric,
-        render_pillar_metric,
-        render_trend_metric,
-    )
+Typical usage:
 
-    render_maturity_metric(
-        label="Maturité globale",
-        value=72,
-        unit="%",
-        level="Advanced",
-        icon="📊",
-        precision=1,  # affiche une décimale
-    )
+from components.metric_cards import (
+    render_maturity_metric,
+    render_pillar_metric,
+    render_trend_metric,
+)
 
-    render_pillar_metric(
-        label="Infrastructure",
-        value=85,
-        unit="%",
-        status="success",
-        icon="🏭",
-    )
+render_maturity_metric(
+    label="Overall Maturity",
+    value=72,
+    unit="%",
+    level="Advanced",
+    icon="📊",
+    precision=1,
+)
 
-    render_trend_metric(
-        label="Progression",
-        value=72,
-        unit="%",
-        delta="+5%",
-        trend="positive",
-        icon="📈",
-    )
+render_pillar_metric(
+    label="Infrastructure",
+    value=85,
+    unit="%",
+    status="success",
+    icon="🏭",
+)
+
+render_trend_metric(
+    label="Progression",
+    value=72,
+    unit="%",
+    delta="+5%",
+    trend="positive",
+    icon="📈",
+)
 """
 
 from __future__ import annotations
@@ -55,7 +57,7 @@ import streamlit as st
 
 
 # ============================================================================
-# CONSTANTES
+# CONSTANTS
 # ============================================================================
 
 _STATUS_MAP = {
@@ -73,24 +75,24 @@ _STATUS_MAP = {
 
 
 # ============================================================================
-# HELPERS INTERNES
+# INTERNAL HELPERS
 # ============================================================================
 
 def _render_html(html: str) -> None:
-    """Rend du HTML de confiance via Streamlit."""
+    """Render trusted HTML through Streamlit."""
     st.markdown(html, unsafe_allow_html=True)
 
 
 def _map_status_to_metric(status: Optional[str]) -> Optional[str]:
     """
-    Convertit un statut sémantique en classe CSS de métrique.
+    Convert a semantic status into a metric CSS class.
 
     Args:
-        status: Statut sémantique, p. ex. "success", "advanced", "high".
+        status: Semantic status, e.g. "success", "advanced", "high".
 
     Returns:
-        La classe CSS correspondante ("positive", "warning", "negative",
-        "neutral") ou None.
+        The corresponding metric class ("positive", "warning",
+        "negative", "neutral"), or None.
     """
     if status is None:
         return None
@@ -101,36 +103,39 @@ def _map_status_to_metric(status: Optional[str]) -> Optional[str]:
 
 def _format_number(value: Any, decimals: Optional[int] = None) -> str:
     """
-    Formate une valeur numérique pour affichage.
+    Format a numeric value for display.
 
     Args:
-        value: Valeur à formater (int, float ou autre).
-        decimals: Nombre de décimales à afficher. Si None, utilise le
-            format `:g` qui supprime les zéros inutiles.
+        value: Value to format (int, float, or another type).
+        decimals: Number of decimal places to display. If None,
+            uses the `:g` format to remove unnecessary trailing zeros.
 
     Returns:
-        Chaîne formatée.
+        Formatted string.
     """
     if isinstance(value, (int, float)):
         if decimals is not None:
             return f"{value:.{decimals}f}"
+
         return f"{value:g}"
+
     return str(value)
 
 
 def _build_metric_classes(status: Optional[str] = None) -> str:
     """
-    Construit la chaîne de classes CSS pour une métrique.
+    Build the CSS class string for a metric.
 
     Args:
-        status: Statut sémantique (sera mappé vers une classe de métrique).
+        status: Semantic status, which will be mapped to a metric class.
 
     Returns:
-        Chaîne de classes CSS.
+        CSS class string.
     """
     classes = ["dmat-metric"]
 
     mapped = _map_status_to_metric(status)
+
     if mapped:
         classes.append(f"dmat-metric--{mapped}")
 
@@ -138,7 +143,7 @@ def _build_metric_classes(status: Optional[str] = None) -> str:
 
 
 # ============================================================================
-# COMPOSANTS PUBLICS
+# PUBLIC COMPONENTS
 # ============================================================================
 
 def render_maturity_metric(
@@ -152,25 +157,25 @@ def render_maturity_metric(
     **kwargs: Any,
 ) -> None:
     """
-    Affiche une métrique de maturité globale avec niveau textuel.
+    Display an overall maturity metric with a textual maturity level.
 
     Args:
-        label (str): Libellé de la métrique.
-        value (float | int): Valeur numérique du score.
-        unit (str, optionnel): Unité (ex: "%"). Un espace sera ajouté.
-        level (str, optionnel): Niveau de maturité textuel (ex: "Advanced").
-        icon (str, optionnel): Icône (emoji ou HTML) à afficher.
-        status (str, optionnel): Statut sémantique. Sera mappé vers une
-            classe de style de métrique.
-        precision (int, optionnel): Nombre de décimales à afficher.
-        **kwargs: Arguments supplémentaires ignorés (extensibilité).
+        label: Metric label.
+        value: Numeric maturity score.
+        unit: Unit, e.g. "%". A space is automatically added.
+        level: Textual maturity level, e.g. "Advanced".
+        icon: Icon (emoji or HTML) displayed with the metric.
+        status: Semantic status mapped to the metric CSS style.
+        precision: Number of decimal places to display.
+        **kwargs: Additional arguments ignored for future extensibility.
 
     Returns:
         None
 
-    Exemple:
+    Example:
+
         render_maturity_metric(
-            label="Maturité globale",
+            label="Overall Maturity",
             value=72.4,
             unit="%",
             level="Advanced",
@@ -179,13 +184,14 @@ def render_maturity_metric(
             precision=1,
         )
     """
-    # Échappement des entrées
+
+    # Escape user-provided values
     escaped_label = escape(str(label))
     escaped_value = escape(_format_number(value, precision))
     escaped_level = escape(str(level)) if level is not None else None
     escaped_icon = escape(str(icon)) if icon is not None else None
 
-    # Ajout de l'unité
+    # Add unit
     if unit:
         escaped_value += f" {unit}"
 
@@ -195,7 +201,7 @@ def render_maturity_metric(
         f'<div class="{classes}">'
     ]
 
-    # Icône (si présente)
+    # Icon
     if escaped_icon:
         html_parts.append(
             f'<div class="dmat-metric__icon">{escaped_icon}</div>'
@@ -206,12 +212,12 @@ def render_maturity_metric(
         f'<div class="dmat-metric__label">{escaped_label}</div>'
     )
 
-    # Valeur
+    # Value
     html_parts.append(
         f'<div class="dmat-metric__value">{escaped_value}</div>'
     )
 
-    # Niveau (si présent)
+    # Maturity level
     if escaped_level:
         html_parts.append(
             f'<div class="dmat-metric__level">{escaped_level}</div>'
@@ -232,22 +238,22 @@ def render_pillar_metric(
     **kwargs: Any,
 ) -> None:
     """
-    Affiche une métrique pour un pilier de maturité.
+    Display a maturity metric for a digital transformation pillar.
 
     Args:
-        label (str): Libellé du pilier.
-        value (float | int): Valeur du score.
-        unit (str, optionnel): Unité (ex: "%").
-        icon (str, optionnel): Icône (emoji ou HTML) à afficher.
-        status (str, optionnel): Statut sémantique. Sera mappé vers une
-            classe de style de métrique.
-        precision (int, optionnel): Nombre de décimales à afficher.
-        **kwargs: Arguments supplémentaires ignorés (extensibilité).
+        label: Pillar label.
+        value: Pillar score.
+        unit: Unit, e.g. "%".
+        icon: Icon (emoji or HTML) displayed with the metric.
+        status: Semantic status mapped to the metric CSS style.
+        precision: Number of decimal places to display.
+        **kwargs: Additional arguments ignored for future extensibility.
 
     Returns:
         None
 
-    Exemple:
+    Example:
+
         render_pillar_metric(
             label="Infrastructure",
             value=85,
@@ -256,12 +262,13 @@ def render_pillar_metric(
             icon="🏭",
         )
     """
-    # Échappement des entrées
+
+    # Escape user-provided values
     escaped_label = escape(str(label))
     escaped_value = escape(_format_number(value, precision))
     escaped_icon = escape(str(icon)) if icon is not None else None
 
-    # Ajout de l'unité
+    # Add unit
     if unit:
         escaped_value += f" {unit}"
 
@@ -271,7 +278,7 @@ def render_pillar_metric(
         f'<div class="{classes}">'
     ]
 
-    # Icône (si présente)
+    # Icon
     if escaped_icon:
         html_parts.append(
             f'<div class="dmat-metric__icon">{escaped_icon}</div>'
@@ -282,7 +289,7 @@ def render_pillar_metric(
         f'<div class="dmat-metric__label">{escaped_label}</div>'
     )
 
-    # Valeur
+    # Value
     html_parts.append(
         f'<div class="dmat-metric__value">{escaped_value}</div>'
     )
@@ -303,26 +310,27 @@ def render_trend_metric(
     **kwargs: Any,
 ) -> None:
     """
-    Affiche une métrique avec tendance (delta) et statut de tendance.
+    Display a metric with a performance trend and delta.
 
     Args:
-        label (str): Libellé de la métrique.
-        value (float | int): Valeur actuelle.
-        unit (str, optionnel): Unité (ex: "%").
-        delta (str, optionnel): Texte de variation (ex: "+5%", "-2").
-        trend (str, optionnel): Tendance sémantique ("positive", "negative",
-            "neutral", "success", "warning", etc.). Sera mappé vers une
-            classe de style de métrique.
-        icon (str, optionnel): Icône (emoji ou HTML) à afficher.
-        precision (int, optionnel): Nombre de décimales à afficher.
-        **kwargs: Arguments supplémentaires ignorés (extensibilité).
+        label: Metric label.
+        value: Current value.
+        unit: Unit, e.g. "%".
+        delta: Variation text, e.g. "+5%" or "-2".
+        trend: Semantic trend ("positive", "negative", "neutral",
+            "success", "warning", etc.). It will be mapped to
+            the corresponding metric CSS class.
+        icon: Icon (emoji or HTML) displayed with the metric.
+        precision: Number of decimal places to display.
+        **kwargs: Additional arguments ignored for future extensibility.
 
     Returns:
         None
 
-    Exemple:
+    Example:
+
         render_trend_metric(
-            label="Progression",
+            label="Progress",
             value=72,
             unit="%",
             delta="+5%",
@@ -331,13 +339,14 @@ def render_trend_metric(
             precision=1,
         )
     """
-    # Échappement des entrées
+
+    # Escape user-provided values
     escaped_label = escape(str(label))
     escaped_value = escape(_format_number(value, precision))
     escaped_delta = escape(str(delta)) if delta is not None else None
     escaped_icon = escape(str(icon)) if icon is not None else None
 
-    # Ajout de l'unité
+    # Add unit
     if unit:
         escaped_value += f" {unit}"
 
@@ -347,7 +356,7 @@ def render_trend_metric(
         f'<div class="{classes}">'
     ]
 
-    # Icône (si présente)
+    # Icon
     if escaped_icon:
         html_parts.append(
             f'<div class="dmat-metric__icon">{escaped_icon}</div>'
@@ -358,12 +367,12 @@ def render_trend_metric(
         f'<div class="dmat-metric__label">{escaped_label}</div>'
     )
 
-    # Valeur
+    # Value
     html_parts.append(
         f'<div class="dmat-metric__value">{escaped_value}</div>'
     )
 
-    # Delta (si présent)
+    # Delta
     if escaped_delta:
         html_parts.append(
             f'<div class="dmat-metric__delta">{escaped_delta}</div>'
@@ -375,244 +384,7 @@ def render_trend_metric(
 
 
 # ============================================================================
-# COMPOSANTS PUBLICS
-# ============================================================================
-
-def render_maturity_metric(
-    label: str,
-    value: float | int,
-    unit: Optional[str] = None,
-    level: Optional[str] = None,
-    icon: Optional[str] = None,
-    status: Optional[str] = None,
-    precision: Optional[int] = None,
-    **kwargs: Any,
-) -> None:
-    """
-    Affiche une métrique de maturité globale avec niveau textuel.
-
-    Args:
-        label (str): Libellé de la métrique.
-        value (float | int): Valeur numérique du score.
-        unit (str, optionnel): Unité (ex: "%"). Un espace sera ajouté.
-        level (str, optionnel): Niveau de maturité textuel (ex: "Advanced").
-        icon (str, optionnel): Icône (emoji ou HTML) à afficher.
-        status (str, optionnel): Statut sémantique. Sera mappé vers une
-            classe de style de métrique.
-        precision (int, optionnel): Nombre de décimales à afficher.
-        **kwargs: Arguments supplémentaires ignorés (extensibilité).
-
-    Returns:
-        None
-
-    Exemple:
-        render_maturity_metric(
-            label="Maturité globale",
-            value=72.4,
-            unit="%",
-            level="Advanced",
-            status="success",
-            icon="📊",
-            precision=1,
-        )
-    """
-    # Échappement des entrées
-    escaped_label = escape(str(label))
-    escaped_value = escape(_format_number(value, precision))
-    escaped_level = escape(str(level)) if level is not None else None
-    escaped_icon = escape(str(icon)) if icon is not None else None
-
-    # Ajout de l'unité
-    if unit:
-        escaped_value += f" {unit}"
-
-    classes = _build_metric_classes(status)
-
-    html_parts = [
-        f'<div class="{classes}">'
-    ]
-
-    # Icône (si présente)
-    if escaped_icon:
-        html_parts.append(
-            f'<div class="dmat-metric__icon">{escaped_icon}</div>'
-        )
-
-    # Label
-    html_parts.append(
-        f'<div class="dmat-metric__label">{escaped_label}</div>'
-    )
-
-    # Valeur
-    html_parts.append(
-        f'<div class="dmat-metric__value">{escaped_value}</div>'
-    )
-
-    # Niveau (si présent)
-    if escaped_level:
-        html_parts.append(
-            f'<div class="dmat-metric__level">{escaped_level}</div>'
-        )
-
-    html_parts.append("</div>")
-
-    _render_html("\n".join(html_parts))
-
-
-def render_pillar_metric(
-    label: str,
-    value: float | int,
-    unit: Optional[str] = None,
-    icon: Optional[str] = None,
-    status: Optional[str] = None,
-    precision: Optional[int] = None,
-    **kwargs: Any,
-) -> None:
-    """
-    Affiche une métrique pour un pilier de maturité.
-
-    Args:
-        label (str): Libellé du pilier.
-        value (float | int): Valeur du score.
-        unit (str, optionnel): Unité (ex: "%").
-        icon (str, optionnel): Icône (emoji ou HTML) à afficher.
-        status (str, optionnel): Statut sémantique. Sera mappé vers une
-            classe de style de métrique.
-        precision (int, optionnel): Nombre de décimales à afficher.
-        **kwargs: Arguments supplémentaires ignorés (extensibilité).
-
-    Returns:
-        None
-
-    Exemple:
-        render_pillar_metric(
-            label="Infrastructure",
-            value=85,
-            unit="%",
-            status="success",
-            icon="🏭",
-        )
-    """
-    # Échappement des entrées
-    escaped_label = escape(str(label))
-    escaped_value = escape(_format_number(value, precision))
-    escaped_icon = escape(str(icon)) if icon is not None else None
-
-    # Ajout de l'unité
-    if unit:
-        escaped_value += f" {unit}"
-
-    classes = _build_metric_classes(status)
-
-    html_parts = [
-        f'<div class="{classes}">'
-    ]
-
-    # Icône (si présente)
-    if escaped_icon:
-        html_parts.append(
-            f'<div class="dmat-metric__icon">{escaped_icon}</div>'
-        )
-
-    # Label
-    html_parts.append(
-        f'<div class="dmat-metric__label">{escaped_label}</div>'
-    )
-
-    # Valeur
-    html_parts.append(
-        f'<div class="dmat-metric__value">{escaped_value}</div>'
-    )
-
-    html_parts.append("</div>")
-
-    _render_html("\n".join(html_parts))
-
-
-def render_trend_metric(
-    label: str,
-    value: float | int,
-    unit: Optional[str] = None,
-    delta: Optional[str] = None,
-    trend: Optional[str] = None,
-    icon: Optional[str] = None,
-    precision: Optional[int] = None,
-    **kwargs: Any,
-) -> None:
-    """
-    Affiche une métrique avec tendance (delta) et statut de tendance.
-
-    Args:
-        label (str): Libellé de la métrique.
-        value (float | int): Valeur actuelle.
-        unit (str, optionnel): Unité (ex: "%").
-        delta (str, optionnel): Texte de variation (ex: "+5%", "-2").
-        trend (str, optionnel): Tendance sémantique ("positive", "negative",
-            "neutral", "success", "warning", etc.). Sera mappé vers une
-            classe de style de métrique.
-        icon (str, optionnel): Icône (emoji ou HTML) à afficher.
-        precision (int, optionnel): Nombre de décimales à afficher.
-        **kwargs: Arguments supplémentaires ignorés (extensibilité).
-
-    Returns:
-        None
-
-    Exemple:
-        render_trend_metric(
-            label="Progression",
-            value=72,
-            unit="%",
-            delta="+5%",
-            trend="positive",
-            icon="📈",
-            precision=1,
-        )
-    """
-    # Échappement des entrées
-    escaped_label = escape(str(label))
-    escaped_value = escape(_format_number(value, precision))
-    escaped_delta = escape(str(delta)) if delta is not None else None
-    escaped_icon = escape(str(icon)) if icon is not None else None
-
-    # Ajout de l'unité
-    if unit:
-        escaped_value += f" {unit}"
-
-    classes = _build_metric_classes(trend)
-
-    html_parts = [
-        f'<div class="{classes}">'
-    ]
-
-    # Icône (si présente)
-    if escaped_icon:
-        html_parts.append(
-            f'<div class="dmat-metric__icon">{escaped_icon}</div>'
-        )
-
-    # Label
-    html_parts.append(
-        f'<div class="dmat-metric__label">{escaped_label}</div>'
-    )
-
-    # Valeur
-    html_parts.append(
-        f'<div class="dmat-metric__value">{escaped_value}</div>'
-    )
-
-    # Delta (si présent)
-    if escaped_delta:
-        html_parts.append(
-            f'<div class="dmat-metric__delta">{escaped_delta}</div>'
-        )
-
-    html_parts.append("</div>")
-
-    _render_html("\n".join(html_parts))
-
-
-# ============================================================================
-# EXPORT PUBLIC
+# PUBLIC EXPORTS
 # ============================================================================
 
 __all__ = [

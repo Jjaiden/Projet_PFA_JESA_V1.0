@@ -1,25 +1,25 @@
 # JESA_DMAT/components/header.py
 
 """
-Composant d'en-tête de page réutilisable pour JESA DMAT.
+Reusable page header component for JESA DMAT.
 
-Ce module fournit une fonction pour afficher un en-tête professionnel
-dans les pages Streamlit, en utilisant le design system existant.
+This module provides a function to display a professional
+header in Streamlit pages, using the existing design system.
 
-Utilisation typique:
+Typical usage:
 
     from components.header import render_header
 
     render_header(
         title="Digital Maturity Assessment",
-        subtitle="Évaluation de la maturité digitale de votre site industriel",
+        subtitle="Assessment of your industrial site's digital maturity",
         eyebrow="ASSESSMENT",
         icon="📊",
     )
 
-Le composant utilise les classes CSS existantes du projet.
-Pour un contrôle plus fin, vous pouvez étendre le CSS avec les classes
-documentées ci-dessous.
+The component uses the existing CSS classes of the project.
+For finer control, you can extend the CSS with the documented classes
+below.
 """
 
 from __future__ import annotations
@@ -29,9 +29,8 @@ from typing import Any, Optional
 
 import streamlit as st
 
-
 # ============================================================================
-# CONSTANTES
+# CONSTANTS
 # ============================================================================
 
 _STATUS_MAP = {
@@ -47,25 +46,25 @@ _STATUS_MAP = {
 
 _VALID_ALIGNMENTS = {"left", "center", "right"}
 
+# ============================================================================
+# INTERNAL HELPERS
+# ============================================================================
 
-# ============================================================================
-# HELPERS INTERNES
-# ============================================================================
 
 def _render_html(html: str) -> None:
-    """Rend du HTML de confiance via Streamlit."""
+    """Render trusted HTML through Streamlit."""
     st.markdown(html, unsafe_allow_html=True)
 
 
 def _map_status(status: Optional[str]) -> Optional[str]:
     """
-    Convertit un statut sémantique en classe CSS de statut.
+    Convert a semantic status into a CSS status class.
 
     Args:
-        status: Statut sémantique, p. ex. "success", "advanced", "high".
+        status: Semantic status, e.g. "success", "advanced", "high".
 
     Returns:
-        La classe CSS correspondante ou None.
+        The corresponding CSS class or None.
     """
     if status is None:
         return None
@@ -79,18 +78,18 @@ def _build_container_classes(
     compact: bool = False,
 ) -> str:
     """
-    Construit la chaîne de classes CSS pour le conteneur de l'en-tête.
+    Build the CSS class string for the header container.
 
     Args:
-        align: Alignement du contenu ("left", "center", "right").
-        compact: Si True, applique un style compact.
+        align: Content alignment ("left", "center", "right").
+        compact: If True, applies a compact style.
 
     Returns:
-        Chaîne de classes CSS.
+        A string containing the CSS classes.
     """
     classes = ["dmat-header"]
 
-    # Classes d'alignement (définies dans utilities.css)
+    # Alignment classes (defined in utilities.css)
     if align == "left":
         classes.append("u-text-left")
     elif align == "center":
@@ -105,8 +104,9 @@ def _build_container_classes(
 
 
 # ============================================================================
-# FONCTION PRINCIPALE
+# MAIN FUNCTION
 # ============================================================================
+
 
 def render_header(
     title: str,
@@ -119,104 +119,144 @@ def render_header(
     **kwargs: Any,
 ) -> None:
     """
-    Affiche un en-tête de page professionnel.
+    Display a professional page header.
 
     Args:
-        title (str): Titre principal obligatoire.
-        subtitle (str, optionnel): Sous-titre affiché sous le titre.
-        eyebrow (str, optionnel): Texte court au-dessus du titre (ex. "ASSESSMENT").
-        icon (str, optionnel): Icône (emoji ou HTML) affichée à côté du titre.
-        status (str, optionnel): Statut sémantique. Valeurs possibles :
+        title (str): Required main title.
+        subtitle (str, optional): Subtitle displayed below the title.
+        eyebrow (str, optional): Short text displayed above the title
+            (e.g. "ASSESSMENT").
+        icon (str, optional): Icon (emoji or HTML) displayed next to the title.
+        status (str, optional): Semantic status. Possible values:
             "success", "warning", "danger", "neutral",
             "advanced", "high", "medium", "low".
-            Sera mappé vers une classe CSS de statut.
-        align (str): Alignement du contenu. "left", "center" ou "right".
-            Par défaut "left".
-        compact (bool): Si True, réduit l'espacement vertical.
-        **kwargs: Arguments supplémentaires ignorés (pour extensibilité future).
+            It will be mapped to a CSS status class.
+        align (str): Content alignment. "left", "center", or "right".
+            Defaults to "left".
+        compact (bool): If True, reduces vertical spacing.
+        **kwargs: Additional arguments ignored for future extensibility.
 
     Returns:
         None
 
     Raises:
-        ValueError: Si l'alignement n'est pas dans ["left", "center", "right"].
+        ValueError: If the alignment is not one of
+            ["left", "center", "right"].
 
-    Exemples:
+    Examples:
         >>> render_header(title="Digital Maturity Assessment")
 
         >>> render_header(
-        ...     title="Diagnostic de maturité",
-        ...     subtitle="Évaluez le niveau actuel de maturité digitale.",
+        ...     title="Digital Maturity Diagnostic",
+        ...     subtitle="Assess the current level of digital maturity.",
         ...     eyebrow="ASSESSMENT",
         ...     icon="📊",
         ... )
 
         >>> render_header(
-        ...     title="Analyse décisionnelle",
-        ...     subtitle="Identifiez les priorités de transformation.",
+        ...     title="Decision Analysis",
+        ...     subtitle="Identify transformation priorities.",
         ...     eyebrow="DECISION ANALYSIS",
         ...     icon="🎯",
         ...     status="warning",
         ... )
 
         >>> render_header(
-        ...     title="Feuille de route",
-        ...     subtitle="Priorités à court, moyen et long terme.",
+        ...     title="Transformation Roadmap",
+        ...     subtitle="Short-, medium-, and long-term priorities.",
         ...     icon="🗺️",
         ...     compact=True,
         ... )
     """
 
-    # Validation de l'alignement
+    # Alignment validation
     if align not in _VALID_ALIGNMENTS:
         raise ValueError(
-            f"align doit être l'un de {sorted(_VALID_ALIGNMENTS)}, "
-            f"reçu '{align}'."
+            f"align must be one of {sorted(_VALID_ALIGNMENTS)}, "
+            f"received '{align}'."
         )
 
-    # Échappement des entrées
+    # Escape inputs
     escaped_title = escape(str(title))
-    escaped_subtitle = escape(str(subtitle)) if subtitle is not None else None
-    escaped_eyebrow = escape(str(eyebrow)) if eyebrow is not None else None
-    escaped_icon = escape(str(icon)) if icon is not None else None
+    escaped_subtitle = (
+        escape(str(subtitle))
+        if subtitle is not None
+        else None
+    )
+    escaped_eyebrow = (
+        escape(str(eyebrow))
+        if eyebrow is not None
+        else None
+    )
+    escaped_icon = (
+        escape(str(icon))
+        if icon is not None
+        else None
+    )
+
     mapped_status = _map_status(status)
-    escaped_status = escape(str(mapped_status)) if mapped_status is not None else None
 
-    # Construction des classes du conteneur
-    container_classes = _build_container_classes(align=align, compact=compact)
+    escaped_status = (
+        escape(str(mapped_status))
+        if mapped_status is not None
+        else None
+    )
 
-    # Construction du HTML
+    # Build container classes
+    container_classes = _build_container_classes(
+        align=align,
+        compact=compact,
+    )
+
+    # Build HTML
     html_parts: list[str] = [
         f'<div class="{container_classes}">'
     ]
 
-    # Eyebrow (si présent)
+    # Eyebrow (if provided)
     if escaped_eyebrow:
         html_parts.append(
-            f'<div class="dmat-header__eyebrow">{escaped_eyebrow}</div>'
+            f'<div class="dmat-header__eyebrow">'
+            f'{escaped_eyebrow}'
+            f'</div>'
         )
 
-    # Icon (si présent) + Titre
+    # Icon (if provided) + Title
     title_html = ""
-    if escaped_icon:
-        title_html += f'<span class="dmat-header__icon">{escaped_icon}</span> '
-    title_html += f'<h1 class="dmat-header__title">{escaped_title}</h1>'
 
-    html_parts.append(
-        f'<div class="dmat-header__title-wrapper">{title_html}</div>'
+    if escaped_icon:
+        title_html += (
+            f'<span class="dmat-header__icon">'
+            f'{escaped_icon}'
+            f'</span> '
+        )
+
+    title_html += (
+        f'<h1 class="dmat-header__title">'
+        f'{escaped_title}'
+        f'</h1>'
     )
 
-    # Subtitle (si présent)
+    html_parts.append(
+        f'<div class="dmat-header__title-wrapper">'
+        f'{title_html}'
+        f'</div>'
+    )
+
+    # Subtitle (if provided)
     if escaped_subtitle:
         html_parts.append(
-            f'<p class="dmat-header__subtitle">{escaped_subtitle}</p>'
+            f'<p class="dmat-header__subtitle">'
+            f'{escaped_subtitle}'
+            f'</p>'
         )
 
-    # Status (si présent)
+    # Status (if provided)
     if escaped_status:
         html_parts.append(
             f'<div class="dmat-header__status">'
-            f'<span class="dmat-status dmat-status--{escaped_status}">'
+            f'<span class="dmat-status '
+            f'dmat-status--{escaped_status}">'
             f'{escaped_status.capitalize()}'
             f'</span>'
             f'</div>'
@@ -224,12 +264,12 @@ def render_header(
 
     html_parts.append("</div>")
 
-    # Rendu
+    # Render
     _render_html("\n".join(html_parts))
 
 
 # ============================================================================
-# EXPORT PUBLIC
+# PUBLIC EXPORT
 # ============================================================================
 
 __all__ = ["render_header"]

@@ -1,13 +1,14 @@
 """
-roadmap.py — Génération de la feuille de route JDMAF.
+roadmap.py — JDMAF roadmap generation.
 
-Responsabilités :
-- transformer les priorités en phases ;
-- associer les recommandations aux phases ;
-- respecter les dépendances lorsque cela est possible ;
-- produire une roadmap exploitable par le frontend et le PDF.
+Responsibilities:
 
-Ce module ne calcule ni le score, ni le Gap, ni le TPI.
+- transform priorities into phases;
+- associate recommendations with phases;
+- respect dependencies whenever possible;
+- produce a roadmap usable by the frontend and PDF.
+
+This module does not calculate scores, gaps, or TPI.
 """
 
 from __future__ import annotations
@@ -22,15 +23,15 @@ from engines.decision.recommendation import (
     RecommendationResult,
 )
 
+
 # ============================================================================
-# STRUCTURES
+# DATA STRUCTURES
 # ============================================================================
+
 
 @dataclass
 class RoadmapItem:
-    """
-    Action ou recommandation placée dans une phase.
-    """
+    """Action or recommendation assigned to a roadmap phase."""
 
     recommendation_id: str
     title: str
@@ -85,11 +86,10 @@ class RoadmapItem:
             "source_reference": self.source_reference,
         }
 
+
 @dataclass
 class RoadmapPhase:
-    """
-    Une phase de la roadmap.
-    """
+    """A roadmap phase."""
 
     phase_id: str
     phase_name: str
@@ -110,39 +110,82 @@ class RoadmapPhase:
             ],
         }
 
+
 # ============================================================================
 # ENGINE
 # ============================================================================
 
+
 class RoadmapEngine:
     """
-    Génère une roadmap structurée à partir des résultats TPI
-    et des recommandations.
+    Generates a structured roadmap from TPI results
+    and recommendations.
     """
 
-    # ═══════════════════════════════════════════════════════════════
-    # CORRECTION : mapping des phases aligné sur la logique métier
-    # ═══════════════════════════════════════════════════════════════
+    # ========================================================================
+    # DEFAULT PHASE MAPPING
+    # ========================================================================
+
     DEFAULT_PHASE_MAPPING = {
         "Critique": (
             "Phase 1",
-            "< 6 mois",
+            "< 6 months",
         ),
         "Haute": (
-            "Phase 1–2",      # CORRECTION : avant "Phase 2"
-            "6-12 mois",
+            "Phase 1–2",
+            "6–12 months",
         ),
         "Moyenne": (
-            "Phase 2",        # CORRECTION : avant "Phase 3"
-            "12-24 mois",
+            "Phase 2",
+            "12–24 months",
         ),
         "Faible": (
             "Phase 4",
-            "> 24 mois",
+            "> 24 months",
         ),
         "Très faible": (
             "Phase 4",
-            "> 24 mois",
+            "> 24 months",
+        ),
+
+        # English priority labels
+        "Critical": (
+            "Phase 1",
+            "< 6 months",
+        ),
+        "High": (
+            "Phase 1–2",
+            "6–12 months",
+        ),
+        "Medium": (
+            "Phase 2",
+            "12–24 months",
+        ),
+        "Low": (
+            "Phase 4",
+            "> 24 months",
+        ),
+        "Very low": (
+            "Phase 4",
+            "> 24 months",
+        ),
+
+        # Internal normalized priority values
+        "critical": (
+            "Phase 1",
+            "< 6 months",
+        ),
+        "high": (
+            "Phase 1–2",
+            "6–12 months",
+        ),
+        "medium": (
+            "Phase 2",
+            "12–24 months",
+        ),
+        "low": (
+            "Phase 4",
+            "> 24 months",
         ),
     }
 
@@ -167,7 +210,7 @@ class RoadmapEngine:
         )
 
     # ========================================================================
-    # API PRINCIPALE
+    # MAIN API
     # ========================================================================
 
     def build_roadmap(
@@ -181,7 +224,7 @@ class RoadmapEngine:
         ] = None,
     ) -> list[RoadmapPhase]:
         """
-        Génère la roadmap complète.
+        Generates the complete roadmap.
         """
 
         recommendations = (
@@ -254,7 +297,7 @@ class RoadmapEngine:
         )
 
     # ========================================================================
-    # TABLEAU
+    # TABLE
     # ========================================================================
 
     def to_dataframe(
@@ -262,7 +305,8 @@ class RoadmapEngine:
         roadmap: list[RoadmapPhase],
     ) -> pd.DataFrame:
         """
-        Convertit la roadmap en DataFrame.
+        Converts the roadmap into a DataFrame
+        suitable for Streamlit or export.
         """
 
         rows = []
@@ -282,8 +326,8 @@ class RoadmapEngine:
                         "Dimension": (
                             item.dimension_id
                         ),
-                        "Pilier": item.pillar_id,
-                        "Priorité": item.priority,
+                        "Pillar": item.pillar_id,
+                        "Priority": item.priority,
                         "TPI": item.tpi_score,
                         "Gap": item.gap,
                         "Effort": item.effort,
@@ -293,7 +337,7 @@ class RoadmapEngine:
         return pd.DataFrame(rows)
 
     # ========================================================================
-    # RESUME
+    # SUMMARY
     # ========================================================================
 
     def get_summary(
@@ -301,7 +345,7 @@ class RoadmapEngine:
         roadmap: list[RoadmapPhase],
     ) -> dict[str, Any]:
         """
-        Produit un résumé de la roadmap.
+        Produces a roadmap summary.
         """
 
         total_items = sum(
@@ -363,7 +407,7 @@ class RoadmapEngine:
 
         return (
             "Phase 4",
-            "> 24 mois",
+            "> 24 months",
         )
 
     @staticmethod
@@ -421,15 +465,15 @@ class RoadmapEngine:
                 f"NO-REC-{tpi.dimension_id}"
             ),
             title=(
-                f"Définir une action "
-                f"pour {tpi.dimension_name}"
+                f"Define an action "
+                f"for {tpi.dimension_name}"
             ),
             dimension_id=tpi.dimension_id,
             pillar_id="",
             priority=tpi.priority_category,
             phase=phase_name,
             horizon=horizon,
-            effort="À déterminer",
+            effort="To be determined",
             tpi_score=tpi.tpi_score,
             gap=tpi.gap,
         )
@@ -441,10 +485,10 @@ class RoadmapEngine:
 
         order = {
             "Phase 1": 1,
-            "Phase 1–2": 2,   # AJOUT
-            "Phase 2": 3,     # décalé
-            "Phase 3": 4,     # décalé
-            "Phase 4": 5,     # décalé
+            "Phase 1–2": 2,
+            "Phase 2": 3,
+            "Phase 3": 4,
+            "Phase 4": 5,
         }
 
         for phase in phases:
@@ -474,5 +518,6 @@ class RoadmapEngine:
                 99,
             ),
         )
+
 
 RoadmapGenerator = RoadmapEngine

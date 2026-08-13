@@ -1,25 +1,11 @@
 # JESA_DMAT/components/sidebar.py
+
 """
-Composant de barre latérale (sidebar) réutilisable pour JESA DMAT.
+Reusable sidebar component for JESA DMAT.
 
-Ce module fournit un composant pour construire le sidebar professionnel
-de l'application, avec branding, navigation, informations contextuelles
-et footer.
-
-Utilisation typique:
-    from components.sidebar import render_sidebar
-
-    render_sidebar(
-        title="JESA DMAT",
-        subtitle="Digital Maturity Assessment Tool",
-        navigation=[
-            {"label": "Home", "page": "app.py", "icon": "🏠"},
-            {"label": "New Assessment", "page": "pages/2_New_Assessment.py", "icon": "📝"},
-        ],
-        assessment_name="Site industriel A",
-        assessment_status="In progress",
-        show_footer=True,
-    )
+This module provides a component for building the professional
+application sidebar, including branding, navigation, contextual
+assessment information, and footer.
 """
 
 from __future__ import annotations
@@ -29,22 +15,21 @@ from typing import Any, Optional, Sequence
 
 import streamlit as st
 
-
 # ============================================================================
-# CONSTANTES
+# CONSTANTS
 # ============================================================================
 
 _DEFAULT_TITLE = "JESA DMAT"
 _DEFAULT_SUBTITLE = "Digital Maturity Assessment Tool"
 _DEFAULT_VERSION = "v1.0.0"
 
+# ============================================================================
+# INTERNAL HELPERS
+# ============================================================================
 
-# ============================================================================
-# HELPERS INTERNES
-# ============================================================================
 
 def _render_html(html: str) -> None:
-    """Rend du HTML de confiance via Streamlit."""
+    """Render trusted HTML through Streamlit."""
     st.sidebar.markdown(html, unsafe_allow_html=True)
 
 
@@ -55,18 +40,14 @@ def _render_branding(
 ) -> None:
     """
     Affiche la section branding du sidebar.
-
-    Args:
-        title: Titre principal.
-        subtitle: Sous-titre optionnel.
-        logo: URL de l'image du logo ou None.
     """
     escaped_title = escape(str(title))
     escaped_subtitle = escape(str(subtitle)) if subtitle else None
 
     # Affichage du logo (si fourni)
     if logo:
-        # use_container_width est encore valide, mais width="stretch" est recommandé pour Streamlit >=1.37
+        # use_container_width est encore valide, mais width="stretch"
+        # est recommandé pour Streamlit >=1.37
         try:
             st.sidebar.image(logo, use_container_width=True)
         except TypeError:
@@ -75,13 +56,15 @@ def _render_branding(
 
     # Titre et sous-titre
     html_parts = [
-        f'<div class="dmat-sidebar__brand">',
+        '<div class="dmat-sidebar__brand">',
         f'<h2 class="dmat-sidebar__title">{escaped_title}</h2>',
     ]
+
     if escaped_subtitle:
         html_parts.append(
             f'<p class="dmat-sidebar__subtitle">{escaped_subtitle}</p>'
         )
+
     html_parts.append("</div>")
 
     _render_html("\n".join(html_parts))
@@ -103,7 +86,7 @@ def _render_navigation(
     for item in items:
         label = str(item.get("label", "")).strip()
         page = item.get("page")
-        icon = item.get("icon")  # peut être un emoji ou du texte, pas besoin d'échappement
+        icon = item.get("icon")
 
         if not page:
             continue
@@ -121,10 +104,6 @@ def _render_assessment_info(
 ) -> None:
     """
     Affiche les informations contextuelles de l'évaluation en cours.
-
-    Args:
-        name: Nom du site ou de l'évaluation.
-        status: Statut textuel (ex: "In progress", "Completed").
     """
     if not name and not status:
         return
@@ -136,43 +115,50 @@ def _render_assessment_info(
 
     if escaped_name:
         html_parts.append(
-            f'<div class="dmat-sidebar__assessment-name">{escaped_name}</div>'
+            f'<div class="dmat-sidebar__assessment-name">'
+            f'{escaped_name}'
+            f'</div>'
         )
 
     if escaped_status:
         html_parts.append(
-            f'<div class="dmat-sidebar__assessment-status">{escaped_status}</div>'
+            f'<div class="dmat-sidebar__assessment-status">'
+            f'{escaped_status}'
+            f'</div>'
         )
 
-    html_parts.append('</div>')
+    html_parts.append("</div>")
+
     _render_html("\n".join(html_parts))
 
 
 def _render_footer(version: Optional[str] = None) -> None:
     """
     Affiche le pied de page du sidebar.
-
-    Args:
-        version: Version de l'application.
     """
     escaped_version = escape(str(version)) if version else None
 
     html_parts = [
-        f'<div class="dmat-sidebar__footer">',
-        f'<span class="dmat-sidebar__footer-text">JESA DMAT</span>',
+        '<div class="dmat-sidebar__footer">',
+        '<span class="dmat-sidebar__footer-text">JESA DMAT</span>',
     ]
+
     if escaped_version:
         html_parts.append(
-            f'<span class="dmat-sidebar__footer-version">{escaped_version}</span>'
+            f'<span class="dmat-sidebar__footer-version">'
+            f'{escaped_version}'
+            f'</span>'
         )
-    html_parts.append('</div>')
+
+    html_parts.append("</div>")
 
     _render_html("\n".join(html_parts))
 
 
 # ============================================================================
-# COMPOSANT PUBLIC
+# PUBLIC COMPONENT
 # ============================================================================
+
 
 def render_sidebar(
     title: str = _DEFAULT_TITLE,
@@ -189,18 +175,44 @@ def render_sidebar(
     Affiche le sidebar professionnel de JESA DMAT.
 
     Args:
-        title (str): Titre principal du produit. Par défaut "JESA DMAT".
-        subtitle (str, optionnel): Sous-titre. Par défaut "Digital Maturity Assessment Tool".
-        logo (str, optionnel): URL de l'image du logo (peut être un chemin local).
-        navigation (Sequence[dict], optionnel): Liste des éléments de navigation.
-            Chaque élément doit avoir les clés 'label' et 'page' (chemin vers la page),
-            et peut avoir une clé 'icon' (emoji ou texte).
-            Exemple: [{"label": "Home", "page": "app.py", "icon": "🏠"}]
-        assessment_name (str, optionnel): Nom de l'évaluation ou du site industriel.
-        assessment_status (str, optionnel): Statut textuel de l'évaluation.
-        show_footer (bool): Si True, affiche le pied de page avec la version.
-        version (str, optionnel): Version de l'application à afficher dans le footer.
-        **kwargs: Arguments supplémentaires ignorés (extensibilité).
+        title (str): Titre principal du produit.
+            Par défaut "JESA DMAT".
+
+        subtitle (str, optionnel): Sous-titre.
+            Par défaut "Digital Maturity Assessment Tool".
+
+        logo (str, optionnel): URL de l'image du logo
+            (peut être un chemin local).
+
+        navigation (Sequence[dict], optionnel):
+            Liste des éléments de navigation.
+            Chaque élément doit avoir les clés 'label' et 'page',
+            et peut avoir une clé 'icon'.
+
+            Exemple:
+            [
+                {"label": "Home", "page": "app.py", "icon": "🏠"},
+                {
+                    "label": "New Assessment",
+                    "page": "pages/2_New_Assessment.py",
+                    "icon": "📝",
+                },
+            ]
+
+        assessment_name (str, optionnel):
+            Nom de l'évaluation ou du site industriel.
+
+        assessment_status (str, optionnel):
+            Statut textuel de l'évaluation.
+
+        show_footer (bool):
+            Si True, affiche le pied de page avec la version.
+
+        version (str, optionnel):
+            Version de l'application à afficher dans le footer.
+
+        **kwargs:
+            Arguments supplémentaires ignorés (extensibilité).
 
     Returns:
         None
@@ -210,11 +222,19 @@ def render_sidebar(
             title="JESA DMAT",
             subtitle="Digital Maturity Assessment Tool",
             navigation=[
-                {"label": "Home", "page": "app.py", "icon": "🏠"},
-                {"label": "New Assessment", "page": "pages/2_New_Assessment.py", "icon": "📝"},
+                {
+                    "label": "Home",
+                    "page": "app.py",
+                    "icon": "🏠",
+                },
+                {
+                    "label": "New Assessment",
+                    "page": "pages/2_New_Assessment.py",
+                    "icon": "📝",
+                },
             ],
-            assessment_name="Site industriel A",
-            assessment_status="In progress",
+            assessment_name="Industrial Site A",
+            assessment_status="In Progress",
             show_footer=True,
         )
     """
@@ -232,7 +252,10 @@ def render_sidebar(
 
     # Informations sur l'évaluation
     if assessment_name or assessment_status:
-        _render_assessment_info(assessment_name, assessment_status)
+        _render_assessment_info(
+            assessment_name,
+            assessment_status,
+        )
         st.sidebar.divider()
 
     # Footer
@@ -241,7 +264,7 @@ def render_sidebar(
 
 
 # ============================================================================
-# EXPORT PUBLIC
+# PUBLIC EXPORT
 # ============================================================================
 
 __all__ = ["render_sidebar"]

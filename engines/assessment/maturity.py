@@ -1,23 +1,23 @@
 """
-maturity.py — Gestion des niveaux de maturité du JDMAF.
+maturity.py — JDMAF Maturity Level Management.
 
-Responsabilité :
-    Interpréter les scores déjà calculés par le moteur de scoring
-    et déterminer le niveau de maturité correspondant.
+Responsibility:
+Interpret scores already calculated by the scoring engine
+and determine the corresponding maturity level.
 
-Hiérarchie :
-    Indicateur       -> score 0..5
-    Sous-dimension   -> score 0..5
-    Dimension        -> score 0..5
-    Pilier           -> score 0..5
-    DMI              -> score interne 0..5 / affichage 0..100 %
+Hierarchy:
+Indicator       -> score 0..5
+Subdimension    -> score 0..5
+Dimension       -> score 0..5
+Pillar          -> score 0..5
+DMI             -> internal score 0..5 / display 0..100 %
 
-Important :
-    Ce module NE calcule PAS les agrégations.
-    Les calculs sont réalisés dans scoring.py.
-    L'orchestration est réalisée dans aggregation.py.
+Important:
+This module does NOT calculate aggregations.
+Calculations are performed in scoring.py.
+Orchestration is performed in aggregation.py.
 
-Ce module ne contient aucune logique frontend.
+This module contains no frontend logic.
 """
 
 from __future__ import annotations
@@ -35,41 +35,40 @@ from data.models import (
     Referentiel,
 )
 
-
 logger = settings.get_logger(__name__)
 
 
 # ============================================================================
-# RESULTAT DE MATURITE
+# MATURITY RESULT
 # ============================================================================
 
 
 @dataclass(frozen=True)
 class MaturityResult:
     """
-    Résultat standardisé d'une interprétation de maturité.
+    Standardized result of a maturity interpretation.
 
     Attributes:
         score:
-            Score numérique sur l'échelle 0..5.
+            Numerical score on the 0..5 scale.
 
         level:
-            Niveau entier de maturité 0..5.
+            Integer maturity level from 0..5.
 
         level_name:
-            Nom du niveau.
+            Name of the maturity level.
 
         description:
-            Description du niveau.
+            Description of the maturity level.
 
         evaluation_principle:
-            Principe d'évaluation associé au niveau.
+            Evaluation principle associated with the level.
 
         minimum_evidence_principle:
-            Principe concernant les preuves minimales attendues.
+            Principle concerning the minimum expected evidence.
 
         source:
-            Origine de la définition :
+            Origin of the definition:
                 - "generic"
                 - "dimension"
                 - "indicator"
@@ -86,21 +85,21 @@ class MaturityResult:
 
 
 # ============================================================================
-# MOTEUR DE MATURITE
+# MATURITY ENGINE
 # ============================================================================
 
 
 class MaturityEngine:
     """
-    Moteur d'interprétation des niveaux de maturité.
+    Engine responsible for interpreting maturity levels.
 
-    Il utilise les données du Referentiel :
+    It uses data from the Referentiel:
 
         - GENERIC_MATURITY_SCALE
         - DIMENSION_MATURITY_MATRICES
         - INDICATOR_SCORING_GRIDS
 
-    Il ne réalise aucune agrégation.
+    It does not perform any aggregation.
     """
 
     MIN_LEVEL = constants.SCORE_MIN
@@ -114,16 +113,16 @@ class MaturityEngine:
 
         if not isinstance(referentiel, Referentiel):
             raise TypeError(
-                "referentiel doit être une instance de Referentiel."
+                "referentiel must be an instance of Referentiel."
             )
 
         self.referentiel = referentiel
         self.config = config or {}
 
-        logger.info("MaturityEngine initialisé.")
+        logger.info("MaturityEngine initialized.")
 
     # ========================================================================
-    # SCORE -> NIVEAU
+    # SCORE -> LEVEL
     # ========================================================================
 
     def level_from_score(
@@ -131,20 +130,20 @@ class MaturityEngine:
         score: Optional[float],
     ) -> Optional[int]:
         """
-        Convertit un score 0..5 en niveau entier 0..5.
+        Converts a score from 0..5 into an integer level from 0..5.
 
-        Règle :
-            niveau = partie entière du score
+        Rule:
+            level = integer part of the score
 
-        Exemples :
+        Examples:
             0.0 -> 0
             1.0 -> 1
             2.7 -> 2
             3.9 -> 3
             5.0 -> 5
 
-        Cette règle est cohérente avec scoring.py qui utilise
-        math.floor() pour déterminer le niveau.
+        This rule is consistent with scoring.py, which uses
+        math.floor() to determine the level.
         """
 
         if score is None:
@@ -154,7 +153,7 @@ class MaturityEngine:
             numeric_score = float(score)
         except (TypeError, ValueError) as exc:
             raise ValueError(
-                f"Score de maturité invalide : {score!r}"
+                f"Invalid maturity score: {score!r}"
             ) from exc
 
         self._validate_score(numeric_score)
@@ -162,7 +161,7 @@ class MaturityEngine:
         return int(math.floor(numeric_score))
 
     # ========================================================================
-    # MATURITE GENERIQUE
+    # GENERIC MATURITY
     # ========================================================================
 
     def get_generic_maturity(
@@ -170,7 +169,7 @@ class MaturityEngine:
         score: Optional[float],
     ) -> MaturityResult:
         """
-        Retourne la maturité générique correspondant à un score 0..5.
+        Returns the generic maturity corresponding to a score from 0..5.
         """
 
         level = self.level_from_score(score)
@@ -186,7 +185,7 @@ class MaturityEngine:
 
         if description is None:
             logger.warning(
-                "Niveau %s absent du référentiel de maturité.",
+                "Level %s is missing from the maturity reference.",
                 level,
             )
 
@@ -203,7 +202,7 @@ class MaturityEngine:
         )
 
     # ========================================================================
-    # MATURITE DIMENSION
+    # DIMENSION MATURITY
     # ========================================================================
 
     def get_dimension_maturity(
@@ -212,16 +211,16 @@ class MaturityEngine:
         score: Optional[float],
     ) -> MaturityResult:
         """
-        Retourne la maturité spécifique à une dimension.
+        Returns the maturity specific to a dimension.
 
-        Priorité :
-            1. matrice spécifique de la dimension
-            2. échelle générique du référentiel
+        Priority:
+            1. Dimension-specific maturity matrix
+            2. Generic maturity scale from the reference
         """
 
         if not dimension_id:
             raise ValueError(
-                "dimension_id ne peut pas être vide."
+                "dimension_id cannot be empty."
             )
 
         level = self.level_from_score(score)
@@ -249,8 +248,8 @@ class MaturityEngine:
             )
 
         logger.warning(
-            "Description spécifique absente pour %s niveau %s. "
-            "Utilisation de la maturité générique.",
+            "Specific maturity description is missing for %s "
+            "at level %s. Using generic maturity.",
             dimension_id,
             level,
         )
@@ -270,7 +269,7 @@ class MaturityEngine:
         )
 
     # ========================================================================
-    # MATURITE INDICATEUR
+    # INDICATOR MATURITY
     # ========================================================================
 
     def get_indicator_maturity(
@@ -279,14 +278,14 @@ class MaturityEngine:
         score: Optional[float],
     ) -> MaturityResult:
         """
-        Retourne la définition de maturité d'un indicateur.
+        Returns the maturity definition of an indicator.
 
-        La grille INDICATOR_SCORING_GRIDS est prioritaire.
+        The INDICATOR_SCORING_GRIDS takes priority.
         """
 
         if not indicator_id:
             raise ValueError(
-                "indicator_id ne peut pas être vide."
+                "indicator_id cannot be empty."
             )
 
         level = self.level_from_score(score)
@@ -312,8 +311,8 @@ class MaturityEngine:
             )
 
         logger.warning(
-            "Grille de scoring absente pour %s niveau %s. "
-            "Utilisation de la maturité générique.",
+            "Scoring grid is missing for %s at level %s. "
+            "Using generic maturity.",
             indicator_id,
             level,
         )
@@ -333,7 +332,7 @@ class MaturityEngine:
         )
 
     # ========================================================================
-    # MATURITE DMI
+    # DMI MATURITY
     # ========================================================================
 
     def get_dmi_maturity(
@@ -341,19 +340,19 @@ class MaturityEngine:
         dmi_score: Optional[float],
     ) -> MaturityResult:
         """
-        Interprète le DMI.
+        Interprets the DMI.
 
-        aggregation.py / scoring.py stockent le DMI affiché sur 0..100.
+        aggregation.py / scoring.py store the displayed DMI on a 0..100 scale.
 
-        Conversion :
-            DMI % / 20 = score interne 0..5
+        Conversion:
+            DMI % / 20 = internal score 0..5
 
-        Exemple :
-            0 %   -> 0.0 -> niveau 0
-            20 %  -> 1.0 -> niveau 1
-            50 %  -> 2.5 -> niveau 2
-            80 %  -> 4.0 -> niveau 4
-            100 % -> 5.0 -> niveau 5
+        Example:
+            0 %   -> 0.0 -> level 0
+            20 %  -> 1.0 -> level 1
+            50 %  -> 2.5 -> level 2
+            80 %  -> 4.0 -> level 4
+            100 % -> 5.0 -> level 5
         """
 
         if dmi_score is None:
@@ -388,7 +387,7 @@ class MaturityEngine:
         )
 
     # ========================================================================
-    # INTERPRETATION D'UNE EVALUATION
+    # ASSESSMENT INTERPRETATION
     # ========================================================================
 
     def assess_indicator(
@@ -397,13 +396,13 @@ class MaturityEngine:
         indicator_id: str,
     ) -> MaturityResult:
         """
-        Interprète le niveau de maturité d'un indicateur
-        dans une évaluation.
+        Interprets the maturity level of an indicator
+        within an assessment.
         """
 
         if not isinstance(assessment, Assessment):
             raise TypeError(
-                "assessment doit être une instance de Assessment."
+                "assessment must be an instance of Assessment."
             )
 
         indicator_score = assessment.indicator_scores.get(
@@ -412,7 +411,7 @@ class MaturityEngine:
 
         if indicator_score is None:
             raise KeyError(
-                f"Indicateur absent de l'évaluation : {indicator_id}"
+                f"Indicator missing from assessment: {indicator_id}"
             )
 
         if not indicator_score.is_applicable:
@@ -429,7 +428,7 @@ class MaturityEngine:
         )
 
     # ========================================================================
-    # INTERPRETATION DIMENSION
+    # DIMENSION INTERPRETATION
     # ========================================================================
 
     def assess_dimension(
@@ -438,12 +437,12 @@ class MaturityEngine:
         score: Optional[float],
     ) -> MaturityResult:
         """
-        Interprète le niveau de maturité d'une dimension.
+        Interprets the maturity level of a dimension.
         """
 
         if dimension_id not in self.referentiel.dimensions:
             raise KeyError(
-                f"Dimension inconnue dans le référentiel : {dimension_id}"
+                f"Unknown dimension in reference: {dimension_id}"
             )
 
         return self.get_dimension_maturity(
@@ -452,7 +451,7 @@ class MaturityEngine:
         )
 
     # ========================================================================
-    # RESUME MULTI-NIVEAUX
+    # MULTI-LEVEL SUMMARY
     # ========================================================================
 
     def build_maturity_summary(
@@ -463,11 +462,11 @@ class MaturityEngine:
         dmi_score: Optional[float] = None,
     ) -> dict[str, Any]:
         """
-        Construit un résumé des niveaux de maturité.
+        Builds a summary of maturity levels.
 
-        Aucun score n'est calculé ici.
-        Les scores sont supposés avoir déjà été calculés
-        par scoring.py / aggregation.py.
+        No scores are calculated here.
+        Scores are assumed to have already been calculated
+        by scoring.py / aggregation.py.
         """
 
         summary: dict[str, Any] = {
@@ -478,7 +477,7 @@ class MaturityEngine:
         }
 
         # ------------------------------------------------------------------
-        # INDICATEURS
+        # INDICATORS
         # ------------------------------------------------------------------
 
         if indicator_scores is not None:
@@ -512,7 +511,7 @@ class MaturityEngine:
                 )
 
         # ------------------------------------------------------------------
-        # PILIERS
+        # PILLARS
         # ------------------------------------------------------------------
 
         if pillar_scores is not None:
@@ -554,13 +553,13 @@ class MaturityEngine:
         score: float,
     ) -> None:
         """
-        Vérifie qu'un score respecte l'échelle 0..5.
+        Validates that a score complies with the 0..5 scale.
         """
 
         if not math.isfinite(score):
             raise ValueError(
-                f"Score invalide : {score}. "
-                "Le score doit être une valeur numérique finie."
+                f"Invalid score: {score}. "
+                "The score must be a finite numeric value."
             )
 
         if not (
@@ -569,9 +568,9 @@ class MaturityEngine:
             <= self.MAX_LEVEL
         ):
             raise ValueError(
-                f"Score hors limites : {score}. "
-                f"Le score doit être compris entre "
-                f"{self.MIN_LEVEL} et {self.MAX_LEVEL}."
+                f"Score out of range: {score}. "
+                f"The score must be between "
+                f"{self.MIN_LEVEL} and {self.MAX_LEVEL}."
             )
 
     @staticmethod
@@ -579,7 +578,7 @@ class MaturityEngine:
         dmi_score: float,
     ) -> float:
         """
-        Vérifie que le DMI est compris entre 0 et 100 %.
+        Validates that the DMI is between 0 and 100%.
         """
 
         try:
@@ -588,27 +587,27 @@ class MaturityEngine:
         except (TypeError, ValueError) as exc:
 
             raise ValueError(
-                f"DMI invalide : {dmi_score!r}"
+                f"Invalid DMI: {dmi_score!r}"
             ) from exc
 
         if not math.isfinite(dmi_percent):
 
             raise ValueError(
-                f"DMI invalide : {dmi_score!r}. "
-                "Le DMI doit être une valeur numérique finie."
+                f"Invalid DMI: {dmi_score!r}. "
+                "The DMI must be a finite numeric value."
             )
 
         if not 0 <= dmi_percent <= 100:
 
             raise ValueError(
-                f"DMI invalide : {dmi_score!r}. "
-                "Intervalle attendu : 0..100."
+                f"Invalid DMI: {dmi_score!r}. "
+                "Expected range: 0..100."
             )
 
         return dmi_percent
 
     # ========================================================================
-    # CONVERSION DES MODELES
+    # MODEL CONVERSION
     # ========================================================================
 
     @staticmethod
@@ -676,16 +675,16 @@ class MaturityEngine:
         level: int,
     ) -> str:
         """
-        Nom de secours si le référentiel ne contient pas le niveau.
+        Returns a fallback name if the reference does not contain the level.
         """
 
         return constants.MATURITY_LEVELS.get(
             level,
-            f"Niveau {level}",
+            f"Level {level}",
         )
 
     # ========================================================================
-    # SERIALISATION
+    # SERIALIZATION
     # ========================================================================
 
     @staticmethod
@@ -693,7 +692,7 @@ class MaturityEngine:
         result: MaturityResult,
     ) -> dict[str, Any]:
         """
-        Transforme un MaturityResult en dictionnaire.
+        Converts a MaturityResult into a dictionary.
         """
 
         return {
@@ -712,7 +711,7 @@ class MaturityEngine:
 
 
 # ============================================================================
-# FONCTIONS UTILITAIRES PUBLIQUES
+# PUBLIC UTILITY FUNCTIONS
 # ============================================================================
 
 
@@ -720,7 +719,7 @@ def get_maturity_level(
     score: Optional[float],
 ) -> Optional[int]:
     """
-    Retourne le niveau 0..5 correspondant à un score 0..5.
+    Returns the level from 0..5 corresponding to a score from 0..5.
     """
 
     if score is None:
@@ -732,14 +731,14 @@ def get_maturity_level(
     except (TypeError, ValueError) as exc:
 
         raise ValueError(
-            f"Score invalide : {score!r}"
+            f"Invalid score: {score!r}"
         ) from exc
 
     if not math.isfinite(numeric_score):
 
         raise ValueError(
-            f"Score invalide : {score!r}. "
-            "Le score doit être une valeur numérique finie."
+            f"Invalid score: {score!r}. "
+            "The score must be a finite numeric value."
         )
 
     if not (
@@ -749,8 +748,8 @@ def get_maturity_level(
     ):
 
         raise ValueError(
-            f"Score hors limites : {numeric_score}. "
-            f"Intervalle attendu : "
+            f"Score out of range: {numeric_score}. "
+            f"Expected range: "
             f"{constants.SCORE_MIN}..{constants.SCORE_MAX}."
         )
 
@@ -762,7 +761,7 @@ def get_maturity_name(
     level: Optional[int],
 ) -> str:
     """
-    Retourne le nom d'un niveau de maturité depuis le référentiel.
+    Returns the name of a maturity level from the reference.
     """
 
     if level is None:
@@ -770,7 +769,7 @@ def get_maturity_name(
 
     if isinstance(level, bool) or not isinstance(level, int):
         raise ValueError(
-            f"Niveau de maturité invalide : {level!r}"
+            f"Invalid maturity level: {level!r}"
         )
 
     if not (
@@ -779,7 +778,7 @@ def get_maturity_name(
         <= constants.SCORE_MAX
     ):
         raise ValueError(
-            f"Niveau de maturité invalide : {level}"
+            f"Invalid maturity level: {level}"
         )
 
     entry = referentiel.maturity_scale.get(level)

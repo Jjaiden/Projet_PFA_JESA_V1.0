@@ -1,40 +1,41 @@
 # JESA_DMAT/components/tables.py
+
 """
-Composants de tableaux professionnels pour JESA DMAT.
+Professional table components for JESA DMAT.
 
-Ce module fournit des fonctions pour afficher des tableaux de données
-interactifs dans les pages Streamlit, en utilisant le design system existant.
+This module provides functions for displaying interactive data tables
+in Streamlit pages, using the existing design system.
 
-Les composants sont spécialisés pour les données de maturité digitale :
-scores, niveaux, statuts, etc.
+The components are specialized for digital maturity data:
+scores, levels, statuses, etc.
 
-Utilisation typique:
-    from components.tables import render_data_table, render_status_table, render_score_table
+Typical usage:
+from components.tables import render_data_table, render_status_table, render_score_table
 
-    # Tableau générique
-    render_data_table(
-        data=df,
-        title="Assessment Results",
-        height=400,
-        hide_index=True,
-    )
+# Generic table
+render_data_table(
+    data=df,
+    title="Assessment Results",
+    height=400,
+    hide_index=True,
+)
 
-    # Tableau avec statuts
-    render_status_table(
-        data=df,
-        status_column="Status",
-        title="Assessment Status",
-    )
+# Status table
+render_status_table(
+    data=df,
+    status_column="Status",
+    title="Assessment Status",
+)
 
-    # Tableau de scores (scores en pourcentage 0-100)
-    render_score_table(
-        data=df,
-        score_column="Score",
-        level_column="Level",
-        title="Digital Maturity by Pillar",
-        score_scale="percentage",
-        decimals=1,
-    )
+# Score table (scores as percentages 0-100)
+render_score_table(
+    data=df,
+    score_column="Score",
+    level_column="Level",
+    title="Digital Maturity by Pillar",
+    score_scale="percentage",
+    decimals=1,
+)
 """
 
 from __future__ import annotations
@@ -46,8 +47,9 @@ import streamlit as st
 
 
 # ============================================================================
-# HELPERS INTERNES
+# INTERNAL HELPERS
 # ============================================================================
+
 
 def _validate_dataframe(df: pd.DataFrame) -> None:
     """
@@ -60,10 +62,14 @@ def _validate_dataframe(df: pd.DataFrame) -> None:
         ValueError: Si le DataFrame est vide.
     """
     if df.empty:
-        raise ValueError("Le DataFrame est vide.")
+        raise ValueError("The DataFrame is empty.")
 
 
-def _validate_column_exists(df: pd.DataFrame, column: str, param_name: str) -> None:
+def _validate_column_exists(
+    df: pd.DataFrame,
+    column: str,
+    param_name: str,
+) -> None:
     """
     Valide qu'une colonne existe dans le DataFrame.
 
@@ -76,7 +82,10 @@ def _validate_column_exists(df: pd.DataFrame, column: str, param_name: str) -> N
         ValueError: Si la colonne n'existe pas.
     """
     if column not in df.columns:
-        raise ValueError(f"La colonne '{column}' spécifiée pour '{param_name}' n'existe pas dans le DataFrame.")
+        raise ValueError(
+            f"The column '{column}' specified for '{param_name}' "
+            "does not exist in the DataFrame."
+        )
 
 
 def _prepare_column_config(
@@ -100,8 +109,9 @@ def _prepare_column_config(
 
 
 # ============================================================================
-# COMPOSANTS PUBLICS
+# PUBLIC COMPONENTS
 # ============================================================================
+
 
 def render_data_table(
     data: pd.DataFrame,
@@ -124,27 +134,30 @@ def render_data_table(
         height (int, optionnel): Hauteur en pixels.
         hide_index (bool): Si True, masque l'index. Par défaut True.
         column_order (Sequence[str], optionnel): Ordre des colonnes.
-        column_config (dict, optionnel): Configuration des colonnes pour st.dataframe.
-        width (str | int): Largeur du tableau. "stretch" pour utiliser tout l'espace,
-                           ou un nombre en pixels. Par défaut "stretch".
+        column_config (dict, optionnel):
+            Configuration des colonnes pour st.dataframe.
+        width (str | int):
+            Largeur du tableau. "stretch" pour utiliser tout l'espace,
+            ou un nombre en pixels. Par défaut "stretch".
         key (str, optionnel): Clé unique pour le widget.
-        compact (bool): Réservé pour une future extension CSS (non utilisé actuellement).
-        **kwargs: Arguments supplémentaires passés à st.dataframe.
+        compact (bool):
+            Réservé pour une future extension CSS.
+        **kwargs:
+            Arguments supplémentaires passés à st.dataframe.
 
     Returns:
         None
 
     Raises:
         ValueError: Si le DataFrame est vide.
-
-    Exemple:
-        >>> df = pd.DataFrame({"Name": ["A", "B"], "Score": [85, 72]})
-        >>> render_data_table(data=df, title="Results", height=400)
     """
     _validate_dataframe(data)
 
     # Préparer la configuration des colonnes
-    config, order = _prepare_column_config(column_config, column_order)
+    config, order = _prepare_column_config(
+        column_config,
+        column_order,
+    )
 
     # Afficher le titre si fourni
     if title:
@@ -185,36 +198,44 @@ def render_status_table(
         height (int, optionnel): Hauteur en pixels.
         hide_index (bool): Si True, masque l'index. Par défaut True.
         column_order (Sequence[str], optionnel): Ordre des colonnes.
-        column_config (dict, optionnel): Configuration des colonnes.
-        width (str | int): Largeur du tableau. "stretch" pour utiliser tout l'espace,
-                           ou un nombre en pixels. Par défaut "stretch".
+        column_config (dict, optionnel):
+            Configuration des colonnes.
+        width (str | int):
+            Largeur du tableau. "stretch" pour utiliser tout l'espace,
+            ou un nombre en pixels. Par défaut "stretch".
         key (str, optionnel): Clé unique pour le widget.
-        **kwargs: Arguments supplémentaires passés à st.dataframe.
+        **kwargs:
+            Arguments supplémentaires passés à st.dataframe.
 
     Returns:
         None
 
     Raises:
-        ValueError: Si le DataFrame est vide ou si status_column n'existe pas.
-
-    Exemple:
-        >>> df = pd.DataFrame({"Task": ["A", "B"], "Status": ["Completed", "In progress"]})
-        >>> render_status_table(data=df, status_column="Status", title="Task Status")
+        ValueError:
+            Si le DataFrame est vide ou si status_column n'existe pas.
     """
     _validate_dataframe(data)
-    _validate_column_exists(data, status_column, "status_column")
+    _validate_column_exists(
+        data,
+        status_column,
+        "status_column",
+    )
 
     # Copier le DataFrame pour ne pas modifier l'original
     display_df = data.copy()
 
     # Préparer la configuration des colonnes
-    config, order = _prepare_column_config(column_config, column_order)
+    config, order = _prepare_column_config(
+        column_config,
+        column_order,
+    )
 
-    # Si l'utilisateur n'a pas configuré la colonne status_column, on ajoute une config par défaut
+    # Si l'utilisateur n'a pas configuré la colonne status_column,
+    # on ajoute une configuration par défaut
     if status_column not in config:
         config[status_column] = st.column_config.TextColumn(
-            "Statut",
-            help="Statut de l'élément",
+            "Status",
+            help="Status of the item",
         )
 
     # Afficher le tableau
@@ -252,75 +273,96 @@ def render_score_table(
     Args:
         data (pd.DataFrame): Données à afficher.
         score_column (str): Nom de la colonne contenant les scores.
-        level_column (str, optionnel): Nom de la colonne contenant les niveaux.
+        level_column (str, optionnel):
+            Nom de la colonne contenant les niveaux.
         title (str, optionnel): Titre du tableau.
         height (int, optionnel): Hauteur en pixels.
-        hide_index (bool): Si True, masque l'index. Par défaut True.
-        column_order (Sequence[str], optionnel): Ordre des colonnes.
-        column_config (dict, optionnel): Configuration des colonnes.
-        width (str | int): Largeur du tableau. "stretch" pour utiliser tout l'espace,
-                           ou un nombre en pixels. Par défaut "stretch".
-        key (str, optionnel): Clé unique pour le widget.
-        decimals (int): Nombre de décimales pour l'affichage des pourcentages.
-        score_scale (Literal["percentage", "ratio"]): Indique si les scores sont déjà en pourcentage (0-100)
-                                                      ou en ratio (0-1). Par défaut "percentage".
-        **kwargs: Arguments supplémentaires passés à st.dataframe.
+        hide_index (bool):
+            Si True, masque l'index. Par défaut True.
+        column_order (Sequence[str], optionnel):
+            Ordre des colonnes.
+        column_config (dict, optionnel):
+            Configuration des colonnes.
+        width (str | int):
+            Largeur du tableau. "stretch" pour utiliser tout l'espace,
+            ou un nombre en pixels. Par défaut "stretch".
+        key (str, optionnel):
+            Clé unique pour le widget.
+        decimals (int):
+            Nombre de décimales pour l'affichage des pourcentages.
+        score_scale (Literal["percentage", "ratio"]):
+            Indique si les scores sont déjà en pourcentage (0-100)
+            ou en ratio (0-1). Par défaut "percentage".
+        **kwargs:
+            Arguments supplémentaires passés à st.dataframe.
 
     Returns:
         None
 
     Raises:
-        ValueError: Si le DataFrame est vide, si score_column n'existe pas,
-                    si decimals est négatif, ou si score_scale est invalide.
-
-    Exemple:
-        >>> df = pd.DataFrame({"Pillar": ["Infrastructure", "Data"], "Score": [85, 72], "Level": ["Advanced", "Developing"]})
-        >>> render_score_table(
-        ...     data=df,
-        ...     score_column="Score",
-        ...     level_column="Level",
-        ...     title="Maturity by Pillar",
-        ...     decimals=1,
-        ... )
+        ValueError:
+            Si le DataFrame est vide, si score_column n'existe pas,
+            si decimals est négatif, ou si score_scale est invalide.
     """
     _validate_dataframe(data)
-    _validate_column_exists(data, score_column, "score_column")
+    _validate_column_exists(
+        data,
+        score_column,
+        "score_column",
+    )
 
     if decimals < 0:
-        raise ValueError("Le nombre de décimales ne peut pas être négatif.")
+        raise ValueError(
+            "The number of decimal places cannot be negative."
+        )
+
     if score_scale not in ("percentage", "ratio"):
-        raise ValueError("score_scale doit être 'percentage' ou 'ratio'.")
+        raise ValueError(
+            "score_scale must be 'percentage' or 'ratio'."
+        )
 
     # Copier le DataFrame pour ne pas modifier l'original
     display_df = data.copy()
 
-    # Si les scores sont en ratio, les multiplier par 100 pour les afficher en pourcentage
+    # Si les scores sont en ratio,
+    # les multiplier par 100 pour les afficher en pourcentage
     if score_scale == "ratio":
-        # Note: l'utilisateur est responsable de fournir des ratios valides (0-1).
-        # Cette validation pourrait être effectuée par validators.py en amont.
-        display_df[score_column] = display_df[score_column] * 100
+        # Note: l'utilisateur est responsable de fournir
+        # des ratios valides (0-1).
+        display_df[score_column] = (
+            display_df[score_column] * 100
+        )
 
     # Configurer la colonne de score avec un format approprié
-    config, order = _prepare_column_config(column_config, column_order)
+    config, order = _prepare_column_config(
+        column_config,
+        column_order,
+    )
 
     # Format d'affichage pour les pourcentages
     format_str = f"%.{decimals}f%%"
 
-    # Si l'utilisateur n'a pas configuré la colonne score_column, on ajoute une config par défaut
+    # Si l'utilisateur n'a pas configuré la colonne score_column,
+    # on ajoute une configuration par défaut
     if score_column not in config:
         config[score_column] = st.column_config.NumberColumn(
             "Score",
-            help="Score de maturité",
+            help="Maturity score",
             format=format_str,
         )
 
     # Configurer la colonne de niveau si fournie et non configurée
     if level_column:
-        _validate_column_exists(data, level_column, "level_column")
+        _validate_column_exists(
+            data,
+            level_column,
+            "level_column",
+        )
+
         if level_column not in config:
             config[level_column] = st.column_config.TextColumn(
-                "Niveau",
-                help="Niveau de maturité",
+                "Level",
+                help="Maturity level",
             )
 
     # Afficher le tableau
@@ -338,7 +380,7 @@ def render_score_table(
 
 
 # ============================================================================
-# EXPORT PUBLIC
+# PUBLIC EXPORT
 # ============================================================================
 
 __all__ = [

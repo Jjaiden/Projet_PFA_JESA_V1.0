@@ -1,25 +1,4 @@
-"""
-constants.py — Constantes structurelles du référentiel JESA (JDMAF)
-
-Ce module contient les constantes nécessaires au BACKEND (moteurs de calcul, 
-loader, validation) ainsi que les constantes pour le FRONTEND (navigation, UI).
-
-BACKEND (Sections 1–6, 10–15):
-- Échelle de maturité 0-5
-- Hiérarchie Pilier → Dimension → Sous-dimension → Indicateur
-- Règles de notation et d'agrégation
-- Paramètres du DMI et du TPI
-- Noms des feuilles Excel (loader/validation)
-- Messages d'erreur backend
-
-FRONTEND (Sections 7–9, 16–22):
-- Navigation (pages, icônes, ordre)
-- Enums pour l'UI (priorités, statuts, formats)
-- Configuration des extensions autorisées
-
-Les données détaillées du référentiel (60 indicateurs, grilles de scoring, etc.)
-sont chargées depuis les fichiers Excel par loader.py.
-"""
+# constants.py — Structural Constants of the JESA Reference Framework (JDMAF)
 
 from __future__ import annotations
 
@@ -27,13 +6,14 @@ from dataclasses import dataclass
 from enum import Enum, IntEnum
 from typing import Dict, Tuple
 
+
 # ============================================================================
 # ============================ BACKEND CONSTANTS =============================
 # ============================================================================
 
 
 # ============================================================================
-# 1. ÉCHELLE DE MATURITÉ (BACKEND)
+# 1. MATURITY SCALE (BACKEND)
 # ============================================================================
 
 SCORE_MIN = 0
@@ -43,66 +23,67 @@ VALID_INDICATOR_SCORES = tuple(
     range(SCORE_MIN, SCORE_MAX + 1)
 )
 
+
 MATURITY_LEVELS = {
     0: "Absence",
-    1: "Informatisation",
-    2: "Connectivité",
-    3: "Visibilité",
-    4: "Maîtrise & Optimisation",
-    5: "Excellence digitale supervisée",
+    1: "Digitization",
+    2: "Connectivity",
+    3: "Visibility",
+    4: "Control & Optimization",
+    5: "Supervised Digital Excellence",
 }
+
 
 MATURITY_LEVEL_DESCRIPTIONS = {
     0: (
-        "Aucune initiative digitale identifiée. "
-        "Les processus sont entièrement manuels ou analogiques."
+        "No digital initiative has been identified. "
+        "Processes are entirely manual or analog."
     ),
     1: (
-        "Des outils numériques sont déployés ponctuellement pour remplacer "
-        "certaines tâches manuelles. Les solutions restent locales, peu "
-        "standardisées et fonctionnent indépendamment."
+        "Digital tools are deployed selectively to replace "
+        "certain manual tasks. Solutions remain local, poorly "
+        "standardized, and operate independently."
     ),
     2: (
-        "Les systèmes industriels et informatiques (OT/IT) sont "
-        "interconnectés et échangent des données de manière fiable via "
-        "des interfaces ou des protocoles normalisés."
+        "Industrial and information technology systems (OT/IT) "
+        "are interconnected and exchange data reliably through "
+        "standardized interfaces or protocols."
     ),
     3: (
-        "Les données sont centralisées, historisées et accessibles en "
-        "temps réel. Des tableaux de bord et des indicateurs de performance "
-        "soutiennent le pilotage quotidien des opérations."
+        "Data is centralized, historized, and accessible in real time. "
+        "Dashboards and performance indicators support daily "
+        "operational management."
     ),
     4: (
-        "Les données sont exploitées pour analyser les performances, "
-        "identifier les causes des écarts et mettre en œuvre des actions "
-        "d'amélioration."
+        "Data is leveraged to analyze performance, identify the root "
+        "causes of deviations, and implement improvement actions."
     ),
     5: (
-        "Les systèmes assistent ou automatisent la prise de décision "
-        "grâce à des analyses avancées et à l'intelligence artificielle (IA)."
+        "Systems support or automate decision-making through advanced "
+        "analytics and artificial intelligence (AI)."
     ),
 }
 
 
 # ============================================================================
-# 2. HIÉRARCHIE DU RÉFÉRENTIEL (BACKEND)
+# 2. REFERENCE FRAMEWORK HIERARCHY (BACKEND)
 # ============================================================================
 #
-# Structure :
-# 5 Piliers → 10 Dimensions → 20 Sous-dimensions → 60 Indicateurs
+# Structure:
+# 5 Pillars → 10 Dimensions → 20 Sub-dimensions → 60 Indicators
 # ============================================================================
 
 
 # ----------------------------------------------------------------------------
-# 2.1 Piliers
+# 2.1 Pillars
 # ----------------------------------------------------------------------------
 
 PILLARS = {
-    "P1": "Infrastructure numérique",
-    "P2": "Opérations digitales",
-    "P3": "Données & Intelligence",
-    "P4": "Gouvernance & Cybersécurité",
-    "P5": "Capital humain & Compétences",
+    "P1": "Digital Infrastructure",
+    "P2": "Digital Operations",
+    "P3": "Data & Intelligence",
+    "P4": "Governance & Cybersecurity",
+    "P5": "Human Capital & Skills",
 }
 
 PILLAR_IDS = list(PILLARS.keys())
@@ -115,28 +96,29 @@ PILLAR_IDS = list(PILLARS.keys())
 # ----------------------------------------------------------------------------
 
 DIMENSIONS = {
-    "D1": ("P1", "Infrastructure OT/IT"),
-    "D2": ("P1", "Connectivité & Réseaux"),
-    "D3": ("P2", "Automatisation & Contrôle"),
+    "D1": ("P1", "OT/IT Infrastructure"),
+    "D2": ("P1", "Connectivity & Networks"),
+    "D3": ("P2", "Automation & Control"),
     "D4": ("P2", "Supervision & Monitoring"),
-    "D5": ("P3", "Gestion des données"),
-    "D6": ("P3", "Analyse & Intelligence Artificielle"),
-    "D7": ("P4", "Cybersécurité OT/IT"),
-    "D8": ("P4", "Gouvernance numérique"),
-    "D9": ("P5", "Compétences & Formation"),
-    "D10": ("P5", "Culture digitale & Organisation"),
+    "D5": ("P3", "Data Management"),
+    "D6": ("P3", "Analytics & Artificial Intelligence"),
+    "D7": ("P4", "OT/IT Cybersecurity"),
+    "D8": ("P4", "Digital Governance"),
+    "D9": ("P5", "Skills & Training"),
+    "D10": ("P5", "Digital Culture & Organization"),
 }
 
 DIMENSION_IDS = list(DIMENSIONS.keys())
 
 
-# Mapping Dimension → Pilier
+# Mapping Dimension → Pillar
 DIMENSION_TO_PILLAR = {
     dimension_id: pillar_id
     for dimension_id, (pillar_id, _) in DIMENSIONS.items()
 }
 
-# Mapping Pilier → Dimensions
+
+# Mapping Pillar → Dimensions
 PILLAR_TO_DIMENSIONS = {
     pillar_id: [
         dimension_id
@@ -148,44 +130,54 @@ PILLAR_TO_DIMENSIONS = {
 
 
 # ----------------------------------------------------------------------------
-# 2.3 Sous-dimensions
+# 2.3 Sub-dimensions
 # ----------------------------------------------------------------------------
 # SUBDIMENSION_ID -> (DIMENSION_ID, SUBDIMENSION_NAME)
 # ----------------------------------------------------------------------------
 
 SUBDIMENSIONS = {
-    "SD1.1": ("D1", "Réseau OT & Disponibilité"),
-    "SD1.2": ("D1", "Serveurs & Virtualisation"),
-    "SD2.1": ("D2", "Protocoles & Interopérabilité"),
-    "SD2.2": ("D2", "Intégration OT/IT"),
-    "SD3.1": ("D3", "Automates & Contrôle (DCS/PLC)"),
-    "SD3.2": ("D3", "Système d'Exécution de la Fabrication (MES) & Ordonnancement"),
-    "SD4.1": ("D4", "Acquisition & Contrôle (SCADA) & Interface Opérateur (HMI)"),
-    "SD4.2": ("D4", "Maintenance prédictive"),
-    "SD5.1": ("D5", "Historian & Traçabilité"),
-    "SD5.2": ("D5", "Qualité & Gouvernance des données"),
-    "SD6.1": ("D6", "Analytique & Reporting"),
-    "SD6.2": ("D6", "Intelligence Artificielle (IA) & Modélisation"),
-    "SD7.1": ("D7", "Sécurité périmétrique & Segmentation"),
-    "SD7.2": ("D7", "Gestion des accès & Authentification"),
-    "SD8.1": ("D8", "Politiques & Processus digitaux"),
-    "SD8.2": ("D8", "Conformité & Audit"),
-    "SD9.1": ("D9", "Niveaux de compétences digitales"),
-    "SD9.2": ("D9", "Plans de formation & Développement"),
-    "SD10.1": ("D10", "Adoption des outils numériques"),
-    "SD10.2": ("D10", "Innovation & Amélioration continue"),
+    "SD1.1": ("D1", "OT Network & Availability"),
+    "SD1.2": ("D1", "Servers & Virtualization"),
+
+    "SD2.1": ("D2", "Protocols & Interoperability"),
+    "SD2.2": ("D2", "OT/IT Integration"),
+
+    "SD3.1": ("D3", "Automation & Control (DCS/PLC)"),
+    "SD3.2": ("D3", "Manufacturing Execution System (MES) & Scheduling"),
+
+    "SD4.1": ("D4", "Acquisition & Control (SCADA) & Operator Interface (HMI)"),
+    "SD4.2": ("D4", "Predictive Maintenance"),
+
+    "SD5.1": ("D5", "Historian & Traceability"),
+    "SD5.2": ("D5", "Quality & Data Governance"),
+
+    "SD6.1": ("D6", "Analytics & Reporting"),
+    "SD6.2": ("D6", "Artificial Intelligence (AI) & Modeling"),
+
+    "SD7.1": ("D7", "Perimeter Security & Segmentation"),
+    "SD7.2": ("D7", "Access Management & Authentication"),
+
+    "SD8.1": ("D8", "Policies & Digital Processes"),
+    "SD8.2": ("D8", "Compliance & Audit"),
+
+    "SD9.1": ("D9", "Digital Skills Levels"),
+    "SD9.2": ("D9", "Training & Development Plans"),
+
+    "SD10.1": ("D10", "Digital Tool Adoption"),
+    "SD10.2": ("D10", "Innovation & Continuous Improvement"),
 }
 
 SUBDIMENSION_IDS = list(SUBDIMENSIONS.keys())
 
 
-# Mapping Sous-dimension → Dimension
+# Mapping Sub-dimension → Dimension
 SUBDIMENSION_TO_DIMENSION = {
     subdimension_id: dimension_id
     for subdimension_id, (dimension_id, _) in SUBDIMENSIONS.items()
 }
 
-# Mapping Dimension → Sous-dimensions
+
+# Mapping Dimension → Sub-dimensions
 DIMENSION_TO_SUBDIMENSIONS = {
     dimension_id: [
         subdimension_id
@@ -197,7 +189,7 @@ DIMENSION_TO_SUBDIMENSIONS = {
 
 
 # ----------------------------------------------------------------------------
-# 2.4 Structure des indicateurs
+# 2.4 Indicator Structure
 # ----------------------------------------------------------------------------
 
 INDICATORS_PER_SUBDIMENSION = 3
@@ -208,11 +200,11 @@ EXPECTED_INDICATOR_COUNT = (
 
 
 # ============================================================================
-# 3. RÈGLES DE NOTATION (BACKEND)
+# 3. SCORING RULES (BACKEND)
 # ============================================================================
 
 APPLICABILITY_APPLICABLE = "Applicable"
-APPLICABILITY_NOT_APPLICABLE = "Non applicable"
+APPLICABILITY_NOT_APPLICABLE = "Not Applicable"
 
 VALID_APPLICABILITY_VALUES = (
     APPLICABILITY_APPLICABLE,
@@ -223,7 +215,7 @@ WEIGHT_SUM_TOLERANCE = 0.001
 
 
 # ============================================================================
-# 4. PONDÉRATIONS PAR DÉFAUT (BACKEND)
+# 4. DEFAULT WEIGHTS (BACKEND)
 # ============================================================================
 
 DEFAULT_WEIGHT_PILLAR = 1 / len(PILLARS)
@@ -232,14 +224,14 @@ DEFAULT_WEIGHT_SUBDIMENSION_PER_DIMENSION = 0.5
 
 
 # ============================================================================
-# 5. AGRÉGATION ET DMI (BACKEND)
+# 5. AGGREGATION AND DMI (BACKEND)
 # ============================================================================
 
 DMI_SCALE_FACTOR = 20
 
 
 # ============================================================================
-# 6. RÈGLES DE CALCUL DE MATURITÉ (BACKEND)
+# 6. MATURITY CALCULATION RULES (BACKEND)
 # ============================================================================
 
 WEAKNESS_CAP_INCREMENT = 1
@@ -247,7 +239,7 @@ FULL_SATISFACTION_REQUIRED = True
 
 
 # ============================================================================
-# 7. BANDES DE MATURITÉ (BACKEND)
+# 7. MATURITY BANDS (BACKEND)
 # ============================================================================
 
 MATURITY_BANDS = {
@@ -257,35 +249,38 @@ MATURITY_BANDS = {
 }
 
 MATURITY_BAND_NAMES = {
-    "0-1": "Fondations",
-    "2-3": "Intégration",
-    "4-5": "Optimisation",
+    "0-1": "Foundations",
+    "2-3": "Integration",
+    "4-5": "Optimization",
 }
 
 
 def get_maturity_band(level: int) -> str:
     """
-    Retourne la bande de maturité correspondant à un niveau.
+    Return the maturity band corresponding to a maturity level.
 
     Args:
-        level: Niveau de maturité compris entre 0 et 5.
+        level: Maturity level between 0 and 5.
 
     Returns:
-        '0-1', '2-3' ou '4-5'.
+        '0-1', '2-3', or '4-5'.
 
     Raises:
-        ValueError: si le niveau est hors de [0, 5].
+        ValueError: If the level is outside [0, 5].
     """
+
     if level < SCORE_MIN or level > SCORE_MAX:
         raise ValueError(
-            f"Le niveau de maturité doit être compris entre "
-            f"{SCORE_MIN} et {SCORE_MAX}. Reçu : {level}"
+            f"The maturity level must be between "
+            f"{SCORE_MIN} and {SCORE_MAX}. Received: {level}"
         )
 
     if level <= 1:
         return "0-1"
+
     if level <= 3:
         return "2-3"
+
     return "4-5"
 
 
@@ -300,6 +295,7 @@ class HierarchyLevel:
     PILLAR = "pillar"
     DMI = "dmi"
 
+
 HIERARCHY_LEVELS = (
     HierarchyLevel.INDICATOR,
     HierarchyLevel.SUBDIMENSION,
@@ -310,20 +306,20 @@ HIERARCHY_LEVELS = (
 
 
 # ============================================================================
-# 9. TYPES D'ENTITÉS (BACKEND)
+# 9. ENTITY TYPES (BACKEND)
 # ============================================================================
 
 ENTITY_TYPES = {
-    "indicator": "Indicateur",
-    "subdimension": "Sous-dimension",
+    "indicator": "Indicator",
+    "subdimension": "Sub-dimension",
     "dimension": "Dimension",
-    "pillar": "Pilier",
+    "pillar": "Pillar",
     "dmi": "DMI",
 }
 
 
 # ============================================================================
-# 10. MOTEUR DÉCISIONNEL — TPI (BACKEND)
+# 10. DECISION ENGINE — TPI (BACKEND)
 # ============================================================================
 
 TPI_PARAMETERS_FAVORABLE = (
@@ -346,16 +342,16 @@ TPI_ALL_PARAMETERS = (
 DEFAULT_TPI_WEIGHT = 1 / len(TPI_ALL_PARAMETERS)
 
 TPI_PRIORITY_THRESHOLDS = [
-    (0.80, 1.00, "Critique", "Phase 1 (< 6 mois)"),
-    (0.60, 0.80, "Haute", "Phase 1-2 (6-12 mois)"),
-    (0.40, 0.60, "Moyenne", "Phase 2 (12-24 mois)"),
-    (0.20, 0.40, "Faible", "Long terme, selon ressources"),
-    (0.00, 0.20, "Très faible", "Non prioritaire, à réévaluer"),
+    (0.80, 1.00, "Critical", "Phase 1 (< 6 months)"),
+    (0.60, 0.80, "High", "Phase 1-2 (6-12 months)"),
+    (0.40, 0.60, "Medium", "Phase 2 (12-24 months)"),
+    (0.20, 0.40, "Low", "Long term, depending on resources"),
+    (0.00, 0.20, "Very Low", "Not a priority, to be reassessed"),
 ]
 
 
 # ============================================================================
-# 11. SEUILS DE GAP (BACKEND)
+# 11. GAP THRESHOLDS (BACKEND)
 # ============================================================================
 
 GAP_THRESHOLDS = {
@@ -367,7 +363,7 @@ GAP_THRESHOLDS = {
 
 
 # ============================================================================
-# 12. NOMS DES FEUILLES DU RÉFÉRENTIEL EXCEL (BACKEND)
+# 12. REFERENCE EXCEL SHEET NAMES (BACKEND)
 # ============================================================================
 
 class RefSheets:
@@ -384,6 +380,7 @@ class RefSheets:
     QUESTIONNAIRE_TEMPLATE = "QUESTIONNAIRE_TEMPLATE"
     CALCULATION_RULES = "CALCULATION_RULES"
     QUALITY_CONTROL = "QUALITY_CONTROL"
+
 
 REFERENTIEL_SHEETS = [
     RefSheets.README,
@@ -403,7 +400,7 @@ REFERENTIEL_SHEETS = [
 
 
 # ============================================================================
-# 13. NOMS DES FEUILLES DE LA BASE DE CONNAISSANCES (BACKEND)
+# 13. KNOWLEDGE BASE SHEET NAMES (BACKEND)
 # ============================================================================
 
 class KnowledgeBaseSheets:
@@ -423,6 +420,7 @@ class KnowledgeBaseSheets:
     ROADMAP_RULES = "ROADMAP_RULES"
     TRACEABILITY = "TRACEABILITY"
     QUALITY_CONTROL = "QUALITY_CONTROL"
+
 
 KNOWLEDGE_BASE_SHEETS = [
     KnowledgeBaseSheets.README,
@@ -445,26 +443,26 @@ KNOWLEDGE_BASE_SHEETS = [
 
 
 # ============================================================================
-# 14. MESSAGES D'ERREUR BACKEND
+# 14. BACKEND ERROR MESSAGES
 # ============================================================================
 
 ERROR_MESSAGES = {
-    "invalid_score": "Le score doit être un entier entre 0 et 5.",
-    "invalid_indicator_id": "Format d'ID d'indicateur invalide.",
-    "invalid_dimension": "ID de dimension invalide : {dim_id}",
-    "invalid_subdimension": "ID de sous-dimension invalide : {subdimension_id}",
-    "invalid_pillar": "ID de pilier invalide : {pillar_id}",
-    "invalid_applicability": "Statut d'applicabilité invalide : {value}",
-    "weight_sum_error": "La somme des poids doit être égale à 1.0. Reçu : {sum}",
-    "data_validation_error": "Erreur de validation des données : {error}",
-    "file_not_found": "Fichier non trouvé : {path}",
-    "sheet_not_found": "Feuille '{sheet}' non trouvée dans le fichier {file}",
-    "assessment_not_found": "Évaluation non trouvée pour l'ID : {assessment_id}",
+    "invalid_score": "The score must be an integer between 0 and 5.",
+    "invalid_indicator_id": "Invalid indicator ID format.",
+    "invalid_dimension": "Invalid dimension ID: {dim_id}",
+    "invalid_subdimension": "Invalid subdimension ID: {subdimension_id}",
+    "invalid_pillar": "Invalid pillar ID: {pillar_id}",
+    "invalid_applicability": "Invalid applicability status: {value}",
+    "weight_sum_error": "The sum of weights must be equal to 1.0. Received: {sum}",
+    "data_validation_error": "Data validation error: {error}",
+    "file_not_found": "File not found: {path}",
+    "sheet_not_found": "Sheet '{sheet}' not found in file {file}",
+    "assessment_not_found": "Assessment not found for ID: {assessment_id}",
 }
 
 
 # ============================================================================
-# 15. CONSTANTES DE VALIDATION DU RÉFÉRENTIEL (BACKEND)
+# 15. REFERENCE FRAMEWORK VALIDATION CONSTANTS (BACKEND)
 # ============================================================================
 
 EXPECTED_PILLAR_COUNT = 5
@@ -485,10 +483,12 @@ SUBDIMENSIONS_PER_DIMENSION = 2
 
 @dataclass(frozen=True)
 class AppInfo:
-    """Informations statiques sur l'application."""
+    """Static information about the application."""
+
     NAME: str = "JESA Digital Maturity Assessment Tool"
     ACRONYM: str = "JESA DMAT"
     VERSION: str = "1.0.0"
+
 
 APP = AppInfo()
 
@@ -498,7 +498,8 @@ APP = AppInfo()
 # ============================================================================
 
 class Page(Enum):
-    """Pages principales avec titre, icône et ordre d'affichage."""
+    """Main pages with title, icon, and display order."""
+
     HOME = ("Home", "🏠", 0)
     NEW_ASSESSMENT = ("New Assessment", "📝", 1)
     DASHBOARD = ("Dashboard", "📊", 2)
@@ -514,8 +515,9 @@ class Page(Enum):
         self.order = order
 
     @classmethod
-    def ordered_pages(cls) -> Tuple[Page, ...]:
-        """Retourne les pages triées selon leur ordre d'affichage."""
+    def ordered_pages(cls) -> Tuple["Page", ...]:
+        """Return the pages sorted by their display order."""
+
         return tuple(sorted(cls, key=lambda p: p.order))
 
 
@@ -524,7 +526,8 @@ class Page(Enum):
 # ============================================================================
 
 class MaturityLevel(IntEnum):
-    """Niveaux de maturité digitale (0 à 5)."""
+    """Digital maturity levels (0 to 5)."""
+
     LEVEL_0 = 0
     LEVEL_1 = 1
     LEVEL_2 = 2
@@ -538,12 +541,14 @@ class MaturityLevel(IntEnum):
 # ============================================================================
 
 class Pillar(str, Enum):
-    """Piliers fondamentaux de l'évaluation de maturité (pour l'UI)."""
-    INFRASTRUCTURE = "Infrastructure & Connectivité"
-    OPERATIONS = "Opérations Digitales"
-    DATA_AI = "Données & Intelligence Artificielle"
-    GOVERNANCE = "Gouvernance & Cybersécurité"
-    HUMAN_CAPITAL = "Capital Humain & Compétences"
+    """Fundamental pillars of the maturity assessment (for UI)."""
+
+    INFRASTRUCTURE = "Infrastructure & Connectivity"
+    OPERATIONS = "Digital Operations"
+    DATA_AI = "Data & Artificial Intelligence"
+    GOVERNANCE = "Governance & Cybersecurity"
+    HUMAN_CAPITAL = "Human Capital & Skills"
+
 
 NUMBER_OF_PILLARS: int = len(Pillar)
 
@@ -553,7 +558,8 @@ NUMBER_OF_PILLARS: int = len(Pillar)
 # ============================================================================
 
 class Priority(str, Enum):
-    """Niveaux de priorité pour les recommandations et actions."""
+    """Priority levels for recommendations and actions."""
+
     VERY_HIGH = "Very High"
     HIGH = "High"
     MEDIUM = "Medium"
@@ -566,7 +572,8 @@ class Priority(str, Enum):
 # ============================================================================
 
 class Status(str, Enum):
-    """États utilisés dans l'interface (alertes, badges, etc.)."""
+    """States used in the interface (alerts, badges, etc.)."""
+
     SUCCESS = "success"
     WARNING = "warning"
     ERROR = "error"
@@ -574,29 +581,33 @@ class Status(str, Enum):
 
 
 # ============================================================================
-# 22. EXTENSIONS AUTORISÉES & EXPORT (FRONTEND)
+# 22. ALLOWED EXTENSIONS & EXPORT (FRONTEND)
 # ============================================================================
 
 ALLOWED_EXTENSIONS: Tuple[str, ...] = ("xlsx", "csv", "pdf")
-"""Extensions de fichiers autorisées pour les imports/exports."""
+"""Allowed file extensions for imports/exports."""
+
 
 class ExportFormat(str, Enum):
-    """Formats supportés pour les exports."""
+    """Supported export formats."""
+
     PDF = "PDF"
     EXCEL = "Excel"
+
 
 SHEET_ASSESSMENT = "Assessment"
 SHEET_KNOWLEDGE_BASE = "Knowledge Base"
 
-PAGE_ICONS: Dict[str, str] = {page.name: page.icon for page in Page}
+
+PAGE_ICONS: Dict[str, str] = {
+    page.name: page.icon
+    for page in Page
+}
+
 
 MAX_SCORE: float = 100.0
-"""Score maximal théorique (en pourcentage)."""
+"""Maximum theoretical score (in percentage)."""
+
 
 MIN_MATURITY_LEVEL: MaturityLevel = MaturityLevel.LEVEL_0
 MAX_MATURITY_LEVEL: MaturityLevel = MaturityLevel.LEVEL_5
-
-
-# ============================================================================
-# FIN DU MODULE
-# ============================================================================

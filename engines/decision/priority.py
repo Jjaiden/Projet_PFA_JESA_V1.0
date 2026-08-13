@@ -1,26 +1,26 @@
 """
-priority.py — Orchestration de la priorisation décisionnelle JDMAF.
+priority.py — JDMAF decision prioritization orchestration.
 
-Responsabilités :
-    - consolider les GapResult et TPIResult ;
-    - associer les recommandations aux dimensions prioritaires ;
-    - construire une matrice de priorisation ;
-    - fournir les dimensions prioritaires ;
-    - produire un résumé décisionnel.
+Responsibilities:
+- consolidate GapResult and TPIResult;
+- associate recommendations with priority dimensions;
+- build a prioritization matrix;
+- provide priority dimensions;
+- generate a decision-making summary.
 
-Ce module ne recalcule pas le TPI :
-    le calcul du TPI reste dans engines/decision/tpi.py.
+This module does not recalculate TPI:
+TPI calculation remains in engines/decision/tpi.py.
 
-Architecture :
-    Gap
-      ↓
-    TPI
-      ↓
-    Priority
-      ↓
-    Recommendations
-      ↓
-    Roadmap
+Architecture:
+Gap
+↓
+TPI
+↓
+Priority
+↓
+Recommendations
+↓
+Roadmap
 """
 
 from __future__ import annotations
@@ -39,14 +39,14 @@ from engines.decision.recommendation import (
 
 
 # ============================================================================
-# RESULTAT
+# RESULT
 # ============================================================================
 
 
 @dataclass
 class PriorityResult:
     """
-    Résultat consolidé de priorisation pour une dimension.
+    Consolidated prioritization result for a dimension.
     """
 
     dimension_id: str
@@ -69,7 +69,7 @@ class PriorityResult:
 
     def to_dict(self) -> dict[str, Any]:
         """
-        Convertit le résultat en dictionnaire.
+        Convert the result to a dictionary.
         """
 
         return {
@@ -109,22 +109,24 @@ class PriorityResult:
 
 class PriorityEngine:
     """
-    Moteur d'orchestration de la priorisation.
+    Decision prioritization orchestration engine.
 
-    Il consolide :
-        - les écarts ;
-        - les résultats TPI ;
-        - les recommandations.
+    It consolidates:
+    - maturity gaps;
+    - TPI results;
+    - recommendations.
 
-    Il ne modifie aucun de ces résultats.
+    It does not modify any of these results.
     """
 
     PRIORITY_ORDER = {
-        "Critique": 0,
-        "Haute": 1,
-        "Moyenne": 2,
-        "Faible": 3,
-        "Très faible": 4,
+        "Critical": 0,
+        "High": 1,
+        "Medium": 2,
+        "Low": 3,
+        "Very Low": 4,
+
+        # Backward-compatible internal values
         "critical": 0,
         "high": 1,
         "medium": 2,
@@ -152,105 +154,106 @@ class PriorityEngine:
         )
 
     # ========================================================================
-    # API PRINCIPALE
+    # MAIN API
     # ========================================================================
 
     def build_priority_analysis(
-    self,
-    gap_results: list[GapResult],
-    tpi_results: Optional[list[TPIResult]] = None,
-    recommendations: Optional[
-        Mapping[str, list[RecommendationResult]]
-    ] = None,
-) -> list[PriorityResult]:
+        self,
+        gap_results: list[GapResult],
+        tpi_results: Optional[list[TPIResult]] = None,
+        recommendations: Optional[
+            Mapping[str, list[RecommendationResult]]
+        ] = None,
+    ) -> list[PriorityResult]:
 
-     if not isinstance(gap_results, list):
-        raise TypeError(
-            "gap_results doit être une liste."
+        if not isinstance(gap_results, list):
+            raise TypeError(
+                "gap_results must be a list."
+            )
+
+        tpi_by_dimension = {
+            result.dimension_id: result
+            for result in (tpi_results or [])
+        }
+
+        recommendation_by_dimension = dict(
+            recommendations or {}
         )
 
-     tpi_by_dimension = {
-        result.dimension_id: result
-        for result in (tpi_results or [])
-     }
+        results: list[PriorityResult] = []
 
-     recommendation_by_dimension = dict(
-        recommendations or {}
-     )
+        for gap in gap_results:
 
-     results: list[PriorityResult] = []
+            if gap.entity_type != "dimension":
+                continue
 
-     for gap in gap_results:
-
-         if gap.entity_type != "dimension":
-            continue
-
-         tpi = tpi_by_dimension.get(
-            gap.entity_id
-         )
-
-         if tpi is None:
-            continue
-
-         results.append(
-            PriorityResult(
-                dimension_id=gap.entity_id,
-                dimension_name=gap.entity_name,
-
-                current_score=gap.current_score,
-                target_score=gap.target_score,
-                gap=gap.gap,
-
-                tpi_score=float(
-                    tpi.tpi_score
-                ),
-
-                # IMPORTANT :
-                # priority vient directement du TPI
-                priority_category=(
-                    tpi.priority_category
-                ),
-
-                recommendations=(
-                    recommendation_by_dimension.get(
-                        gap.entity_id,
-                        [],
-                    )
-                ),
-
-                details={
-                    "gap_priority": gap.priority,
-                    "gap_percent": gap.gap_percent,
-
-                    "current_level": (
-                        gap.details or {}
-                    ).get(
-                        "current_level"
-                    ),
-
-                    "target_level": (
-                        gap.details or {}
-                    ).get(
-                        "target_level"
-                    ),
-                },
+            tpi = tpi_by_dimension.get(
+                gap.entity_id
             )
+
+            if tpi is None:
+                continue
+
+            results.append(
+                PriorityResult(
+                    dimension_id=gap.entity_id,
+                    dimension_name=gap.entity_name,
+
+                    current_score=gap.current_score,
+                    target_score=gap.target_score,
+                    gap=gap.gap,
+
+                    tpi_score=float(
+                        tpi.tpi_score
+                    ),
+
+                    # IMPORTANT:
+                    # Priority comes directly from the TPI.
+                    priority_category=(
+                        tpi.priority_category
+                    ),
+
+                    recommendations=(
+                        recommendation_by_dimension.get(
+                            gap.entity_id,
+                            [],
+                        )
+                    ),
+
+                    details={
+                        "gap_priority": gap.priority,
+                        "gap_percent": gap.gap_percent,
+
+                        "current_level": (
+                            gap.details or {}
+                        ).get(
+                            "current_level"
+                        ),
+
+                        "target_level": (
+                            gap.details or {}
+                        ).get(
+                            "target_level"
+                        ),
+                    },
+                )
+            )
+
+        # UNIQUE ranking based on descending TPI score
+        return sorted(
+            results,
+            key=lambda result: (
+                -float(
+                    result.tpi_score
+                )
+                if result.tpi_score is not None
+                else float("inf"),
+                result.dimension_id,
+            ),
         )
 
-    # Classement UNIQUE par TPI décroissant
-     return sorted(
-        results,
-        key=lambda result: (
-            -float(
-                result.tpi_score
-            )
-            if result.tpi_score is not None
-            else float("inf"),
-            result.dimension_id,
-        ),
-    )
     # ========================================================================
-    # CALCUL COMPLET
+    # COMPLETE CALCULATION
     # ========================================================================
 
     def run(
@@ -264,10 +267,10 @@ class PriorityEngine:
         ] = None,
     ) -> dict[str, Any]:
         """
-        Lance une analyse décisionnelle complète.
+        Run a complete decision analysis.
 
-        Le calcul TPI n'est effectué que si decision_inputs
-        est fourni.
+        TPI calculation is performed only when decision_inputs
+        are provided.
 
         Returns:
             {
@@ -319,7 +322,7 @@ class PriorityEngine:
         }
 
     # ========================================================================
-    # MATRICE
+    # MATRIX
     # ========================================================================
 
     def build_priority_matrix(
@@ -327,8 +330,8 @@ class PriorityEngine:
         results: list[PriorityResult],
     ) -> pd.DataFrame:
         """
-        Construit une matrice tabulaire exploitable
-        par Streamlit ou par un export.
+        Build a tabular prioritization matrix
+        for Streamlit or data export.
         """
 
         rows = []
@@ -338,13 +341,13 @@ class PriorityEngine:
             rows.append(
                 {
                     "Dimension": result.dimension_id,
-                    "Nom": result.dimension_name,
-                    "Score actuel": result.current_score,
-                    "Cible": result.target_score,
-                    "Écart": result.gap,
+                    "Name": result.dimension_name,
+                    "Current Score": result.current_score,
+                    "Target": result.target_score,
+                    "Gap": result.gap,
                     "TPI": result.tpi_score,
-                    "Priorité": result.priority_category,
-                    "Recommandations": len(
+                    "Priority": result.priority_category,
+                    "Recommendations": len(
                         result.recommendations
                     ),
                 }
@@ -353,7 +356,7 @@ class PriorityEngine:
         return pd.DataFrame(rows)
 
     # ========================================================================
-    # PRIORITES
+    # PRIORITIES
     # ========================================================================
 
     def get_top_priorities(
@@ -362,7 +365,7 @@ class PriorityEngine:
         limit: int = 5,
     ) -> list[PriorityResult]:
         """
-        Retourne les principales dimensions prioritaires.
+        Return the top priority dimensions.
         """
 
         if limit <= 0:
@@ -375,7 +378,7 @@ class PriorityEngine:
         results: list[PriorityResult],
     ) -> list[PriorityResult]:
         """
-        Retourne les dimensions critiques et hautes.
+        Return critical and high-priority dimensions.
         """
 
         return [
@@ -383,15 +386,15 @@ class PriorityEngine:
             for result in results
             if result.priority_category
             in {
-                "Critique",
-                "Haute",
+                "Critical",
+                "High",
                 "critical",
                 "high",
             }
         ]
 
     # ========================================================================
-    # RESUME
+    # SUMMARY
     # ========================================================================
 
     def get_summary(
@@ -399,7 +402,7 @@ class PriorityEngine:
         results: list[PriorityResult],
     ) -> dict[str, Any]:
         """
-        Produit un résumé de la priorisation.
+        Generate a prioritization summary.
         """
 
         distribution: dict[
@@ -436,7 +439,7 @@ class PriorityEngine:
                 for result in results
                 if result.priority_category
                 in {
-                    "Critique",
+                    "Critical",
                     "critical",
                 }
             ),
@@ -445,7 +448,7 @@ class PriorityEngine:
                 for result in results
                 if result.priority_category
                 in {
-                    "Haute",
+                    "High",
                     "high",
                 }
             ),
@@ -502,11 +505,11 @@ class PriorityEngine:
     ) -> str:
 
         mapping = {
-            "critical": "Critique",
-            "high": "Haute",
-            "medium": "Moyenne",
-            "low": "Faible",
-            "none": "Très faible",
+            "critical": "Critical",
+            "high": "High",
+            "medium": "Medium",
+            "low": "Low",
+            "none": "Very Low",
         }
 
         return mapping.get(

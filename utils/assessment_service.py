@@ -118,7 +118,10 @@ def process_uploaded_assessment(
     """Run validation, scoring, gaps, recommendations, and dashboard adaptation."""
 
     validate_workbook_structure(path)
-    referentiel = load_referentiel()
+
+    # ★★★ CORRECTION ICI : charger le référentiel depuis le fichier uploadé ★★★
+    referentiel = load_referentiel(file_path=path)
+
     assessment = load_assessment(path)
 
     assessment_id = f"ASM-{uuid.uuid4().hex[:12].upper()}"
@@ -661,7 +664,7 @@ def _priority_label(value) -> str:
     raw = str(value).strip().lower()
     
     # Nettoyer les caractères parasites : parenthèses, apostrophes, points, etc.
-    raw = re.sub(r"[^a-zàâäéèêëïîôöùûüÿç\s]", "", raw).strip()
+    raw = re.sub(r"[^a-zàâäçéèêëïîôöùûüÿ\s]", "", raw).strip()
     
     labels = {
         "critical": "Critical",

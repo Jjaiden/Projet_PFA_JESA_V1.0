@@ -1,30 +1,32 @@
 """
-validator.py — Validation du référentiel et d'une évaluation JDMAF.
+validator.py — Validation of the reference framework and an assessment.
 
-Deux niveaux de validation :
+Two validation levels:
 
-1. Référentiel
-   - volumétrie
-   - structure hiérarchique
-   - pondérations
-   - niveaux de maturité
-   - niveaux cibles
-   - doublons
-   - identifiants orphelins
-   - cellules obligatoires
-   - version du référentiel
+1. Reference framework
+
+   - volume
+   - hierarchical structure
+   - weights
+   - maturity levels
+   - target levels
+   - duplicates
+   - orphan identifiers
+   - mandatory cells
+   - reference framework version
 
 2. Assessment
-   - Assessment_ID
-   - cohérence avec le référentiel
-   - Applicability
-   - R1 : score entier [0,5]
-   - R3 : présence d'une preuve
-   - scores manquants
 
-Convention :
-    error   = bloque le calcul
-    warning = n'empêche pas le calcul
+   - Assessment_ID
+   - consistency with the reference framework
+   - Applicability
+   - R1: integer score [0,5]
+   - R3: evidence presence
+   - missing scores
+
+Convention:
+error   = blocks calculation
+warning = does not prevent calculation
 """
 
 from __future__ import annotations
@@ -40,19 +42,18 @@ from utils.excel_utils import (
     sheet_to_records,
 )
 
-
 logger = settings.get_logger(__name__)
 
 
 # ============================================================================
-# STRUCTURES DE RAPPORT
+# VALIDATION REPORT STRUCTURES
 # ============================================================================
 
 
 @dataclass
 class ValidationIssue:
     """
-    Une anomalie détectée pendant la validation.
+    An issue detected during validation.
     """
 
     code: str
@@ -66,7 +67,7 @@ class ValidationIssue:
 @dataclass
 class ValidationReport:
     """
-    Rapport complet de validation.
+    Complete validation report.
     """
 
     issues: list[ValidationIssue] = field(
@@ -81,7 +82,7 @@ class ValidationReport:
         **context: Any,
     ) -> None:
         """
-        Ajoute une anomalie au rapport.
+        Add an issue to the validation report.
         """
 
         if severity not in {
@@ -89,7 +90,7 @@ class ValidationReport:
             "warning",
         }:
             raise ValueError(
-                "severity doit être 'error' ou 'warning'."
+                "severity must be 'error' or 'warning'."
             )
 
         self.issues.append(
@@ -135,15 +136,15 @@ class ValidationReport:
 
     def summary(self) -> str:
         return (
-            f"{len(self.errors)} erreur(s), "
-            f"{len(self.warnings)} avertissement(s)"
+            f"{len(self.errors)} error(s), "
+            f"{len(self.warnings)} warning(s)"
         )
 
 
 class ValidationBlockingError(Exception):
     """
-    Exception levée lorsqu'une validation contient
-    au moins une erreur bloquante.
+    Exception raised when validation contains
+    at least one blocking error.
     """
 
     def __init__(
@@ -158,8 +159,8 @@ class ValidationBlockingError(Exception):
         )
 
         super().__init__(
-            "Validation échouée "
-            f"({report.summary()}) :\n"
+            "Validation failed "
+            f"({report.summary()}):\n"
             f"{messages}"
         )
 
@@ -168,7 +169,7 @@ def ensure_valid(
     report: ValidationReport,
 ) -> None:
     """
-    Bloque le traitement si le rapport contient une erreur.
+    Stop processing if the validation report contains an error.
     """
 
     if not report.is_valid:
@@ -178,7 +179,7 @@ def ensure_valid(
 
 
 # ============================================================================
-# 1. VALIDATION DU REFERENTIEL
+# 1. REFERENCE FRAMEWORK VALIDATION
 # ============================================================================
 
 
@@ -187,14 +188,16 @@ def validate_referentiel(
     wb_path: Optional[Any] = None,
 ) -> ValidationReport:
     """
-    Valide le référentiel chargé.
+    Validate the loaded reference framework.
 
-    Contrôles :
-        QC-01 à QC-21
+    Controls:
+        QC-01 to QC-21
     """
 
     if not isinstance(ref, Referentiel):
-        raise TypeError("ref doit être une instance de Referentiel.")
+        raise TypeError(
+            "ref must be an instance of Referentiel."
+        )
 
     report = ValidationReport()
 
@@ -219,7 +222,7 @@ def validate_referentiel(
     )
 
     logger.info(
-        "Validation référentiel terminée : %s",
+        "Reference framework validation completed: %s",
         report.summary(),
     )
 
@@ -236,7 +239,7 @@ def _qc_volumetry(
     report: ValidationReport,
 ) -> None:
     """
-    Vérifie la volumétrie du référentiel.
+    Validate the reference framework volume.
     """
 
     # QC-01
@@ -245,7 +248,7 @@ def _qc_volumetry(
         "QC-01",
         len(ref.pillars),
         len(constants.PILLARS),
-        "piliers",
+        "pillars",
     )
 
     # QC-02
@@ -263,7 +266,7 @@ def _qc_volumetry(
         "QC-03",
         len(ref.subdimensions),
         len(constants.SUBDIMENSIONS),
-        "sous-dimensions",
+        "subdimensions",
     )
 
     # QC-04
@@ -272,7 +275,7 @@ def _qc_volumetry(
         "QC-04",
         len(ref.indicators),
         constants.EXPECTED_INDICATOR_COUNT,
-        "indicateurs",
+        "indicators",
     )
 
     # QC-05
@@ -296,7 +299,7 @@ def _qc_volumetry(
         "QC-05",
         total_matrix_rows,
         expected_matrix_rows,
-        "lignes DIMENSION_MATURITY_MATRICES",
+        "DIMENSION_MATURITY_MATRICES rows",
     )
 
     # QC-06
@@ -320,7 +323,7 @@ def _qc_volumetry(
         "QC-06",
         total_grid_rows,
         expected_grid_rows,
-        "lignes INDICATOR_SCORING_GRIDS",
+        "INDICATOR_SCORING_GRIDS rows",
     )
 
     # QC-07
@@ -340,9 +343,9 @@ def _qc_volumetry(
             report.add(
                 "QC-07",
                 "error",
-                f"Sous-dimension {subdimension_id} "
-                f"a {actual_count} indicateur(s) "
-                f"au lieu de "
+                f"Subdimension {subdimension_id} "
+                f"has {actual_count} indicator(s) "
+                f"instead of "
                 f"{constants.INDICATORS_PER_SUBDIMENSION}.",
                 subdimension_id=subdimension_id,
             )
@@ -388,7 +391,7 @@ def _qc_volumetry(
             "QC-09",
             indicator_id,
             levels,
-            "indicateur",
+            "indicator",
             expected_levels,
         )
 
@@ -407,8 +410,8 @@ def _qc_volumetry(
         report.add(
             "QC-10",
             "error",
-            "Niveau cible manquant pour "
-            f"{len(missing_targets)} dimension(s) : "
+            "Target level missing for "
+            f"{len(missing_targets)} dimension(s): "
             f"{missing_targets}",
             dimensions=missing_targets,
         )
@@ -422,15 +425,15 @@ def _check_count(
     label: str,
 ) -> None:
     """
-    Vérifie un nombre attendu.
+    Validate an expected count.
     """
 
     if actual != expected:
         report.add(
             code,
             "error",
-            f"Nombre de {label} attendu : "
-            f"{expected}, obtenu : {actual}.",
+            f"Expected number of {label}: "
+            f"{expected}, found: {actual}.",
         )
 
 
@@ -443,7 +446,7 @@ def _check_levels_complete(
     expected_levels: set,
 ) -> None:
     """
-    Vérifie qu'une entité possède exactement les niveaux 0 à 5.
+    Validate that an entity contains exactly levels 0 to 5.
     """
 
     if levels == expected_levels:
@@ -462,16 +465,16 @@ def _check_levels_complete(
     report.add(
         code,
         "error",
-        f"{kind.capitalize()} {entity_id} : "
-        "niveaux incomplets/incorrects "
-        f"(manquants={sorted(missing)}, "
-        f"en trop={sorted(extra)}).",
+        f"{kind.capitalize()} {entity_id}: "
+        "incomplete/invalid levels "
+        f"(missing={sorted(missing)}, "
+        f"extra={sorted(extra)}).",
         entity_id=entity_id,
     )
 
 
 # ============================================================================
-# QC-11 → QC-13 : PONDERATIONS
+# QC-11 → QC-13: WEIGHTS
 # ============================================================================
 
 
@@ -480,14 +483,14 @@ def _qc_weights(
     report: ValidationReport,
 ) -> None:
     """
-    Vérifie les sommes des pondérations.
+    Validate weight sums.
     """
 
     tolerance = (
         constants.WEIGHT_SUM_TOLERANCE
     )
 
-    # QC-11 : poids des piliers
+    # QC-11: pillar weights
     pillar_weights = ref.weights.get(
         "Pilier",
         {},
@@ -502,12 +505,12 @@ def _qc_weights(
         report.add(
             "QC-11",
             "error",
-            f"Somme des poids des piliers = "
-            f"{total:.4f}, attendu 1.0 "
+            f"Pillar weight sum = "
+            f"{total:.4f}, expected 1.0 "
             f"(±{tolerance}).",
         )
 
-    # QC-12 : dimensions par pilier
+    # QC-12: dimensions per pillar
     dimension_weights = ref.weights.get(
         "Dimension",
         {},
@@ -532,14 +535,14 @@ def _qc_weights(
             report.add(
                 "QC-12",
                 "error",
-                f"Somme des poids des dimensions "
-                f"du pilier {pillar_id} = "
-                f"{total:.4f}, attendu 1.0 "
+                f"Weight sum of dimensions "
+                f"under pillar {pillar_id} = "
+                f"{total:.4f}, expected 1.0 "
                 f"(±{tolerance}).",
                 pillar_id=pillar_id,
             )
 
-    # QC-13 : SD par dimension
+    # QC-13: subdimensions per dimension
     subdimension_weights = ref.weights.get(
         "Sous-dimension",
         {},
@@ -564,10 +567,10 @@ def _qc_weights(
             report.add(
                 "QC-13",
                 "error",
-                f"Somme des poids des "
-                f"sous-dimensions de "
+                f"Weight sum of "
+                f"subdimensions under "
                 f"{dimension_id} = "
-                f"{total:.4f}, attendu 1.0 "
+                f"{total:.4f}, expected 1.0 "
                 f"(±{tolerance}).",
                 dimension_id=dimension_id,
             )
@@ -583,7 +586,7 @@ def _qc_targets_and_ids(
     report: ValidationReport,
 ) -> None:
     """
-    Vérifie les niveaux cibles et les références des indicateurs.
+    Validate target levels and indicator references.
     """
 
     # QC-20
@@ -623,10 +626,10 @@ def _qc_targets_and_ids(
                 report.add(
                     "QC-20",
                     "error",
-                    f"{label} de {dimension_id} "
-                    f"hors bornes "
+                    f"{label} for {dimension_id} "
+                    f"is outside the valid range "
                     f"[{constants.SCORE_MIN}-"
-                    f"{constants.SCORE_MAX}] : "
+                    f"{constants.SCORE_MAX}]: "
                     f"{value}.",
                     dimension_id=dimension_id,
                 )
@@ -644,9 +647,9 @@ def _qc_targets_and_ids(
             report.add(
                 "QC-18",
                 "error",
-                f"Indicateur {indicator_id} "
-                f"référence un Pillar_ID "
-                f"invalide : "
+                f"Indicator {indicator_id} "
+                f"references an invalid "
+                f"Pillar_ID: "
                 f"{indicator.pillar_id}.",
                 indicator_id=indicator_id,
             )
@@ -658,9 +661,9 @@ def _qc_targets_and_ids(
             report.add(
                 "QC-19",
                 "error",
-                f"Indicateur {indicator_id} "
-                f"référence un Dimension_ID "
-                f"invalide : "
+                f"Indicator {indicator_id} "
+                f"references an invalid "
+                f"Dimension_ID: "
                 f"{indicator.dimension_id}.",
                 indicator_id=indicator_id,
             )
@@ -676,8 +679,8 @@ def _qc_raw_workbook_checks(
     report: ValidationReport,
 ) -> None:
     """
-    Contrôles nécessitant les données Excel brutes avant leur
-    transformation en dictionnaires.
+    Perform checks requiring raw Excel data before
+    transformation into dictionaries.
     """
 
     try:
@@ -689,14 +692,13 @@ def _qc_raw_workbook_checks(
         report.add(
             "QC-RAW",
             "warning",
-            "Classeur introuvable pour "
-            "les contrôles bruts : "
-            f"{wb_path}.",
+            "Reference workbook not found for "
+            f"raw checks: {wb_path}.",
         )
         return
 
     # ------------------------------------------------------------------------
-    # QC-14 : doublons Indicator_ID
+    # QC-14: duplicate Indicator_ID
     # ------------------------------------------------------------------------
 
     indicator_records = (
@@ -714,7 +716,7 @@ def _qc_raw_workbook_checks(
     )
 
     # ------------------------------------------------------------------------
-    # QC-15 : doublons Evidence_ID
+    # QC-15: duplicate Evidence_ID
     # ------------------------------------------------------------------------
 
     evidence_records = (
@@ -732,7 +734,7 @@ def _qc_raw_workbook_checks(
     )
 
     # ------------------------------------------------------------------------
-    # QC-16 : Subdimension_ID orphelins
+    # QC-16: orphan Subdimension_ID
     # ------------------------------------------------------------------------
 
     hierarchy_records = (
@@ -773,8 +775,8 @@ def _qc_raw_workbook_checks(
         report.add(
             "QC-16",
             "error",
-            "Subdimension_ID orphelin(s) "
-            "référencé(s) dans INDICATORS : "
+            "Orphan Subdimension_ID(s) "
+            "referenced in INDICATORS: "
             f"{sorted(orphans)}.",
             subdimensions=sorted(
                 orphans
@@ -782,7 +784,7 @@ def _qc_raw_workbook_checks(
         )
 
     # ------------------------------------------------------------------------
-    # QC-17 : cellules obligatoires
+    # QC-17: mandatory cells
     # ------------------------------------------------------------------------
 
     required_columns = (
@@ -805,9 +807,9 @@ def _qc_raw_workbook_checks(
             report.add(
                 "QC-17",
                 "error",
-                f"Indicateur "
-                f"{record.get('Indicator_ID', '?')} : "
-                "colonnes obligatoires vides : "
+                f"Indicator "
+                f"{record.get('Indicator_ID', '?')}: "
+                "mandatory columns are empty: "
                 f"{missing}.",
                 indicator_id=record.get(
                     "Indicator_ID"
@@ -815,7 +817,7 @@ def _qc_raw_workbook_checks(
             )
 
     # ------------------------------------------------------------------------
-    # QC-21 : version du référentiel
+    # QC-21: reference framework version
     # ------------------------------------------------------------------------
 
     metadata_records = (
@@ -847,9 +849,9 @@ def _qc_raw_workbook_checks(
         report.add(
             "QC-21",
             "warning",
-            "Version du référentiel "
+            "Reference framework version "
             "(Reference_Framework_Version) "
-            "non renseignée.",
+            "is not specified.",
         )
 
 
@@ -860,7 +862,7 @@ def _check_no_duplicates(
     id_column: str,
 ) -> None:
     """
-    Vérifie l'absence de doublons sur une colonne ID.
+    Validate that no duplicate values exist in an ID column.
     """
 
     seen: dict[Any, int] = {}
@@ -892,15 +894,15 @@ def _check_no_duplicates(
         report.add(
             code,
             "error",
-            f"Doublons détectés sur "
-            f"{id_column} : "
+            f"Duplicates detected for "
+            f"{id_column}: "
             f"{duplicates}.",
             duplicates=duplicates,
         )
 
 
 # ============================================================================
-# 2. VALIDATION D'UNE EVALUATION
+# 2. ASSESSMENT VALIDATION
 # ============================================================================
 
 
@@ -909,25 +911,29 @@ def validate_assessment(
     referentiel: Referentiel,
 ) -> ValidationReport:
     """
-    Valide une campagne d'évaluation.
+    Validate an assessment campaign.
 
-    Contrôles :
+    Controls:
         - Assessment_ID
-        - cohérence indicateurs
+        - indicator consistency
         - Applicability
-        - score manquant
+        - missing score
         - R1
         - R3
 
-    R2 n'est pas automatisé car il dépend de l'observation
-    et du jugement de l'évaluateur sur le terrain.
+    R2 is not automated because it depends on field observation
+    and evaluator judgment.
     """
 
     if not isinstance(assessment, Assessment):
-        raise TypeError("assessment doit être une instance de Assessment.")
+        raise TypeError(
+            "assessment must be an instance of Assessment."
+        )
 
     if not isinstance(referentiel, Referentiel):
-        raise TypeError("referentiel doit être une instance de Referentiel.")
+        raise TypeError(
+            "referentiel must be an instance of Referentiel."
+        )
 
     report = ValidationReport()
 
@@ -948,12 +954,12 @@ def validate_assessment(
         report.add(
             "META-01",
             "error",
-            "Assessment_ID manquant "
-            "dans ASSESSMENT_METADATA.",
+            "Assessment_ID is missing "
+            "from ASSESSMENT_METADATA.",
         )
 
     # ------------------------------------------------------------------------
-    # COHERENCE
+    # CONSISTENCY
     # ------------------------------------------------------------------------
 
     _check_indicator_coherence(
@@ -972,7 +978,7 @@ def validate_assessment(
     )
 
     logger.info(
-        "Validation évaluation terminée : %s",
+        "Assessment validation completed: %s",
         report.summary(),
     )
 
@@ -985,8 +991,8 @@ def _check_indicator_coherence(
     report: ValidationReport,
 ) -> None:
     """
-    Vérifie que l'évaluation correspond exactement
-    aux indicateurs du référentiel.
+    Validate that the assessment exactly matches
+    the indicators defined in the reference framework.
     """
 
     expected_ids = set(
@@ -997,8 +1003,8 @@ def _check_indicator_coherence(
         assessment.indicator_scores.keys()
     )
 
-    # Indicateurs présents dans Assessment
-    # mais absents du référentiel
+    # Indicators present in the assessment
+    # but absent from the reference framework
     orphans = (
         actual_ids
         - expected_ids
@@ -1008,16 +1014,16 @@ def _check_indicator_coherence(
         report.add(
             "COHERENCE-01",
             "error",
-            "L'évaluation référence "
-            "des indicateurs absents "
-            "du référentiel : "
+            "The assessment references "
+            "indicators that are absent "
+            "from the reference framework: "
             f"{sorted(orphans)}.",
             indicators=sorted(
                 orphans
             ),
         )
 
-    # Indicateurs attendus mais absents
+    # Expected indicators that are missing
     missing = (
         expected_ids
         - actual_ids
@@ -1027,45 +1033,74 @@ def _check_indicator_coherence(
         report.add(
             "COHERENCE-02",
             "error",
-            "Indicateurs du référentiel "
-            "absents de l'évaluation : "
+            "Indicators from the reference framework "
+            "are missing from the assessment: "
             f"{sorted(missing)}.",
             indicators=sorted(
                 missing
             ),
         )
 
-    # Les colonnes de hiérarchie de l'évaluation doivent correspondre au
-    # référentiel. Sans ce contrôle, une ligne peut porter un bon Indicator_ID
-    # mais être affichée sous une mauvaise dimension dans le questionnaire.
+    # The hierarchy fields in the assessment must match
+    # the reference framework. Without this check, a row could
+    # contain a valid Indicator_ID but be displayed under
+    # an incorrect dimension in the questionnaire.
     for indicator_id in actual_ids & expected_ids:
-        assessment_score = assessment.indicator_scores[indicator_id]
-        reference_indicator = referentiel.indicators[indicator_id]
 
-        if assessment_score.indicator_id != indicator_id:
+        assessment_score = (
+            assessment.indicator_scores[
+                indicator_id
+            ]
+        )
+
+        reference_indicator = (
+            referentiel.indicators[
+                indicator_id
+            ]
+        )
+
+        if (
+            assessment_score.indicator_id
+            != indicator_id
+        ):
             report.add(
                 "COHERENCE-03",
                 "error",
-                f"Clé {indicator_id} incohérente avec Indicator_ID "
-                f"de la ligne : {assessment_score.indicator_id!r}.",
+                f"Key {indicator_id} is inconsistent "
+                f"with the row's Indicator_ID: "
+                f"{assessment_score.indicator_id!r}.",
                 indicator_id=indicator_id,
             )
 
-        for field_name, actual_value, expected_value in (
-            ("Pillar_ID", assessment_score.pillar_id, reference_indicator.pillar_id),
-            ("Dimension_ID", assessment_score.dimension_id, reference_indicator.dimension_id),
+        for (
+            field_name,
+            actual_value,
+            expected_value,
+        ) in (
+            (
+                "Pillar_ID",
+                assessment_score.pillar_id,
+                reference_indicator.pillar_id,
+            ),
+            (
+                "Dimension_ID",
+                assessment_score.dimension_id,
+                reference_indicator.dimension_id,
+            ),
             (
                 "Subdimension_ID",
                 assessment_score.subdimension_id,
                 reference_indicator.subdimension_id,
             ),
         ):
+
             if actual_value != expected_value:
                 report.add(
                     "COHERENCE-04",
                     "error",
-                    f"{indicator_id} : {field_name}={actual_value!r}, "
-                    f"attendu {expected_value!r}.",
+                    f"{indicator_id}: "
+                    f"{field_name}={actual_value!r}, "
+                    f"expected {expected_value!r}.",
                     indicator_id=indicator_id,
                     field=field_name,
                 )
@@ -1076,7 +1111,7 @@ def _check_scores(
     report: ValidationReport,
 ) -> None:
     """
-    Vérifie les scores et l'applicabilité.
+    Validate scores and applicability.
     """
 
     for (
@@ -1102,17 +1137,17 @@ def _check_scores(
             report.add(
                 "APPLICABILITY-01",
                 "error",
-                f"{indicator_id} : "
-                "valeur Applicability invalide : "
+                f"{indicator_id}: "
+                "invalid Applicability value: "
                 f"{applicability!r}.",
                 indicator_id=indicator_id,
             )
 
-            # On ne peut pas interpréter la suite
+            # The remaining checks cannot be interpreted
             continue
 
         # --------------------------------------------------------------------
-        # Non applicable
+        # Not applicable
         # --------------------------------------------------------------------
 
         if (
@@ -1121,7 +1156,7 @@ def _check_scores(
             continue
 
         # --------------------------------------------------------------------
-        # Score manquant
+        # Missing score
         # --------------------------------------------------------------------
 
         selected_score = (
@@ -1139,16 +1174,17 @@ def _check_scores(
             report.add(
                 "R1-MISSING",
                 severity,
-                f"{indicator_id} : "
-                "applicable mais aucune note "
-                "saisie (Selected_Score vide).",
+                f"{indicator_id}: "
+                "applicable but no score "
+                "has been entered "
+                "(Selected_Score is empty).",
                 indicator_id=indicator_id,
             )
 
             continue
 
         # --------------------------------------------------------------------
-        # R1 : entier 0-5
+        # R1: integer 0-5
         # --------------------------------------------------------------------
 
         valid_integer = (
@@ -1162,8 +1198,8 @@ def _check_scores(
             )
         )
 
-        # Excel / pandas peut fournir 3.0
-        # pour une valeur entière.
+        # Excel / pandas may provide 3.0
+        # for an integer value.
         if isinstance(
             selected_score,
             float,
@@ -1176,11 +1212,11 @@ def _check_scores(
             report.add(
                 "R1",
                 "error",
-                f"{indicator_id} : "
-                f"note {selected_score!r} "
-                "non entière. "
-                "Les notes doivent être "
-                "des entiers de 0 à 5.",
+                f"{indicator_id}: "
+                f"score {selected_score!r} "
+                "is not an integer. "
+                "Scores must be "
+                "integers from 0 to 5.",
                 indicator_id=indicator_id,
             )
 
@@ -1197,16 +1233,16 @@ def _check_scores(
             report.add(
                 "R1",
                 "error",
-                f"{indicator_id} : "
-                f"note {numeric_score} "
-                "hors de l'échelle valide "
+                f"{indicator_id}: "
+                f"score {numeric_score} "
+                "is outside the valid scale "
                 f"[{constants.SCORE_MIN}-"
                 f"{constants.SCORE_MAX}].",
                 indicator_id=indicator_id,
             )
 
         # --------------------------------------------------------------------
-        # R3 : preuve
+        # R3: evidence
         # --------------------------------------------------------------------
 
         evidence_reference = (
@@ -1217,9 +1253,9 @@ def _check_scores(
             report.add(
                 "R3",
                 "warning",
-                f"{indicator_id} : "
-                f"note {numeric_score} saisie "
-                "sans référence de preuve "
+                f"{indicator_id}: "
+                f"score {numeric_score} entered "
+                "without an evidence reference "
                 "(Evidence_Reference).",
                 indicator_id=indicator_id,
             )

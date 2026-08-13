@@ -1,36 +1,36 @@
 """
-scoring.py — Moteur de calcul des scores du JDMAF.
+scoring.py — JDMAF Score Calculation Engine.
 
-Responsabilité :
-    - calcul du score d'un indicateur
-    - calcul des sous-dimensions
-    - calcul des dimensions
-    - calcul des piliers
-    - calcul du DMI
+Responsibilities:
+- calculate indicator scores
+- calculate subdimension scores
+- calculate dimension scores
+- calculate pillar scores
+- calculate the DMI
 
-Ce module ne contient aucune logique frontend.
+This module contains no frontend logic.
 
-Hiérarchie :
-    Indicateur
-        ↓
-    Sous-dimension
-        ↓
-    Dimension
-        ↓
-    Pilier
-        ↓
-    DMI
+Hierarchy:
+Indicator
+↓
+Subdimension
+↓
+Dimension
+↓
+Pillar
+↓
+DMI
 
-Règles :
-    R1 : score indicateur entier dans [0, 5]
-    R2 : niveau choisi par l'évaluateur selon la grille de scoring
-    R3 : preuve recommandée, contrôlée dans validator.py
+Rules:
+R1: Indicator score must be an integer in [0, 5]
+R2: Level is selected by the evaluator according to the scoring grid
+R3: Recommended evidence is controlled in validator.py
 
-Agrégation :
-    SD        = moyenne plafonnée des indicateurs
-    Dimension = moyenne pondérée des SD
-    Pilier    = moyenne pondérée des dimensions
-    DMI       = moyenne pondérée des piliers × 20
+Aggregation:
+Subdimension = capped average of indicators
+Dimension    = weighted average of subdimensions
+Pillar       = weighted average of dimensions
+DMI          = weighted average of pillars × 20
 """
 
 from __future__ import annotations
@@ -41,19 +41,16 @@ import math
 
 from config import constants, settings
 
-
 logger = settings.get_logger(__name__)
 
-
 # ============================================================================
-# RESULTAT DE CALCUL
+# CALCULATION RESULT
 # ============================================================================
-
 
 @dataclass
 class ScoreResult:
     """
-    Résultat d'un calcul de score pour une entité de la hiérarchie.
+    Result of a score calculation for an entity in the hierarchy.
     """
 
     entity_id: str
@@ -74,15 +71,18 @@ class ScoreResult:
 
     def to_dict(self) -> Dict[str, Any]:
         """
-        Convertit le résultat en dictionnaire exploitable par les autres
-        modules du backend ou par le frontend.
+        Convert the result into a dictionary that can be consumed
+        by other backend modules or by the frontend.
         """
 
         return {
             "entity_id": self.entity_id,
             "entity_name": self.entity_name,
             "entity_type": self.entity_type,
-            "score": round(self.score, settings.SCORE_DECIMAL_PRECISION),
+            "score": round(
+                self.score,
+                settings.SCORE_DECIMAL_PRECISION,
+            ),
             "level": self.level,
             "level_name": self.level_name,
             "parent_id": self.parent_id,
@@ -94,23 +94,25 @@ class ScoreResult:
 
 
 # ============================================================================
-# MOTEUR DE SCORING
+# SCORING ENGINE
 # ============================================================================
-
 
 class ScoringEngine:
     """
-    Moteur de scoring du JDMAF.
+    JDMAF scoring engine.
 
-    Il réalise uniquement les calculs mathématiques.
-    L'orchestration globale est assurée par aggregation.py.
+    This class performs mathematical calculations only.
+    Global orchestration is handled by aggregation.py.
     """
 
-    def __init__(self, config: Optional[Dict[str, Any]] = None):
+    def __init__(
+        self,
+        config: Optional[Dict[str, Any]] = None,
+    ):
         """
         Args:
             config:
-                Configuration optionnelle contenant éventuellement :
+                Optional configuration that may contain:
 
                 {
                     "pillar_weights": {...},
@@ -120,20 +122,23 @@ class ScoringEngine:
         """
 
         self.config = config or {}
+
         self.maturity_levels = constants.MATURITY_LEVELS
 
         self.weights = self._load_weights()
 
     # ------------------------------------------------------------------------
-    # CHARGEMENT DES POIDS
+    # WEIGHT LOADING
     # ------------------------------------------------------------------------
 
-    def _load_weights(self) -> Dict[str, Dict[str, float]]:
+    def _load_weights(
+        self,
+    ) -> Dict[str, Dict[str, float]]:
         """
-        Charge les pondérations éventuellement fournies dans la configuration.
+        Load weighting configurations when provided.
 
-        Les poids du référentiel Excel sont normalement récupérés par
-        aggregation.py via ReferenceLoader.
+        Weights from the Excel reference repository are normally
+        retrieved by aggregation.py.
         """
 
         return {
@@ -155,80 +160,90 @@ class ScoringEngine:
         }
 
     # ------------------------------------------------------------------------
-    # OUTILS INTERNES
+    # INTERNAL UTILITIES
     # ------------------------------------------------------------------------
 
-    def _get_level_name(self, level: int) -> str:
-        """Retourne le nom du niveau de maturité."""
+    def _get_level_name(
+        self,
+        level: int,
+    ) -> str:
+        """Return the name of a maturity level."""
 
         return self.maturity_levels.get(
             level,
-            f"Niveau {level}",
+            f"Level {level}",
         )
 
-    def get_maturity_level_description(self, level: int) -> str:
+    def get_maturity_level_description(
+        self,
+        level: int,
+    ) -> str:
         """
-        Retourne la description du niveau de maturité.
+        Return the description of a maturity level.
 
-        Les descriptions correspondent à l'échelle définie dans le référentiel.
+        Descriptions correspond to the maturity scale defined
+        in the reference repository.
         """
 
         descriptions = {
             0: (
-                "Aucune initiative digitale identifiée. "
-                "Les processus sont entièrement manuels ou analogiques."
+                "No digital initiative identified. "
+                "Processes are entirely manual or analogue."
             ),
             1: (
-                "Des outils numériques sont déployés ponctuellement "
-                "pour remplacer certaines tâches manuelles. "
-                "Les solutions restent locales et peu standardisées."
+                "Digital tools are deployed occasionally "
+                "to replace certain manual tasks. "
+                "Solutions remain local and poorly standardized."
             ),
             2: (
-                "Les systèmes industriels et informatiques (OT/IT) "
-                "sont interconnectés et échangent des données de manière fiable."
+                "Industrial and information systems (OT/IT) "
+                "are interconnected and exchange data reliably."
             ),
             3: (
-                "Les données sont centralisées, historisées et accessibles "
-                "en temps réel. Des indicateurs soutiennent le pilotage."
+                "Data is centralized, historized, and accessible "
+                "in real time. Performance indicators support management."
             ),
             4: (
-                "Les données sont exploitées pour analyser les performances, "
-                "identifier les causes des écarts et améliorer les opérations."
+                "Data is leveraged to analyze performance, "
+                "identify the causes of deviations, and improve operations."
             ),
             5: (
-                "Les systèmes assistent ou automatisent la prise de décision "
-                "grâce à des analyses avancées et à l'intelligence artificielle."
+                "Systems assist or automate decision-making "
+                "through advanced analytics and artificial intelligence."
             ),
         }
 
         return descriptions.get(
             level,
-            "Niveau non défini",
+            "Level not defined",
         )
 
-    def _validate_score(self, score: Any) -> None:
+    def _validate_score(
+        self,
+        score: Any,
+    ) -> None:
         """
-        Vérifie qu'un score indicateur est un entier entre 0 et 5.
+        Validate that an indicator score is an integer between 0 and 5.
 
-        Les booléens sont explicitement refusés car Python considère
-        bool comme un sous-type de int.
+        Booleans are explicitly rejected because Python considers
+        bool to be a subclass of int.
         """
 
         if isinstance(score, bool):
             raise ValueError(
-                "Le score ne peut pas être un booléen."
+                "Score cannot be a boolean."
             )
 
         if not isinstance(score, int):
             raise ValueError(
-                f"Le score doit être un entier. Valeur reçue : {score!r}"
+                f"Score must be an integer. Received value: {score!r}"
             )
 
         if score not in constants.VALID_INDICATOR_SCORES:
             raise ValueError(
-                f"Le score doit être compris entre "
-                f"{constants.SCORE_MIN} et {constants.SCORE_MAX}. "
-                f"Valeur reçue : {score}"
+                f"Score must be between "
+                f"{constants.SCORE_MIN} and {constants.SCORE_MAX}. "
+                f"Received value: {score}"
             )
 
     def _normalize_weights(
@@ -238,42 +253,54 @@ class ScoringEngine:
         default_weight: float,
     ) -> List[float]:
         """
-        Retourne une liste de poids normalisés.
+        Return a normalized list of weights.
 
-        Les éléments exclus (ex. Non applicable) ne sont pas inclus dans
-        component_ids. Les poids sont donc automatiquement renormalisés.
+        Excluded elements (e.g. Not Applicable) are not included
+        in component_ids. The remaining weights are therefore
+        automatically renormalized.
 
-        Exemple :
-            poids initiaux = [0.5, 0.5]
-            deuxième élément N/A
-            poids restants = [1.0]
+        Example:
+            initial weights = [0.5, 0.5]
+            second element = N/A
+            remaining weights = [1.0]
         """
 
         if not component_ids:
             return []
 
-        # Aucun poids fourni -> poids égaux
+        # No weights provided -> equal weights
         if not weights:
-            raw_weights = [default_weight] * len(component_ids)
+            raw_weights = [
+                default_weight
+            ] * len(component_ids)
+
         else:
             raw_weights = []
 
             for component_id in component_ids:
-                value = weights.get(component_id, default_weight)
+                value = weights.get(
+                    component_id,
+                    default_weight,
+                )
 
                 if value is None:
                     value = default_weight
 
                 try:
                     value = float(value)
-                except (TypeError, ValueError) as exc:
+
+                except (
+                    TypeError,
+                    ValueError,
+                ) as exc:
                     raise ValueError(
-                        f"Poids invalide pour {component_id}: {value!r}"
+                        f"Invalid weight for {component_id}: {value!r}"
                     ) from exc
 
                 if not math.isfinite(value) or value < 0:
                     raise ValueError(
-                        f"Le poids de {component_id} doit être un nombre fini positif ou nul."
+                        f"Weight for {component_id} must be "
+                        "a finite non-negative number."
                     )
 
                 raw_weights.append(value)
@@ -282,7 +309,7 @@ class ScoringEngine:
 
         if total_weight <= 0:
             raise ValueError(
-                "La somme des poids applicables doit être strictement positive."
+                "The sum of applicable weights must be strictly positive."
             )
 
         return [
@@ -299,8 +326,7 @@ class ScoringEngine:
         details: Optional[Dict[str, Any]] = None,
     ) -> ScoreResult:
         """
-        Construit un résultat standard pour une entité entièrement
-        non applicable.
+        Build a standard result for an entirely non-applicable entity.
         """
 
         return ScoreResult(
@@ -316,7 +342,7 @@ class ScoringEngine:
         )
 
     # ------------------------------------------------------------------------
-    # INDICATEUR
+    # INDICATOR
     # ------------------------------------------------------------------------
 
     def calculate_indicator_score(
@@ -329,58 +355,69 @@ class ScoringEngine:
         applicability: str = constants.APPLICABILITY_APPLICABLE,
     ) -> ScoreResult:
         """
-        Calcule le score d'un indicateur.
+        Calculate the score of an indicator.
 
-        R1 :
-            score entier dans [0,5]
+        R1:
+            Score must be an integer in [0, 5].
 
         Args:
             indicator_id:
-                ID de l'indicateur, ex. I-D1-01.
+                Indicator ID, e.g. I-D1-01.
 
             selected_score:
-                Note attribuée par l'évaluateur.
+                Score assigned by the evaluator.
 
             scoring_grid:
-                Informations de la grille de scoring correspondant
-                au niveau sélectionné.
+                Scoring grid information corresponding
+                to the selected level.
 
             indicator_name:
-                Nom de l'indicateur.
+                Indicator name.
 
             parent_id:
-                Sous-dimension parente.
+                Parent subdimension.
 
             applicability:
-                Applicable / Non applicable.
+                Applicable / Not Applicable.
         """
 
-        if applicability == constants.APPLICABILITY_NOT_APPLICABLE:
+        if (
+            applicability
+            == constants.APPLICABILITY_NOT_APPLICABLE
+        ):
             return self._build_non_applicable_result(
                 entity_id=indicator_id,
                 entity_name=indicator_name or indicator_id,
                 entity_type="indicator",
                 parent_id=parent_id,
                 details={
-                    "reason": "Indicateur marqué Non applicable"
+                    "reason": "Indicator marked as Not Applicable"
                 },
             )
 
-        if applicability != constants.APPLICABILITY_APPLICABLE:
+        if (
+            applicability
+            != constants.APPLICABILITY_APPLICABLE
+        ):
             raise ValueError(
-                f"Applicability invalide pour {indicator_id}: "
+                f"Invalid applicability for {indicator_id}: "
                 f"{applicability!r}"
             )
 
-        self._validate_score(selected_score)
+        self._validate_score(
+            selected_score
+        )
 
         grid = scoring_grid or {}
 
-        level_name = self._get_level_name(selected_score)
+        level_name = self._get_level_name(
+            selected_score
+        )
 
         return ScoreResult(
             entity_id=indicator_id,
-            entity_name=indicator_name or grid.get(
+            entity_name=indicator_name
+            or grid.get(
                 "Indicator_Name",
                 indicator_id,
             ),
@@ -389,7 +426,9 @@ class ScoringEngine:
             level=selected_score,
             level_name=level_name,
             parent_id=parent_id,
-            applicability=constants.APPLICABILITY_APPLICABLE,
+            applicability=(
+                constants.APPLICABILITY_APPLICABLE
+            ),
             details={
                 "selected_score": selected_score,
                 "grid_description": grid.get(
@@ -404,7 +443,7 @@ class ScoringEngine:
         )
 
     # ------------------------------------------------------------------------
-    # SOUS-DIMENSION
+    # SUBDIMENSION
     # ------------------------------------------------------------------------
 
     def calculate_subdimension_score(
@@ -414,44 +453,56 @@ class ScoringEngine:
         subdimension_name: Optional[str] = None,
     ) -> ScoreResult:
         """
-        Calcule le score d'une sous-dimension.
+        Calculate the score of a subdimension.
 
-        Règle :
+        Rule:
             Score_SD =
                 min(
-                    moyenne(indicateurs applicables),
-                    minimum(indicateurs applicables) + 1
+                    average(applicable indicators),
+                    minimum(applicable indicators) + 1
                 )
 
-        Cette règle empêche une faiblesse critique d'être masquée
-        par une moyenne élevée.
+        This rule prevents a critical weakness from being hidden
+        by a high average score.
         """
 
         if not indicator_scores:
             return self._build_non_applicable_result(
                 entity_id=subdimension_id,
-                entity_name=subdimension_name or subdimension_id,
+                entity_name=(
+                    subdimension_name
+                    or subdimension_id
+                ),
                 entity_type="subdimension",
                 details={
-                    "error": "Aucun indicateur disponible"
+                    "error": "No indicators available"
                 },
             )
 
         applicable_scores = [
             result
             for result in indicator_scores
-            if result.applicability
-            != constants.APPLICABILITY_NOT_APPLICABLE
+            if (
+                result.applicability
+                != constants.APPLICABILITY_NOT_APPLICABLE
+            )
         ]
 
         if not applicable_scores:
             return self._build_non_applicable_result(
                 entity_id=subdimension_id,
-                entity_name=subdimension_name or subdimension_id,
+                entity_name=(
+                    subdimension_name
+                    or subdimension_id
+                ),
                 entity_type="subdimension",
                 details={
-                    "reason": "Tous les indicateurs sont Non applicable",
-                    "total_count": len(indicator_scores),
+                    "reason": (
+                        "All indicators are Not Applicable"
+                    ),
+                    "total_count": len(
+                        indicator_scores
+                    ),
                 },
             )
 
@@ -461,9 +512,10 @@ class ScoringEngine:
         ]
 
         mean_score = sum(scores) / len(scores)
+
         minimum_score = min(scores)
 
-        # Règle de moyenne plafonnée
+        # Capped average rule
         cap = minimum_score + 1.0
 
         final_score = min(
@@ -476,14 +528,19 @@ class ScoringEngine:
             settings.SCORE_DECIMAL_PRECISION,
         )
 
-        level = int(math.floor(final_score))
+        level = int(
+            math.floor(final_score)
+        )
 
         level = min(
-            max(level, constants.SCORE_MIN),
+            max(
+                level,
+                constants.SCORE_MIN,
+            ),
             constants.SCORE_MAX,
         )
 
-        # Détermination du parent à partir de constants.py
+        # Determine parent from constants.py
         parent_id = constants.SUBDIMENSIONS.get(
             subdimension_id,
             (None, None),
@@ -491,17 +548,24 @@ class ScoringEngine:
 
         return ScoreResult(
             entity_id=subdimension_id,
-            entity_name=subdimension_name or subdimension_id,
+            entity_name=(
+                subdimension_name
+                or subdimension_id
+            ),
             entity_type="subdimension",
             score=final_score,
             level=level,
-            level_name=self._get_level_name(level),
+            level_name=self._get_level_name(
+                level
+            ),
             parent_id=parent_id,
             children_scores={
                 result.entity_id: result.score
                 for result in indicator_scores
             },
-            applicability=constants.APPLICABILITY_APPLICABLE,
+            applicability=(
+                constants.APPLICABILITY_APPLICABLE
+            ),
             details={
                 "indicator_scores": scores,
                 "mean_score": round(
@@ -510,8 +574,12 @@ class ScoringEngine:
                 ),
                 "minimum_score": minimum_score,
                 "cap": cap,
-                "applicable_count": len(applicable_scores),
-                "total_count": len(indicator_scores),
+                "applicable_count": len(
+                    applicable_scores
+                ),
+                "total_count": len(
+                    indicator_scores
+                ),
             },
         )
 
@@ -527,42 +595,52 @@ class ScoringEngine:
         weights: Optional[Dict[str, float]] = None,
     ) -> ScoreResult:
         """
-        Calcule le score d'une dimension par moyenne pondérée
-        des sous-dimensions applicables.
+        Calculate the score of a dimension using a weighted average
+        of applicable subdimensions.
         """
 
         if not subdimension_scores:
             return self._build_non_applicable_result(
                 entity_id=dimension_id,
-                entity_name=dimension_name or dimension_id,
+                entity_name=(
+                    dimension_name
+                    or dimension_id
+                ),
                 entity_type="dimension",
                 parent_id=constants.DIMENSIONS.get(
                     dimension_id,
                     (None, None),
                 )[0],
                 details={
-                    "error": "Aucune sous-dimension disponible"
+                    "error": "No subdimensions available"
                 },
             )
 
         applicable_scores = [
             result
             for result in subdimension_scores
-            if result.applicability
-            != constants.APPLICABILITY_NOT_APPLICABLE
+            if (
+                result.applicability
+                != constants.APPLICABILITY_NOT_APPLICABLE
+            )
         ]
 
         if not applicable_scores:
             return self._build_non_applicable_result(
                 entity_id=dimension_id,
-                entity_name=dimension_name or dimension_id,
+                entity_name=(
+                    dimension_name
+                    or dimension_id
+                ),
                 entity_type="dimension",
                 parent_id=constants.DIMENSIONS.get(
                     dimension_id,
                     (None, None),
                 )[0],
                 details={
-                    "reason": "Toutes les sous-dimensions sont Non applicable"
+                    "reason": (
+                        "All subdimensions are Not Applicable"
+                    )
                 },
             )
 
@@ -574,7 +652,10 @@ class ScoringEngine:
         normalized_weights = self._normalize_weights(
             component_ids=component_ids,
             weights=weights,
-            default_weight=constants.DEFAULT_WEIGHT_SUBDIMENSION_PER_DIMENSION,
+            default_weight=(
+                constants
+                .DEFAULT_WEIGHT_SUBDIMENSION_PER_DIMENSION
+            ),
         )
 
         weighted_sum = sum(
@@ -590,10 +671,15 @@ class ScoringEngine:
             settings.SCORE_DECIMAL_PRECISION,
         )
 
-        level = int(math.floor(final_score))
+        level = int(
+            math.floor(final_score)
+        )
 
         level = min(
-            max(level, constants.SCORE_MIN),
+            max(
+                level,
+                constants.SCORE_MIN,
+            ),
             constants.SCORE_MAX,
         )
 
@@ -604,17 +690,24 @@ class ScoringEngine:
 
         return ScoreResult(
             entity_id=dimension_id,
-            entity_name=dimension_name or dimension_id,
+            entity_name=(
+                dimension_name
+                or dimension_id
+            ),
             entity_type="dimension",
             score=final_score,
             level=level,
-            level_name=self._get_level_name(level),
+            level_name=self._get_level_name(
+                level
+            ),
             parent_id=parent_id,
             children_scores={
                 result.entity_id: result.score
                 for result in applicable_scores
             },
-            applicability=constants.APPLICABILITY_APPLICABLE,
+            applicability=(
+                constants.APPLICABILITY_APPLICABLE
+            ),
             details={
                 "subdimension_scores": [
                     result.score
@@ -630,13 +723,17 @@ class ScoringEngine:
                     weighted_sum,
                     settings.SCORE_DECIMAL_PRECISION,
                 ),
-                "applicable_count": len(applicable_scores),
-                "total_count": len(subdimension_scores),
+                "applicable_count": len(
+                    applicable_scores
+                ),
+                "total_count": len(
+                    subdimension_scores
+                ),
             },
         )
 
     # ------------------------------------------------------------------------
-    # PILIER
+    # PILLAR
     # ------------------------------------------------------------------------
 
     def calculate_pillar_score(
@@ -647,34 +744,44 @@ class ScoringEngine:
         weights: Optional[Dict[str, float]] = None,
     ) -> ScoreResult:
         """
-        Calcule le score d'un pilier par moyenne pondérée
-        des dimensions applicables.
+        Calculate the score of a pillar using a weighted average
+        of applicable dimensions.
         """
 
         if not dimension_scores:
             return self._build_non_applicable_result(
                 entity_id=pillar_id,
-                entity_name=pillar_name or pillar_id,
+                entity_name=(
+                    pillar_name
+                    or pillar_id
+                ),
                 entity_type="pillar",
                 details={
-                    "error": "Aucune dimension disponible"
+                    "error": "No dimensions available"
                 },
             )
 
         applicable_scores = [
             result
             for result in dimension_scores
-            if result.applicability
-            != constants.APPLICABILITY_NOT_APPLICABLE
+            if (
+                result.applicability
+                != constants.APPLICABILITY_NOT_APPLICABLE
+            )
         ]
 
         if not applicable_scores:
             return self._build_non_applicable_result(
                 entity_id=pillar_id,
-                entity_name=pillar_name or pillar_id,
+                entity_name=(
+                    pillar_name
+                    or pillar_id
+                ),
                 entity_type="pillar",
                 details={
-                    "reason": "Toutes les dimensions sont Non applicable"
+                    "reason": (
+                        "All dimensions are Not Applicable"
+                    )
                 },
             )
 
@@ -686,7 +793,10 @@ class ScoringEngine:
         normalized_weights = self._normalize_weights(
             component_ids=component_ids,
             weights=weights,
-            default_weight=constants.DEFAULT_WEIGHT_DIMENSION_PER_PILLAR,
+            default_weight=(
+                constants
+                .DEFAULT_WEIGHT_DIMENSION_PER_PILLAR
+            ),
         )
 
         weighted_sum = sum(
@@ -702,25 +812,37 @@ class ScoringEngine:
             settings.SCORE_DECIMAL_PRECISION,
         )
 
-        level = int(math.floor(final_score))
+        level = int(
+            math.floor(final_score)
+        )
 
         level = min(
-            max(level, constants.SCORE_MIN),
+            max(
+                level,
+                constants.SCORE_MIN,
+            ),
             constants.SCORE_MAX,
         )
 
         return ScoreResult(
             entity_id=pillar_id,
-            entity_name=pillar_name or pillar_id,
+            entity_name=(
+                pillar_name
+                or pillar_id
+            ),
             entity_type="pillar",
             score=final_score,
             level=level,
-            level_name=self._get_level_name(level),
+            level_name=self._get_level_name(
+                level
+            ),
             children_scores={
                 result.entity_id: result.score
                 for result in applicable_scores
             },
-            applicability=constants.APPLICABILITY_APPLICABLE,
+            applicability=(
+                constants.APPLICABILITY_APPLICABLE
+            ),
             details={
                 "dimension_scores": [
                     result.score
@@ -736,8 +858,12 @@ class ScoringEngine:
                     weighted_sum,
                     settings.SCORE_DECIMAL_PRECISION,
                 ),
-                "applicable_count": len(applicable_scores),
-                "total_count": len(dimension_scores),
+                "applicable_count": len(
+                    applicable_scores
+                ),
+                "total_count": len(
+                    dimension_scores
+                ),
             },
         )
 
@@ -751,42 +877,44 @@ class ScoringEngine:
         weights: Optional[Dict[str, float]] = None,
     ) -> ScoreResult:
         """
-        Calcule le Digital Maturity Index.
+        Calculate the Digital Maturity Index.
 
-        Formule :
+        Formula:
 
-            DMI_score = Σ(wi × Score_Pi)
+            DMI_score = Σ(wi × Pillar_Score)
 
             DMI_% = DMI_score × 20
 
-        Le score interne reste sur [0,5].
-        Le DMI affiché est exprimé sur [0,100].
+        The internal score remains on [0, 5].
+        The displayed DMI is expressed on [0, 100].
         """
 
         if not pillar_scores:
             return self._build_non_applicable_result(
                 entity_id="DMI",
-                entity_name="Indice de Maturité Digitale",
+                entity_name="Digital Maturity Index",
                 entity_type="dmi",
                 details={
-                    "error": "Aucun pilier disponible"
+                    "error": "No pillars available"
                 },
             )
 
         applicable_scores = [
             result
             for result in pillar_scores
-            if result.applicability
-            != constants.APPLICABILITY_NOT_APPLICABLE
+            if (
+                result.applicability
+                != constants.APPLICABILITY_NOT_APPLICABLE
+            )
         ]
 
         if not applicable_scores:
             return self._build_non_applicable_result(
                 entity_id="DMI",
-                entity_name="Indice de Maturité Digitale",
+                entity_name="Digital Maturity Index",
                 entity_type="dmi",
                 details={
-                    "reason": "Aucun pilier applicable"
+                    "reason": "No applicable pillars"
                 },
             )
 
@@ -815,29 +943,39 @@ class ScoringEngine:
         )
 
         dmi_percent = round(
-            weighted_sum * constants.DMI_SCALE_FACTOR,
+            weighted_sum
+            * constants.DMI_SCALE_FACTOR,
             settings.DMI_DECIMAL_PRECISION,
         )
 
-        level = int(math.floor(weighted_sum))
+        level = int(
+            math.floor(weighted_sum)
+        )
 
         level = min(
-            max(level, constants.SCORE_MIN),
+            max(
+                level,
+                constants.SCORE_MIN,
+            ),
             constants.SCORE_MAX,
         )
 
         return ScoreResult(
             entity_id="DMI",
-            entity_name="Indice de Maturité Digitale",
+            entity_name="Digital Maturity Index",
             entity_type="dmi",
             score=dmi_percent,
             level=level,
-            level_name=self._get_level_name(level),
+            level_name=self._get_level_name(
+                level
+            ),
             children_scores={
                 result.entity_id: result.score
                 for result in applicable_scores
             },
-            applicability=constants.APPLICABILITY_APPLICABLE,
+            applicability=(
+                constants.APPLICABILITY_APPLICABLE
+            ),
             details={
                 "pillar_scores": {
                     result.entity_id: result.score
@@ -851,7 +989,11 @@ class ScoringEngine:
                 ),
                 "weighted_score_0_5": weighted_sum,
                 "dmi_percent": dmi_percent,
-                "applicable_count": len(applicable_scores),
-                "total_count": len(pillar_scores),
+                "applicable_count": len(
+                    applicable_scores
+                ),
+                "total_count": len(
+                    pillar_scores
+                ),
             },
         )

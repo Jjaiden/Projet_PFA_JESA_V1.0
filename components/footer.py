@@ -1,31 +1,32 @@
 # JESA_DMAT/components/footer.py
+
 """
-Composant de pied de page réutilisable pour JESA DMAT.
+Reusable footer component for JESA DMAT.
 
-Ce module fournit un composant pour afficher un footer professionnel
-dans les pages Streamlit, en utilisant le design system existant.
+This module provides a component for displaying a professional footer
+in Streamlit pages, using the existing design system.
 
-Utilisation typique:
-    from components.footer import render_footer
+Typical usage:
+from components.footer import render_footer
 
-    # Footer simple
-    render_footer()
+# Simple footer
+render_footer()
 
-    # Footer complet
-    render_footer(
-        product_name="JESA DMAT",
-        version="v1.0.0",
-        organization="JESA",
-        copyright_text="© 2026 JESA. All rights reserved.",
-        tagline="Digital Maturity Assessment Tool",
-        links=[
-            {"label": "JESA", "url": "https://www.jesa.ma"},
-            {"label": "Support", "url": "#"},
-        ],
-        align="center",
-        compact=False,
-        show_divider=True,
-    )
+# Full footer
+render_footer(
+    product_name="JESA DMAT",
+    version="v1.0.0",
+    organization="JESA",
+    copyright_text="© 2026 JESA. All rights reserved.",
+    tagline="Digital Maturity Assessment Tool",
+    links=[
+        {"label": "JESA", "url": "https://www.jesa.ma"},
+        {"label": "Support", "url": "#"},
+    ],
+    align="center",
+    compact=False,
+    show_divider=True,
+)
 """
 
 from __future__ import annotations
@@ -38,42 +39,44 @@ import streamlit as st
 
 
 # ============================================================================
-# CONSTANTES
+# CONSTANTS
 # ============================================================================
 
 _VALID_ALIGNMENTS = {"left", "center", "right"}
 
 
 # ============================================================================
-# HELPERS INTERNES
+# INTERNAL HELPERS
 # ============================================================================
+
 
 def _render_html(html: str) -> None:
     """
-    Rend du HTML via Streamlit.
+    Render HTML through Streamlit.
 
-    Utilise st.markdown avec unsafe_allow_html=True pour rester cohérent
-    avec les autres composants du projet (cards.py, header.py, etc.).
-    Si la version de Streamlit est suffisamment récente (>1.36), on pourrait
-    utiliser st.html() mais cela nécessiterait de changer tous les composants.
+    Uses st.markdown with unsafe_allow_html=True to remain consistent
+    with the other project components.
     """
     st.markdown(html, unsafe_allow_html=True)
 
 
-def _build_footer_classes(align: str = "center", compact: bool = False) -> str:
+def _build_footer_classes(
+    align: str = "center",
+    compact: bool = False,
+) -> str:
     """
-    Construit la chaîne de classes CSS pour le conteneur du footer.
+    Build the CSS class string for the footer container.
 
     Args:
-        align: Alignement du contenu ("left", "center", "right").
-        compact: Si True, applique un style compact.
+        align: Content alignment ("left", "center", "right").
+        compact: If True, applies compact styling.
 
     Returns:
-        Chaîne de classes CSS.
+        CSS class string.
     """
     classes = ["dmat-footer"]
 
-    # Classes d'alignement (définies dans utilities.css)
+    # Alignment classes defined in utilities.css
     if align == "left":
         classes.append("u-text-left")
     elif align == "center":
@@ -87,34 +90,40 @@ def _build_footer_classes(align: str = "center", compact: bool = False) -> str:
     return " ".join(classes)
 
 
-def _build_copyright(organization: str, copyright_text: Optional[str] = None) -> str:
+def _build_copyright(
+    organization: str,
+    copyright_text: Optional[str] = None,
+) -> str:
     """
-    Génère le texte du copyright.
+    Generate the copyright text.
 
     Args:
-        organization: Nom de l'organisation.
-        copyright_text: Texte de copyright personnalisé.
+        organization: Organization name.
+        copyright_text: Custom copyright text.
 
     Returns:
-        Texte du copyright échappé.
+        Escaped copyright text.
     """
     if copyright_text:
         return escape(copyright_text)
 
     current_year = datetime.date.today().year
     safe_organization = escape(str(organization))
+
     return f"© {current_year} {safe_organization}"
 
 
-def _render_link(link: dict[str, str]) -> Optional[str]:
+def _render_link(
+    link: dict[str, str],
+) -> Optional[str]:
     """
-    Rend un lien HTML à partir d'un dictionnaire.
+    Render an HTML link from a dictionary.
 
     Args:
-        link: Dictionnaire contenant 'label' et 'url'.
+        link: Dictionary containing 'label' and 'url'.
 
     Returns:
-        Chaîne HTML du lien, ou None si invalide.
+        HTML link string, or None if invalid.
     """
     label = link.get("label", "").strip()
     url = link.get("url", "").strip()
@@ -125,12 +134,20 @@ def _render_link(link: dict[str, str]) -> Optional[str]:
     escaped_label = escape(label)
     escaped_url = escape(url)
 
-    return f'<a class="dmat-footer__link" href="{escaped_url}" target="_blank" rel="noopener noreferrer">{escaped_label}</a>'
+    return (
+        f'<a class="dmat-footer__link" '
+        f'href="{escaped_url}" '
+        f'target="_blank" '
+        f'rel="noopener noreferrer">'
+        f"{escaped_label}"
+        f"</a>"
+    )
 
 
 # ============================================================================
-# FONCTION PUBLIQUE
+# PUBLIC FUNCTION
 # ============================================================================
+
 
 def render_footer(
     product_name: str = "JESA DMAT",
@@ -145,32 +162,33 @@ def render_footer(
     **kwargs: Any,
 ) -> None:
     """
-    Affiche un pied de page professionnel.
+    Display a professional footer.
 
     Args:
-        product_name (str): Nom du produit. Par défaut "JESA DMAT".
-        version (str, optionnel): Version du produit. Par défaut "v1.0.0".
-        copyright_text (str, optionnel): Texte de copyright personnalisé.
-            Si non fourni, généré automatiquement à partir de `organization`
-            et de l'année courante.
-        organization (str): Nom de l'organisation. Par défaut "JESA".
-        tagline (str, optionnel): Slogan ou phrase d'accroche.
-        links (Sequence[dict], optionnel): Liste de dictionnaires contenant
-            les clés 'label' et 'url'. Exemple:
+        product_name (str): Product name. Defaults to "JESA DMAT".
+        version (str, optional): Product version. Defaults to "v1.0.0".
+        copyright_text (str, optional): Custom copyright text.
+            If not provided, it is automatically generated from
+            `organization` and the current year.
+        organization (str): Organization name. Defaults to "JESA".
+        tagline (str, optional): Tagline or short description.
+        links (Sequence[dict], optional): List of dictionaries containing
+            the keys 'label' and 'url'. Example:
             [{"label": "JESA", "url": "https://www.jesa.ma"}]
-        show_divider (bool): Si True, affiche un séparateur au-dessus du footer.
-        align (str): Alignement du contenu. "left", "center" ou "right".
-            Par défaut "center".
-        compact (bool): Si True, réduit l'espacement vertical.
-        **kwargs: Arguments supplémentaires ignorés (extensibilité).
+        show_divider (bool): If True, displays a divider above the footer.
+        align (str): Content alignment. "left", "center", or "right".
+            Defaults to "center".
+        compact (bool): If True, reduces vertical spacing.
+        **kwargs: Additional ignored arguments for extensibility.
 
     Returns:
         None
 
     Raises:
-        ValueError: Si l'alignement n'est pas dans ["left", "center", "right"].
+        ValueError: If alignment is not one of
+            ["left", "center", "right"].
 
-    Exemples:
+    Examples:
         >>> render_footer()
 
         >>> render_footer(
@@ -185,76 +203,109 @@ def render_footer(
         ...     ],
         ... )
     """
-    # Validation de l'alignement
+
+    # Alignment validation
     if align not in _VALID_ALIGNMENTS:
         raise ValueError(
-            f"align doit être l'un de {sorted(_VALID_ALIGNMENTS)}, "
-            f"reçu '{align}'."
+            f"align must be one of {sorted(_VALID_ALIGNMENTS)}, "
+            f"received '{align}'."
         )
 
-    # Séparateur
+    # Divider
     if show_divider:
         st.divider()
 
-    # Construction des classes du conteneur
-    container_classes = _build_footer_classes(align=align, compact=compact)
+    # Build container classes
+    container_classes = _build_footer_classes(
+        align=align,
+        compact=compact,
+    )
 
-    # Échappement des entrées
+    # Escape inputs
     escaped_product = escape(str(product_name))
-    escaped_version = escape(str(version)) if version is not None else None
-    escaped_tagline = escape(str(tagline)) if tagline else None
-    copyright_html = _build_copyright(organization, copyright_text)
+    escaped_version = (
+        escape(str(version))
+        if version is not None
+        else None
+    )
+    escaped_tagline = (
+        escape(str(tagline))
+        if tagline
+        else None
+    )
 
-    # Construction du HTML
+    copyright_html = _build_copyright(
+        organization,
+        copyright_text,
+    )
+
+    # Build HTML
     html_parts = [
         f'<div class="{container_classes}">',
         '<div class="dmat-footer__content">',
     ]
 
-    # Branding (produit + version)
+    # Branding (product + version)
     brand_parts = [
-        f'<span class="dmat-footer__product">{escaped_product}</span>'
+        f'<span class="dmat-footer__product">'
+        f"{escaped_product}"
+        f"</span>"
     ]
+
     if escaped_version:
         brand_parts.append(
-            f'<span class="dmat-footer__version">{escaped_version}</span>'
+            f'<span class="dmat-footer__version">'
+            f"{escaped_version}"
+            f"</span>"
         )
+
     html_parts.append(
-        f'<div class="dmat-footer__brand">{" ".join(brand_parts)}</div>'
+        f'<div class="dmat-footer__brand">'
+        f'{" ".join(brand_parts)}'
+        f"</div>"
     )
 
     # Tagline
     if escaped_tagline:
         html_parts.append(
-            f'<div class="dmat-footer__tagline">{escaped_tagline}</div>'
+            f'<div class="dmat-footer__tagline">'
+            f"{escaped_tagline}"
+            f"</div>"
         )
 
     # Copyright / Organization
     html_parts.append(
-        f'<div class="dmat-footer__copyright">{copyright_html}</div>'
+        f'<div class="dmat-footer__copyright">'
+        f"{copyright_html}"
+        f"</div>"
     )
 
-    # Liens
+    # Links
     if links:
         link_htmls = []
+
         for link in links:
             link_html = _render_link(link)
+
             if link_html:
                 link_htmls.append(link_html)
+
         if link_htmls:
             html_parts.append(
-                f'<div class="dmat-footer__links">{" • ".join(link_htmls)}</div>'
+                f'<div class="dmat-footer__links">'
+                f'{" • ".join(link_htmls)}'
+                f"</div>"
             )
 
-    html_parts.append("</div>")  # fin content
-    html_parts.append("</div>")  # fin footer
+    html_parts.append("</div>")  # End content
+    html_parts.append("</div>")  # End footer
 
-    # Rendu
+    # Render
     _render_html("\n".join(html_parts))
 
 
 # ============================================================================
-# EXPORT PUBLIC
+# PUBLIC EXPORT
 # ============================================================================
 
 __all__ = ["render_footer"]
