@@ -5,7 +5,7 @@
 developmentMode = false
 
 [server]
-headless = true
+headless = false
 enableCORS = false
 enableXsrfProtection = true
 maxUploadSize = 50
