@@ -286,6 +286,11 @@ class _BasePDFExporter:
 
         self.generated_at = datetime.now()
 
+        # Metadata explicitly supplied by the caller (for example from
+        # the New Assessment page). Keep it separate from aggregation
+        # results so export-only metadata is not lost.
+        self.metadata: Dict[str, Any] = {}
+
         self.styles = self._build_styles()
 
         self._logo_paths = self._locate_logos()
@@ -896,13 +901,17 @@ class PDFScoreSummaryExporter(
         results,
         assessment_id,
     ):
-        metadata = (
-            results.get(
-                "metadata",
-                {},
-            )
-            or {}
-        )
+        # Preserve explicit export metadata first, then use any metadata
+        # embedded in aggregation results as a fallback. This prevents
+        # assessment_date, evaluator, and site_id from being lost when
+        # the score summary is generated.
+        metadata = dict(self.metadata or {})
+        embedded_metadata = results.get("metadata", {}) or {}
+
+        if isinstance(embedded_metadata, Mapping):
+            for key, value in embedded_metadata.items():
+                if key not in metadata or metadata.get(key) in (None, ""):
+                    metadata[key] = value
 
         site_name = metadata.get(
             "plant",
@@ -966,7 +975,28 @@ class PDFScoreSummaryExporter(
             )
         )
 
+        # Compact metadata line. The values are already collected on the
+        # New Assessment page; this only makes them visible in the Score
+        # Summary without changing any scoring or report calculations.
+        metadata_line = (
+            f"Site ID: {_escape_xml(metadata.get('site_id', '—') or '—')} "
+            f"• Assessment Date: {_escape_xml(metadata.get('assessment_date', '—') or '—')} "
+            f"• Evaluator: {_escape_xml(metadata.get('evaluator', '—') or '—')}"
+        )
 
+        story.append(
+            Paragraph(
+                metadata_line,
+                self.styles["small"],
+            )
+        )
+
+        story.append(
+            Spacer(
+                1,
+                1.5 * mm,
+            )
+        )
 
         # --------------------------------------------------------------
         # KPI TABLE

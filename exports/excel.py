@@ -161,6 +161,36 @@ class ExcelExporter:
         metadata: Optional[Dict[str, Any]] = None,
     ) -> Path:
 
+        # Preserve the original aggregation results while ensuring that
+        # metadata explicitly supplied by the frontend reaches every
+        # Excel sheet that reads from results["metadata"].
+        #
+        # This is intentionally limited to metadata propagation. No scoring,
+        # aggregation, prioritization, recommendation, roadmap, or formatting
+        # logic is changed.
+        export_results = dict(aggregation_results or {})
+
+        existing_metadata = export_results.get("metadata", {})
+        if isinstance(existing_metadata, Mapping):
+            export_metadata = dict(existing_metadata)
+        else:
+            export_metadata = {}
+
+        if isinstance(metadata, Mapping):
+            export_metadata.update(
+                {
+                    key: value
+                    for key, value in metadata.items()
+                    if value not in (None, "")
+                }
+            )
+
+        # Keep the explicit assessment ID authoritative.
+        if assessment_id:
+            export_metadata["assessment_id"] = assessment_id
+
+        export_results["metadata"] = export_metadata
+
         if output_path is None:
             suffix = f"_{assessment_id}" if assessment_id else ""
             filename = f"JESA_DMAT_Workbook{suffix}.xlsx"
@@ -180,7 +210,7 @@ class ExcelExporter:
 
             self._write_executive_summary(
                 writer,
-                aggregation_results,
+                export_results,
                 gap_results,
                 tpi_results,
                 priority_results,
@@ -188,22 +218,22 @@ class ExcelExporter:
                 assessment_id,
             )
 
-            self._write_dmi_overview(writer, aggregation_results)
-            self._write_pillar_assessment(writer, aggregation_results)
-            self._write_dimension_assessment(writer, aggregation_results)
-            self._write_indicator_details(writer, aggregation_results)
+            self._write_dmi_overview(writer, export_results)
+            self._write_pillar_assessment(writer, export_results)
+            self._write_dimension_assessment(writer, export_results)
+            self._write_indicator_details(writer, export_results)
             self._write_gap_analysis(writer, gap_results or [])
             self._write_tpi_prioritization(writer, tpi_results or [])
             self._write_priority_matrix(writer, priority_results or [])
             self._write_transformation_roadmap(writer, roadmap or [])
             self._write_recommendations(writer, priority_results or [], roadmap or [])
-            self._write_metadata(writer, aggregation_results, assessment_id)
+            self._write_metadata(writer, export_results, assessment_id)
 
         # --------------------------------------------------------------------
         # POST-PROCESS WORKBOOK WITH OPENPYXL
         # --------------------------------------------------------------------
 
-        self._format_workbook(output_path, aggregation_results)
+        self._format_workbook(output_path, export_results)
 
         logger.info("Excel workbook generated: %s", output_path)
         return output_path

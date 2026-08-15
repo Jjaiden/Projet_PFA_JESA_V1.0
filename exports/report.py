@@ -122,6 +122,11 @@ class ReportMetadata:
     generated_at: str
     report_version: str = "1.0"
     generator: str = "JESA DMAT"
+    site_id: str = ""
+    assessment_date: str = ""
+    evaluator: str = ""
+    evaluator_name: str = ""
+    evaluator_function: str = ""
 
 
 @dataclass
@@ -2122,15 +2127,42 @@ class ReportGenerator:
         if not isinstance(metadata, Mapping):
             metadata = {}
 
+        # Preserve the caller-provided assessment metadata for every report
+        # output without mutating the original aggregation results.
+        resolved_metadata = dict(metadata)
+
+        aggregation_results_for_report = dict(aggregation_results)
+
+        existing_metadata = aggregation_results_for_report.get("metadata")
+        if isinstance(existing_metadata, Mapping):
+            merged_metadata = dict(existing_metadata)
+            merged_metadata.update(resolved_metadata)
+            resolved_metadata = merged_metadata
+        else:
+            aggregation_results_for_report["metadata"] = dict(resolved_metadata)
+
+        aggregation_results_for_report["metadata"] = dict(resolved_metadata)
+
         resolved_assessment_id = (
             assessment_id
-            or metadata.get("assessment_id", "UNKNOWN")
+            or resolved_metadata.get("assessment_id")
+            or aggregation_results_for_report.get("metadata", {}).get(
+                "assessment_id",
+                "UNKNOWN",
+            )
         )
 
-        site_name = metadata.get("site_name", "N/A")
+        site_name = (
+            resolved_metadata.get("site_name")
+            or resolved_metadata.get("plant")
+            or aggregation_results_for_report.get("metadata", {}).get(
+                "site_name",
+                "N/A",
+            )
+        )
 
         report_data = self._build_report_data(
-            aggregation_results,
+            aggregation_results_for_report,
             gap_results,
             tpi_results,
             priority_results,
@@ -2191,6 +2223,8 @@ class ReportGenerator:
     ) -> ReportData:
         generated_at = datetime.now().isoformat()
 
+        source_metadata = aggregation_results.get("metadata", {}) or {}
+
         metadata = ReportMetadata(
             report_id=(
                 f"RPT-{assessment_id}-"
@@ -2199,6 +2233,20 @@ class ReportGenerator:
             assessment_id=assessment_id,
             site_name=site_name,
             generated_at=generated_at,
+            report_version=str(
+                source_metadata.get("report_version", "1.0")
+            ),
+            site_id=str(source_metadata.get("site_id", "") or ""),
+            assessment_date=str(
+                source_metadata.get("assessment_date", "") or ""
+            ),
+            evaluator=str(source_metadata.get("evaluator", "") or ""),
+            evaluator_name=str(
+                source_metadata.get("evaluator_name", "") or ""
+            ),
+            evaluator_function=str(
+                source_metadata.get("evaluator_function", "") or ""
+            ),
         )
 
         summary = self._build_executive_summary(
@@ -2473,6 +2521,11 @@ class ReportGenerator:
                 "generated_at": report_data.metadata.generated_at,
                 "report_version": report_data.metadata.report_version,
                 "generator": report_data.metadata.generator,
+                "site_id": report_data.metadata.site_id,
+                "assessment_date": report_data.metadata.assessment_date,
+                "evaluator": report_data.metadata.evaluator,
+                "evaluator_name": report_data.metadata.evaluator_name,
+                "evaluator_function": report_data.metadata.evaluator_function,
             },
             "summary": {
                 "dmi_score": report_data.summary.dmi_score,

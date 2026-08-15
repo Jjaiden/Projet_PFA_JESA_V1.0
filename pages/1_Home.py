@@ -630,11 +630,6 @@ st.html(
             From Insight to Industrial Impact
         </div>
 
-
-        <p class="hero-description">
-            JESA Digital Maturity Assessment Tool
-        </p>
-
     </section>
 
 
