@@ -12,7 +12,6 @@ Public API::
         GaugeChart,
         RadarChart,
         BarChart,
-        LineChart,
         HeatmapChart,
     )
 """
@@ -23,7 +22,6 @@ from .base import BaseChart
 from .bar import BarChart
 from .gauge import GaugeChart
 from .heatmap import HeatmapChart
-from .line import LineChart
 from .radar import RadarChart
 
 # Factory is being implemented progressively. It is not imported until its
@@ -34,6 +32,5 @@ __all__ = [
     "GaugeChart",
     "RadarChart",
     "BarChart",
-    "LineChart",
     "HeatmapChart",
 ]

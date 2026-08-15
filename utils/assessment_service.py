@@ -24,6 +24,7 @@ from data.loader import load_assessment, load_referentiel
 from data.models import AssessmentMetadata
 from engines.assessment.aggregation import AggregationEngine
 from engines.assessment.scoring import ScoreResult
+from utils.helpers import ENTITY_ENGLISH_NAMES
 from engines.assessment.validator import ValidationBlockingError, ensure_valid, validate_assessment
 from engines.decision.gap import GapAnalysisEngine, GapResult
 from engines.decision.priority import PriorityEngine, PriorityResult
@@ -143,17 +144,59 @@ def process_uploaded_assessment(
     recommendations = _load_recommendations(gaps)
     summary = _build_summary(aggregation, gaps)
 
+    # Ensure all metadata fields are properly extracted from ui_metadata
+    # The ui_metadata keys from New Assessment form: assessment_name, plant, company, assessment_date, assessor_name, assessor_role, contact_email
+    # IMPORTANT: We need to ensure these are correctly mapped to the keys expected by exports
+    metadata_dict = {}
+    
+    # Map ui_metadata fields to the expected metadata keys
+    metadata_dict["assessment_name"] = ui_metadata.get("assessment_name") or assessment_id
+    metadata_dict["site_name"] = ui_metadata.get("plant") or ui_metadata.get("site_name") or ""
+    metadata_dict["plant"] = ui_metadata.get("plant") or ui_metadata.get("site_name") or ""
+    metadata_dict["site_id"] = ui_metadata.get("plant") or ui_metadata.get("site_id") or ""
+    metadata_dict["company"] = ui_metadata.get("company") or ""
+    metadata_dict["assessment_date"] = ui_metadata.get("assessment_date") or ""
+    metadata_dict["evaluator"] = ui_metadata.get("assessor_name") or ui_metadata.get("evaluator") or ""
+    metadata_dict["evaluator_name"] = ui_metadata.get("assessor_name") or ui_metadata.get("evaluator_name") or ""
+    metadata_dict["evaluator_function"] = ui_metadata.get("assessor_role") or ui_metadata.get("evaluator_function") or ""
+    metadata_dict["assessor_name"] = ui_metadata.get("assessor_name") or ""
+    metadata_dict["assessor_role"] = ui_metadata.get("assessor_role") or ""
+    metadata_dict["contact_email"] = ui_metadata.get("contact_email") or ""
+    metadata_dict["source_filename"] = source_filename
+    metadata_dict["report_version"] = "1.0"
+    
+    # Merge with any existing aggregation metadata, but ensure our values take precedence
+    # If aggregation has metadata, use it as base, otherwise start fresh
+    if "metadata" in aggregation and isinstance(aggregation["metadata"], dict):
+        existing_metadata = dict(aggregation["metadata"])
+    else:
+        existing_metadata = {}
+    
+    # Override with our values (ensuring we don't lose any fields)
+    for key, value in metadata_dict.items():
+        if value not in (None, "", "None"):
+            existing_metadata[key] = value
+    
+    # Explicitly ensure assessment_date and evaluator are set from ui_metadata
+    if ui_metadata.get("assessment_date"):
+        existing_metadata["assessment_date"] = str(ui_metadata.get("assessment_date"))
+    if ui_metadata.get("assessor_name"):
+        existing_metadata["evaluator"] = str(ui_metadata.get("assessor_name"))
+        existing_metadata["evaluator_name"] = str(ui_metadata.get("assessor_name"))
+    if ui_metadata.get("assessor_role"):
+        existing_metadata["evaluator_function"] = str(ui_metadata.get("assessor_role"))
+    
+    # Force these fields to be non-empty if they have values
+    if ui_metadata.get("plant"):
+        existing_metadata["site_name"] = str(ui_metadata.get("plant"))
+    if ui_metadata.get("company"):
+        existing_metadata["company"] = str(ui_metadata.get("company"))
+    if ui_metadata.get("assessment_name"):
+        existing_metadata["assessment_name"] = str(ui_metadata.get("assessment_name"))
+    
     backend_results = {
         "assessment_id": assessment_id,
-        "metadata": {
-            **aggregation.get("metadata", {}),
-            "assessment_name": ui_metadata.get("assessment_name") or assessment_id,
-            "company": ui_metadata.get("company"),
-            "assessor_name": ui_metadata.get("assessor_name"),
-            "assessor_role": ui_metadata.get("assessor_role"),
-            "contact_email": ui_metadata.get("contact_email"),
-            "source_filename": source_filename,
-        },
+        "metadata": existing_metadata,
         "aggregation": aggregation,
         "gaps": gaps,
         "recommendations": recommendations,
@@ -206,7 +249,10 @@ def build_dashboard_data(backend_results: Mapping[str, Any]) -> dict[str, Any]:
     gaps_by_dimension = {gap.entity_id: gap for gap in backend_results.get("gaps", [])}
 
     pillars = [
-        {"name": result.entity_name, "score": round(float(result.score) * 20, 1)}
+        {
+            "name": ENTITY_ENGLISH_NAMES.get(result.entity_id, result.entity_name),
+            "score": round(float(result.score) * 20, 1),
+        }
         for result in aggregation.get("pillars", {}).values()
         if isinstance(result, ScoreResult)
     ]
@@ -233,6 +279,58 @@ def build_dashboard_data(backend_results: Mapping[str, Any]) -> dict[str, Any]:
     largest_gap = min(dimensions, key=lambda item: item["gap"], default=None)
     strongest = max(pillars, key=lambda item: item["score"], default=None)
 
+    # Build sub-dimensions data for heatmap
+    subdimensions = []
+    subdim_data = aggregation.get("subdimensions", {})
+    
+    # If subdimensions is empty, try to extract from dimensions
+    if not subdim_data:
+        # Try to build sub-dimension data from dimension results
+        for dim_id, dim_result in aggregation.get("dimensions", {}).items():
+            if not isinstance(dim_result, ScoreResult):
+                continue
+            # Get sub-dimensions for this dimension from referentiel
+            # We need to access the referentiel to get sub-dimension IDs
+            pass
+    
+    for result in subdim_data.values():
+        if not isinstance(result, ScoreResult):
+            continue
+        # Get the parent dimension ID and name for this sub-dimension
+        dim_id = getattr(result, 'parent_id', '')
+        dim_name = ''
+        # Try to find dimension name from dimensions results
+        if dim_id:
+            dim_result = aggregation.get("dimensions", {}).get(dim_id)
+            if isinstance(dim_result, ScoreResult):
+                dim_name = dim_result.entity_name
+        
+        subdimensions.append({
+            "id": result.entity_id,
+            "name": result.entity_name,
+            "score": round(float(result.score) * 20, 1),
+            "dimension_id": dim_id,
+            "dimension_name": dim_name,
+        })
+    
+    # If still empty, try to extract from dimensions' subdimension data
+    if not subdimensions:
+        # Some aggregation formats store subdimensions inside dimensions
+        for dim_id, dim_result in aggregation.get("dimensions", {}).items():
+            if not isinstance(dim_result, ScoreResult):
+                continue
+            # Check if dimension has subdimensions attribute
+            if hasattr(dim_result, 'subdimensions'):
+                for sub in dim_result.subdimensions or []:
+                    if isinstance(sub, ScoreResult):
+                        subdimensions.append({
+                            "id": sub.entity_id,
+                            "name": sub.entity_name,
+                            "score": round(float(sub.score) * 20, 1),
+                            "dimension_id": dim_id,
+                            "dimension_name": dim_result.entity_name,
+                        })
+
     return {
         "dmi": dmi_score,
         "maturity_level": dmi.level_name if dmi else "N/A",
@@ -240,12 +338,15 @@ def build_dashboard_data(backend_results: Mapping[str, Any]) -> dict[str, Any]:
         "dmi_gap": round(dmi_score - target_dmi, 1),
         "pillars": pillars,
         "dimensions": sorted(dimensions, key=lambda item: item["gap"]),
+        "sub_dimensions": subdimensions,
         "insights": _dashboard_insights(largest_gap, strongest),
     }
 
 
 def build_decision_rows(backend_results: Mapping[str, Any]) -> list[dict[str, Any]]:
     """Return dimensions with positive gaps for the Decision Analysis table."""
+
+    from utils.helpers import translate_entity_name
 
     rows = []
     for gap in backend_results.get("gaps", []):
@@ -254,7 +355,7 @@ def build_decision_rows(backend_results: Mapping[str, Any]) -> list[dict[str, An
         rows.append(
             {
                 "dimension_id": gap.entity_id,
-                "dimension": gap.entity_name,
+                "dimension": translate_entity_name(gap.entity_id, gap.entity_name),
                 "current_score": round(gap.current_score, 2),
                 "target_score": round(gap.target_score, 2),
                 "gap": round(gap.gap, 2),
@@ -419,6 +520,7 @@ def export_selected_assessment(
     tpi_results = backend_results.get("tpi") or []
     priority_results = backend_results.get("priorities") or []
     roadmap = backend_results.get("roadmap") or []
+    metadata = backend_results.get("metadata") or {}
 
     # --------------------------------------------------------------------
     # 1. PDF Score Summary
@@ -433,6 +535,7 @@ def export_selected_assessment(
                 priority_results=priority_results,
                 output_path=output_dir / f"JESA_DMAT_Score_Summary_{assessment_id}.pdf",
                 assessment_id=assessment_id,
+                metadata=metadata,
             )
             outputs["pdf_score"] = path
         except Exception as e:
@@ -443,17 +546,24 @@ def export_selected_assessment(
     # --------------------------------------------------------------------
     if "pdf_full" in formats:
         try:
-            from exports.pdf import export_full_report
-            path = export_full_report(
+            from exports.report import ReportGenerator
+            generator = ReportGenerator()
+            result = generator.generate_full_report(
                 aggregation_results=aggregation_results,
                 gap_results=gap_results,
                 tpi_results=tpi_results,
                 priority_results=priority_results,
                 roadmap=roadmap,
-                output_path=output_dir / f"JESA_DMAT_Full_Report_{assessment_id}.pdf",
+                output_dir=output_dir,
                 assessment_id=assessment_id,
+                metadata=metadata,
+                include_pdf_score=False,
+                include_pdf_full=True,
+                include_excel=False,
+                include_json=False,
             )
-            outputs["pdf_full"] = path
+            if "pdf_full" in result:
+                outputs["pdf_full"] = result["pdf_full"]
         except Exception as e:
             logger.error(f"Error generating PDF full report: {e}")
 
@@ -471,6 +581,7 @@ def export_selected_assessment(
                 roadmap=roadmap,
                 output_path=output_dir / f"JESA_DMAT_Workbook_{assessment_id}.xlsx",
                 assessment_id=assessment_id,
+                metadata=metadata,
             )
             outputs["excel"] = path
         except Exception as e:
@@ -499,6 +610,8 @@ def serialize_backend_results(
     if not isinstance(results, Mapping):
         raise AssessmentProcessingError("Backend results must be a mapping.")
 
+    from utils.helpers import translate_entity_name
+
     aggregation = results.get("aggregation") or {}
     if not isinstance(aggregation, Mapping):
         aggregation = {}
@@ -512,6 +625,58 @@ def serialize_backend_results(
     priorities = results.get("priorities") or []
     roadmap = results.get("roadmap") or []
 
+    # Translate entity names in gaps
+    translated_gaps = []
+    for gap in gaps:
+        if hasattr(gap, "to_dict"):
+            gap_dict = gap.to_dict()
+            gap_dict["entity_name"] = translate_entity_name(
+                gap_dict.get("entity_id", ""),
+                gap_dict.get("entity_name", "Unknown")
+            )
+            translated_gaps.append(gap_dict)
+
+    # Translate dimension names in TPI results
+    translated_tpi = []
+    for item in tpi_results:
+        if hasattr(item, "to_dict"):
+            tpi_dict = item.to_dict()
+            tpi_dict["dimension_name"] = translate_entity_name(
+                tpi_dict.get("dimension_id", ""),
+                tpi_dict.get("dimension_name", "Unknown")
+            )
+            translated_tpi.append(tpi_dict)
+
+    # Translate dimension names in Priority results
+    translated_priorities = []
+    for item in priorities:
+        if hasattr(item, "to_dict"):
+            pri_dict = item.to_dict()
+            pri_dict["dimension_name"] = translate_entity_name(
+                pri_dict.get("dimension_id", ""),
+                pri_dict.get("dimension_name", "Unknown")
+            )
+            translated_priorities.append(pri_dict)
+
+    # Translate dimension names in Roadmap phases
+    translated_roadmap = []
+    for phase in roadmap:
+        if hasattr(phase, "to_dict"):
+            phase_dict = phase.to_dict()
+            # Translate actions within the phase
+            actions = phase_dict.get("actions", [])
+            for action in actions:
+                if isinstance(action, dict):
+                    action["dimension"] = translate_entity_name(
+                        action.get("dimension", ""),
+                        action.get("dimension", "Unknown")
+                    )
+                    action["title"] = translate_entity_name(
+                        action.get("dimension", ""),
+                        action.get("title", "Objective")
+                    )
+            translated_roadmap.append(phase_dict)
+
     return {
         "assessment_id": results.get("assessment_id"),
         "metadata": results.get("metadata") or {},
@@ -523,14 +688,14 @@ def serialize_backend_results(
             "dmi": _serialize_score(aggregation.get("dmi")),
             "metadata": aggregation.get("metadata") or {},
         },
-        "gaps": [gap.to_dict() for gap in gaps if hasattr(gap, "to_dict")],
+        "gaps": translated_gaps,
         "recommendations": {
             str(dim_id): [rec.to_dict() for rec in (recs or []) if hasattr(rec, "to_dict")]
             for dim_id, recs in recommendations_raw.items()
         },
-        "tpi": [item.to_dict() for item in tpi_results if hasattr(item, "to_dict")],
-        "priorities": [item.to_dict() for item in priorities if hasattr(item, "to_dict")],
-        "roadmap": [phase.to_dict() for phase in roadmap if hasattr(phase, "to_dict")],
+        "tpi": translated_tpi,
+        "priorities": translated_priorities,
+        "roadmap": translated_roadmap,
         "summary": results.get("summary") or {},
     }
 
@@ -624,19 +789,25 @@ def _target_dmi_percent(gaps: list[GapResult], aggregation: Mapping[str, Any]) -
 def _dashboard_insights(largest_gap: dict[str, Any] | None, strongest: dict[str, Any] | None) -> list[dict[str, str]]:
     insights = []
     if largest_gap and largest_gap["gap"] < 0:
+        # Translate dimension name to English
+        dim_id = largest_gap.get("id", "")
+        dim_name = ENTITY_ENGLISH_NAMES.get(dim_id, largest_gap["name"])
         insights.append(
             {
                 "type": "danger",
                 "title": "Main Constraint",
-                "text": f"{largest_gap['name']} is the largest maturity gap.",
+                "text": f"{dim_name} is the largest maturity gap.",
             }
         )
     if strongest:
+        # Translate pillar name to English
+        pillar_id = strongest.get("id", "")
+        pillar_name = ENTITY_ENGLISH_NAMES.get(pillar_id, strongest["name"])
         insights.append(
             {
                 "type": "success",
                 "title": "Strength",
-                "text": f"{strongest['name']} is the strongest pillar.",
+                "text": f"{pillar_name} is the strongest pillar.",
             }
         )
     if not insights:

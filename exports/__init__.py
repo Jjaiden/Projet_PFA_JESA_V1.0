@@ -25,8 +25,8 @@ from exports.excel import (
 
 # PDF
 from exports.pdf import (
-    PDFReportGenerator,
-    generate_pdf_report,
+    PDFScoreSummaryExporter,
+    export_score_summary,
 )
 
 # Rapport unifié
@@ -44,8 +44,8 @@ __all__ = [
     "export_to_excel",
     "export_full_analysis",
     # PDF
-    "PDFReportGenerator",
-    "generate_pdf_report",
+    "PDFScoreSummaryExporter",
+    "export_score_summary",
     # Rapport
     "ReportGenerator",
     "generate_report",

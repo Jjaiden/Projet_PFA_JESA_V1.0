@@ -1,5 +1,5 @@
 """
-models.py — Structures de données du référentiel JDMAF et d'une évaluation.
+models.py — Data structures for the JDMAF referential and assessment.
 """
 
 from __future__ import annotations
@@ -9,7 +9,7 @@ from typing import Any, Optional
 
 
 # ---------------------------------------------------------------------------
-# 1. MODÈLES DU RÉFÉRENTIEL (statique)
+# 1. REFERENTIAL MODELS (static)
 # ---------------------------------------------------------------------------
 
 
@@ -160,7 +160,7 @@ class Referentiel:
 
 
 # ---------------------------------------------------------------------------
-# 2. MODÈLES D'UNE ÉVALUATION (dynamique)
+# 2. ASSESSMENT MODELS (dynamic)
 # ---------------------------------------------------------------------------
 
 
@@ -216,4 +216,4 @@ class Assessment:
         return [s for s in self.indicator_scores.values() if s.dimension_id == dimension_id]
 
     def scores_for_pillar(self, pillar_id: str) -> list[IndicatorScore]:
-        return [s for s in self.indicator_scores.values() if s.pillar_id == pillar_id]
+        return [s for s in self.indicator_scores.values() if s.pillar_id == pillar_id] 

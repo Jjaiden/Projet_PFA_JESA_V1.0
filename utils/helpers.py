@@ -45,6 +45,8 @@ __all__ = [
     "first_not_none",
     "format_number",
     "format_percentage",
+    # Translation (NEW)
+    "translate_entity_name",
 ]
 
 _logger = get_logger(__name__)
@@ -577,3 +579,55 @@ def noop(*args: Any, **kwargs: Any) -> None:
     callback or placeholder.
     """
     pass
+
+
+# ==============================================================================
+# TRANSLATION MAP FOR JESA REFERENTIEL ENTITIES (NEW)
+# ==============================================================================
+
+ENTITY_ENGLISH_NAMES = {
+    # ------- PILLARS -------
+    "P1": "Digital Infrastructure",
+    "P2": "Digital Operations",
+    "P3": "Data & Intelligence",
+    "P4": "Governance & Cybersecurity",
+    "P5": "Human Capital & Skills",
+
+    # ------- DIMENSIONS -------
+    "D1": "OT/IT Infrastructure",
+    "D2": "Connectivity & Networks",
+    "D3": "Automation & Control",
+    "D4": "Supervision & Monitoring",
+    "D5": "Data Management",
+    "D6": "Analytics & Artificial Intelligence",
+    "D7": "OT/IT Cybersecurity",
+    "D8": "Digital Governance",
+    "D9": "Skills & Training",
+    "D10": "Digital Culture & Organization",
+
+    # ------- SUBDIMENSIONS (for complete exports) -------
+    "SD1.1": "OT Network & Availability",
+    "SD1.2": "Servers & Virtualization",
+    "SD2.1": "Protocols & Interoperability",
+    "SD2.2": "OT/IT Integration",
+    "SD3.1": "Automation & Control (DCS/PLC)",
+    "SD3.2": "MES & Scheduling",
+    "SD4.1": "SCADA & HMI",
+    "SD4.2": "Predictive Maintenance",
+    "SD5.1": "Historian & Traceability",
+    "SD5.2": "Data Quality & Governance",
+    "SD6.1": "Analytics & Reporting",
+    "SD6.2": "AI & Modeling",
+    "SD7.1": "Perimeter Security & Segmentation",
+    "SD7.2": "Access Management & Authentication",
+    "SD8.1": "Digital Policies & Processes",
+    "SD8.2": "Compliance & Audit",
+    "SD9.1": "Digital Skills Levels",
+    "SD9.2": "Training & Development",
+    "SD10.1": "Digital Tool Adoption",
+    "SD10.2": "Innovation & Continuous Improvement"
+}
+
+def translate_entity_name(entity_id: str, fallback: str = "Unknown") -> str:
+    """Return the English name of a given entity ID, or fallback if not found."""
+    return ENTITY_ENGLISH_NAMES.get(entity_id, fallback)

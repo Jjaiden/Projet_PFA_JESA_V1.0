@@ -632,7 +632,7 @@ st.html(
 
 
         <p class="hero-description">
-            &#x20;
+            JESA Digital Maturity Assessment Tool
         </p>
 
     </section>
@@ -1378,6 +1378,8 @@ st.html(
         0;
 
     color: #718396;
+
+    font-size: 1.2rem;
 
     font-size: 0.60rem;
 

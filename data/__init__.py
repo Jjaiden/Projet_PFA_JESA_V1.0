@@ -1,13 +1,13 @@
 """
 data
 ----
-Chargement et modèles de données du JDMAF.
+JDMAF data loading and models.
 
-Ce package contient :
-- loader.py : Chargement des fichiers Excel (Référentiel et Assessment)
-- models.py : Structures de données (dataclasses) pour le référentiel et l'évaluation
+This package contains:
+- loader.py: Excel file loading (Referential and Assessment)
+- models.py: Data structures (dataclasses) for the referential and assessment
 
-Exports publics :
+Public exports:
     load_referentiel(path=None) -> Referentiel
     load_assessment(path=None) -> Assessment
     Referentiel, Assessment, Pillar, Dimension, Subdimension, Indicator, ...

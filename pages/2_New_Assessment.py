@@ -191,66 +191,61 @@ st.markdown("""
     }
 
     /* ==============================================================
-       UPLOAD ASSESSMENT FILE – SIMPLIFIED STYLING
+       UPLOAD ASSESSMENT FILE – NO BUTTONS, CLICK DROPZONE
        ============================================================== */
     [data-testid="stFileUploader"] {
         margin-top: 0.10rem !important;
     }
+    /* Hide ALL buttons inside the file uploader */
+    [data-testid="stFileUploader"] button,
+    [data-testid="stFileUploaderDropzone"] button,
+    [data-testid="stFileUploader"] button[data-testid="baseButton-secondary"],
+    [data-testid="stFileUploader"] button[kind="secondary"],
+    [data-testid="stFileUploader"] [data-testid="baseButton-secondary"] {
+        display: none !important;
+    }
+    /* Style the dropzone as a clickable area */
     [data-testid="stFileUploaderDropzone"] {
-        min-height: 92px !important;
-        background: #FFFFFF !important;
-        border: 1px solid rgba(23, 63, 105, 0.18) !important;
+        min-height: 120px !important;
+        background: #FAFCFF !important;
+        border: 2px dashed rgba(23, 63, 105, 0.20) !important;
         border-radius: 12px !important;
-        padding: 1rem !important;
-    }
-    [data-testid="stFileUploader"] > button {
-        display: none !important;
-    }
-    [data-testid="stFileUploaderDropzone"] button {
-        position: relative !important;
-        display: inline-flex !important;
-        min-height: 40px !important;
-        min-width: 110px !important;
-        background: #2563EB !important;
-        color: transparent !important;
-        border: none !important;
-        border-radius: 8px !important;
-        padding: 0.5rem 1rem !important;
-        font-family: var(--dmat-font) !important;
-        font-size: 0.85rem !important;
-        font-weight: 700 !important;
-        box-shadow: none !important;
-        overflow: hidden !important;
-    }
-    [data-testid="stFileUploaderDropzone"] button:hover {
-        background: #1D4ED8 !important;
-    }
-    /* Streamlit renders multiple internal text layers here; hide them all. */
-    [data-testid="stFileUploaderDropzone"] button span,
-    [data-testid="stFileUploaderDropzone"] button p,
-    [data-testid="stFileUploaderDropzone"] button div {
-        color: transparent !important;
-        visibility: hidden !important;
-    }
-    [data-testid="stFileUploaderDropzone"] button::before,
-    [data-testid="stFileUploaderDropzone"] button span::before,
-    [data-testid="stFileUploaderDropzone"] button span::after {
-        content: none !important;
-        display: none !important;
-    }
-    [data-testid="stFileUploaderDropzone"] button::after {
-        content: "Upload" !important;
-        position: absolute !important;
-        inset: 0 !important;
+        padding: 2rem 1rem !important;
         display: flex !important;
+        flex-direction: column !important;
         align-items: center !important;
         justify-content: center !important;
-        color: #FFFFFF !important;
-        visibility: visible !important;
-        font-family: var(--dmat-font) !important;
+        transition: border-color 0.2s ease, background 0.2s ease !important;
+        cursor: pointer !important;
+    }
+    [data-testid="stFileUploaderDropzone"]:hover {
+        border-color: #2563EB !important;
+        background: #EFF6FF !important;
+    }
+    /* Add icon and text inside the dropzone */
+    [data-testid="stFileUploaderDropzone"]::before {
+        content: "📤" !important;
+        display: block !important;
+        font-size: 2.2rem !important;
+        margin-bottom: 0.5rem !important;
+    }
+    [data-testid="stFileUploaderDropzone"]::after {
+        content: "Click here or drag & drop your assessment file" !important;
+        display: block !important;
+        color: #64748B !important;
         font-size: 0.85rem !important;
-        font-weight: 700 !important;
-        pointer-events: none !important;
+        font-family: var(--dmat-font) !important;
+        text-align: center !important;
+        letter-spacing: 0.02em !important;
+    }
+    /* Hide any file info containers that appear after upload */
+    [data-testid="stFileUploader"] > div:last-child,
+    [data-testid="stFileUploader"] .st-emotion-cache-1j2m9f4,
+    [data-testid="stFileUploader"] .st-emotion-cache-1wivap2,
+    [data-testid="stFileUploader"] .st-emotion-cache-1xarl3l,
+    [data-testid="stFileUploader"] .st-emotion-cache-1miwxuw,
+    [data-testid="stFileUploader"] .st-emotion-cache-1r6slb0 {
+        display: none !important;
     }
 
     /* ==============================================================
@@ -580,10 +575,15 @@ with col_btn2:
                 "assessment_name": assessment_name.strip(),
                 "plant": plant.strip(),
                 "company": company.strip(),
-                "assessment_date": assessment_date.isoformat(),
+                "assessment_date": assessment_date.isoformat() if assessment_date else "",
                 "assessor_name": assessor_name.strip(),
                 "assessor_role": assessor_role.strip(),
                 "contact_email": contact_email.strip() if contact_email else None,
+                "evaluator": assessor_name.strip(),
+                "evaluator_name": assessor_name.strip(),
+                "evaluator_function": assessor_role.strip(),
+                "site_name": plant.strip(),
+                "site_id": plant.strip(),
             }
 
             try:
@@ -605,10 +605,6 @@ with col_btn2:
                     save_assessment_history(result["serialized_results"])
 
                 st.success("Assessment processed successfully.")
-                if result["validation_warnings"]:
-                    with st.expander("Validation warnings", expanded=False):
-                        for warning in result["validation_warnings"][:10]:
-                            st.warning(warning)
 
                 st.switch_page("pages/3_Dashboard.py")
 
@@ -628,8 +624,8 @@ render_footer(
     organization="JESA · ENSAM Casablanca",
     tagline="Internship Project · Digital Transformation & Industry 5.0",
     links=[
-        {"label": "JESA", "url": "https://www.jesa.ma"},
-        {"label": "ENSAM Casablanca", "url": "https://ensam-casablanca.ma"},
+        {"label": "JESA", "url": "https://www.jesagroup.com/"},
+        {"label": "ENSAM Casablanca", "url": "https://ensam-casa.ma/"},
     ],
     align="center",
     compact=False,

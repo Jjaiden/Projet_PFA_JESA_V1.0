@@ -1,4 +1,3 @@
-# exports/excel.py
 """
 Excel exporter for JESA DMAT.
 
@@ -39,6 +38,9 @@ from engines.decision.tpi import TPIResult
 from engines.decision.priority import PriorityResult
 from engines.decision.roadmap import RoadmapPhase
 from utils.file_manager import ensure_directory, build_output_path
+
+# AJOUT DE L'IMPORT DE TRADUCTION
+from utils.helpers import translate_entity_name
 
 logger = logging.getLogger(__name__)
 
@@ -156,6 +158,7 @@ class ExcelExporter:
         roadmap: Optional[List[RoadmapPhase]] = None,
         output_path: Optional[Path] = None,
         assessment_id: Optional[str] = None,
+        metadata: Optional[Dict[str, Any]] = None,
     ) -> Path:
 
         if output_path is None:
@@ -232,9 +235,8 @@ class ExcelExporter:
             else metadata.get("dmi_level_name", "")
         )
 
-        site_name = metadata.get("site_name", "")
-        assessment_date = metadata.get("assessment_date", "")
-        evaluator = metadata.get("evaluator", "")
+        # Ensure we capture all metadata fields, including fallbacks - using actual keys from New Assessment
+        site_name = metadata.get("plant") or metadata.get("site_name", "")
         report_version = metadata.get("report_version", "1.0")
 
         rows = [
@@ -263,15 +265,10 @@ class ExcelExporter:
         ws["D4"] = "Site"
         ws["E4"] = site_name
 
-        ws["A5"] = "Assessment Date"
-        ws["B5"] = assessment_date
-        ws["D5"] = "Evaluator"
-        ws["E5"] = evaluator
-
-        ws["A6"] = "Report Version"
-        ws["B6"] = report_version
-        ws["D6"] = "Generated"
-        ws["E6"] = self.generated_at.strftime("%Y-%m-%d %H:%M")
+        ws["A5"] = "Report Version"
+        ws["B5"] = report_version
+        ws["D5"] = "Generated"
+        ws["E5"] = self.generated_at.strftime("%Y-%m-%d %H:%M")
 
         # KPI header
         ws["A9"] = "Executive KPI"
@@ -301,7 +298,7 @@ class ExcelExporter:
             if isinstance(result, ScoreResult):
                 rows.append({
                     "Pillar ID": result.entity_id,
-                    "Pillar Name": result.entity_name,
+                    "Pillar Name": translate_entity_name(result.entity_id, result.entity_name), # CORRECTION
                     "Score": result.score,
                     "Maturity Level": result.level,
                     "Maturity Level Name": result.level_name,
@@ -316,7 +313,7 @@ class ExcelExporter:
             if isinstance(result, ScoreResult):
                 rows.append({
                     "Dimension ID": result.entity_id,
-                    "Dimension Name": result.entity_name,
+                    "Dimension Name": translate_entity_name(result.entity_id, result.entity_name), # CORRECTION
                     "Score": result.score,
                     "Maturity Level": result.level,
                     "Maturity Level Name": result.level_name,
@@ -332,7 +329,7 @@ class ExcelExporter:
             if isinstance(result, ScoreResult):
                 rows.append({
                     "Indicator ID": result.entity_id,
-                    "Indicator Name": result.entity_name,
+                    "Indicator Name": translate_entity_name(result.entity_id, result.entity_name), # CORRECTION
                     "Score": result.score,
                     "Maturity Level": result.level,
                     "Maturity Level Name": result.level_name,
@@ -347,7 +344,7 @@ class ExcelExporter:
         for gap in gap_results:
             rows.append({
                 "Entity ID": gap.entity_id,
-                "Entity Name": gap.entity_name,
+                "Entity Name": translate_entity_name(gap.entity_id, gap.entity_name), # CORRECTION
                 "Entity Type": gap.entity_type,
                 "Current Score": gap.current_score,
                 "Target Score": gap.target_score,
@@ -372,7 +369,7 @@ class ExcelExporter:
             rows.append({
                 "Rank": len(rows) + 1,
                 "Dimension ID": tpi.dimension_id,
-                "Dimension Name": tpi.dimension_name,
+                "Dimension Name": translate_entity_name(tpi.dimension_id, tpi.dimension_name), # CORRECTION
                 "TPI Score": float(tpi.tpi_score) * 100 if tpi.tpi_score is not None else None,
                 "Priority": priority,
                 "Gap": tpi.gap,
@@ -399,7 +396,7 @@ class ExcelExporter:
             rows.append({
                 "Rank": rank,
                 "Dimension ID": result.dimension_id,
-                "Dimension Name": result.dimension_name,
+                "Dimension Name": translate_entity_name(result.dimension_id, result.dimension_name), # CORRECTION
                 "Current Score": result.current_score,
                 "Target Score": result.target_score,
                 "Gap": result.gap,
@@ -431,8 +428,8 @@ class ExcelExporter:
                     "Horizon": phase.horizon,
                     "Recommendation ID": item.recommendation_id,
                     "Action": item.title,
-                    "Dimension ID": item.dimension_id,
-                    "Pillar ID": item.pillar_id,
+                    "Dimension ID": item.dimension_id, # ID stays
+                    "Pillar ID": item.pillar_id,       # ID stays
                     "Priority": self._normalize_priority(item.priority),
                     "TPI Score": item.tpi_score,
                     "Gap": item.gap,
@@ -457,7 +454,7 @@ class ExcelExporter:
                 rows.append({
                     "Recommendation ID": recommendation.recommendation_id,
                     "Dimension ID": priority.dimension_id,
-                    "Dimension Name": priority.dimension_name,
+                    "Dimension Name": translate_entity_name(priority.dimension_id, priority.dimension_name), # CORRECTION
                     "Priority": normalized_priority,
                     "TPI Score": priority.tpi_score,
                     "Gap": priority.gap,
@@ -480,7 +477,7 @@ class ExcelExporter:
                     rows.append({
                         "Recommendation ID": item.recommendation_id,
                         "Dimension ID": item.dimension_id,
-                        "Dimension Name": "",
+                        "Dimension Name": "", # No translation needed if empty, but we can still try
                         "Priority": self._normalize_priority(item.priority),
                         "TPI Score": item.tpi_score,
                         "Gap": item.gap,

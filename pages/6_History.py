@@ -93,8 +93,8 @@ render_footer(
     organization="JESA · ENSAM Casablanca",
     tagline="Internship Project · Digital Transformation & Industry 5.0",
     links=[
-        {"label": "JESA", "url": "https://www.jesa.ma"},
-        {"label": "ENSAM Casablanca", "url": "https://ensam-casablanca.ma"},
+        {"label": "JESA", "url": "https://www.jesagroup.com/"},
+        {"label": "ENSAM Casablanca", "url": "https://ensam-casa.ma/"},
     ],
     align="center",
     compact=False,

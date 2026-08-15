@@ -211,9 +211,13 @@ def render_footer(
             f"received '{align}'."
         )
 
-    # Divider
+    # Divider — completely removed to avoid double lines
     if show_divider:
-        st.divider()
+        # Add some vertical space instead of a divider
+        st.markdown(
+            '<div style="height: 0.5rem;"></div>',
+            unsafe_allow_html=True,
+        )
 
     # Build container classes
     container_classes = _build_footer_classes(

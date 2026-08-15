@@ -1,17 +1,17 @@
 """
-pdf_builder.py — Génération du rapport PDF JDMAF.
+pdf_builder.py — JDMAF PDF report generation.
 
-Responsabilités :
-    - générer un rapport PDF professionnel ;
-    - présenter les KPI ;
-    - présenter les résultats de maturité ;
-    - présenter les écarts ;
-    - présenter les priorités ;
-    - présenter la roadmap ;
-    - présenter les recommandations.
+Responsibilities:
+    - generate a professional PDF report;
+    - present KPIs;
+    - present maturity results;
+    - present gaps;
+    - present priorities;
+    - present the roadmap;
+    - present recommendations.
 
-Le module ne réalise aucun calcul métier.
-Il consomme uniquement les résultats déjà calculés.
+This module performs no business calculations.
+It only consumes already-computed results.
 """
 
 from __future__ import annotations
@@ -123,9 +123,9 @@ class PDFBuilder:
         except ImportError as exc:
 
             raise ImportError(
-                "reportlab est nécessaire pour "
-                "générer le PDF. "
-                "Installez-le avec : pip install reportlab"
+                "reportlab is required to "
+                "generate the PDF. "
+                "Install it with: pip install reportlab"
             ) from exc
 
         output = Path(
@@ -230,7 +230,7 @@ class PDFBuilder:
             "assessment_id",
             metadata.get(
                 "Assessment_ID",
-                "Non renseigné",
+                "Not provided",
             ),
         )
 
@@ -238,13 +238,13 @@ class PDFBuilder:
             "plant_name",
             metadata.get(
                 "Plant_Name",
-                "Site industriel",
+                "Industrial site",
             ),
         )
 
         story.append(
             Paragraph(
-                f"<b>Assessment :</b> "
+                f"<b>Assessment:</b> "
                 f"{self._escape(assessment_id)}",
                 normal_style,
             )
@@ -267,8 +267,8 @@ class PDFBuilder:
 
         story.append(
             Paragraph(
-                f"Rapport généré le "
-                f"{datetime.now():%d/%m/%Y à %H:%M}",
+                f"Report generated on "
+                f"{datetime.now():%d/%m/%Y at %H:%M}",
                 normal_style,
             )
         )
@@ -283,7 +283,7 @@ class PDFBuilder:
 
         story.append(
             Paragraph(
-                "1. Synthèse exécutive",
+                "1. Executive summary",
                 heading_style,
             )
         )
@@ -328,7 +328,7 @@ class PDFBuilder:
 
         story.append(
             Paragraph(
-                "2. Vue de la maturité",
+                "2. Maturity overview",
                 heading_style,
             )
         )
@@ -352,7 +352,7 @@ class PDFBuilder:
 
             story.append(
                 Paragraph(
-                    "Aucune donnée de maturité disponible.",
+                    "No maturity data available.",
                     normal_style,
                 )
             )
@@ -363,7 +363,7 @@ class PDFBuilder:
 
         story.append(
             Paragraph(
-                "3. Analyse des écarts",
+                "3. Gap analysis",
                 heading_style,
             )
         )
@@ -387,7 +387,7 @@ class PDFBuilder:
 
             story.append(
                 Paragraph(
-                    "Aucun écart disponible.",
+                    "No gap available.",
                     normal_style,
                 )
             )
@@ -402,7 +402,7 @@ class PDFBuilder:
 
         story.append(
             Paragraph(
-                "4. Analyse décisionnelle",
+                "4. Decision analysis",
                 heading_style,
             )
         )
@@ -427,7 +427,7 @@ class PDFBuilder:
 
             story.append(
                 Paragraph(
-                    "Aucune analyse décisionnelle disponible.",
+                    "No decision analysis available.",
                     normal_style,
                 )
             )
@@ -438,7 +438,7 @@ class PDFBuilder:
 
         story.append(
             Paragraph(
-                "5. Feuille de route",
+                "5. Roadmap",
                 heading_style,
             )
         )
@@ -489,7 +489,7 @@ class PDFBuilder:
                             "ID",
                             "Dimension",
                             "Action",
-                            "Priorité",
+                            "Priority",
                             "TPI",
                             "Gap",
                         ]
@@ -514,7 +514,7 @@ class PDFBuilder:
 
             story.append(
                 Paragraph(
-                    "Aucune roadmap disponible.",
+                    "No roadmap available.",
                     normal_style,
                 )
             )
@@ -529,7 +529,7 @@ class PDFBuilder:
 
         story.append(
             Paragraph(
-                "6. Recommandations",
+                "6. Recommendations",
                 heading_style,
             )
         )
@@ -588,7 +588,7 @@ class PDFBuilder:
 
                         story.append(
                             Paragraph(
-                                f"<b>Actions :</b><br/>{actions}",
+                                f"<b>Actions:</b><br/>{actions}",
                                 small_style,
                             )
                         )
@@ -604,7 +604,7 @@ class PDFBuilder:
 
             story.append(
                 Paragraph(
-                    "Aucune recommandation disponible.",
+                    "No recommendation available.",
                     normal_style,
                 )
             )
@@ -704,12 +704,12 @@ class PDFBuilder:
 
         values = [
             [
-                "Maturité moyenne",
-                "Gap moyen",
-                "Gap maximum",
-                "TPI moyen",
-                "Priorités critiques",
-                "Actions roadmap",
+                "Average maturity",
+                "Average gap",
+                "Maximum gap",
+                "Average TPI",
+                "Critical priorities",
+                "Roadmap actions",
             ],
             [
                 PDFBuilder._format_value(
@@ -838,13 +838,13 @@ class PDFBuilder:
             [
                 {
                     "ID": result.entity_id,
-                    "Nom": result.entity_name,
+                    "Name": result.entity_name,
                     "Type": result.entity_type,
-                    "Actuel": round(
+                    "Current": round(
                         result.current_score,
                         2,
                     ),
-                    "Cible": round(
+                    "Target": round(
                         result.target_score,
                         2,
                     ),
@@ -852,7 +852,7 @@ class PDFBuilder:
                         result.gap,
                         2,
                     ),
-                    "Priorité": result.priority,
+                    "Priority": result.priority,
                 }
                 for result
                 in gap_results
@@ -875,14 +875,14 @@ class PDFBuilder:
                         "Dimension": (
                             result.dimension_id
                         ),
-                        "Nom": (
+                        "Name": (
                             result.dimension_name
                         ),
-                        "Actuel": round(
+                        "Current": round(
                             result.current_score,
                             2,
                         ),
-                        "Cible": round(
+                        "Target": round(
                             result.target_score,
                             2,
                         ),
@@ -899,7 +899,7 @@ class PDFBuilder:
                             is not None
                             else "-"
                         ),
-                        "Priorité": (
+                        "Priority": (
                             result.priority_category
                         ),
                     }
@@ -912,7 +912,7 @@ class PDFBuilder:
             [
                 {
                     "Dimension": result.dimension_id,
-                    "Nom": result.dimension_name,
+                    "Name": result.dimension_name,
                     "Gap": round(
                         result.gap,
                         2,
@@ -921,7 +921,7 @@ class PDFBuilder:
                         result.tpi_score,
                         3,
                     ),
-                    "Priorité": (
+                    "Priority": (
                         result.priority_category
                     ),
                 }
@@ -1108,21 +1108,21 @@ class PDFBuilder:
 
         if average_maturity is None:
             maturity_text = (
-                "Le niveau moyen de maturité "
-                "n'est pas disponible."
+                "The average maturity level "
+                "is not available."
             )
         else:
             maturity_text = (
-                f"Le niveau moyen de maturité "
-                f"est de <b>{average_maturity:.2f}/5</b>."
+                f"The average maturity level "
+                f"is <b>{average_maturity:.2f}/5</b>."
             )
 
         return (
             f"{maturity_text} "
-            f"L'écart moyen par rapport aux cibles "
-            f"est de <b>{average_gap:.2f}</b>. "
-            f"L'analyse fait ressortir "
-            f"<b>{critical}</b> priorité(s) critique(s)."
+            f"The average gap to targets "
+            f"is <b>{average_gap:.2f}</b>. "
+            f"The analysis identifies "
+            f"<b>{critical}</b> critical priority(ies)."
         )
 
     # ========================================================================

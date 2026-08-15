@@ -1,11 +1,17 @@
 from __future__ import annotations
 
 from html import escape
+from typing import Any
 
 import streamlit as st
 
 from components import render_footer, render_header
-from charts import BarChart, GaugeChart, RadarChart
+from charts import BarChart, GaugeChart, RadarChart, HeatmapChart
+
+from utils.helpers import (
+    translate_entity_name,
+    ENTITY_ENGLISH_NAMES,
+)
 
 
 # ==============================================================================
@@ -469,13 +475,102 @@ st.html(
 # HELPERS
 # ==============================================================================
 
-def _get_largest_gap(dimensions: list[dict]) -> dict | None:
+def _safe_float(value: Any, default: float = 0.0) -> float:
+    """Safely convert a value to float."""
+
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def _english_name(
+    entity_id: Any,
+    raw_name: Any,
+    fallback: str = "",
+) -> str:
+    """
+    Return the English display name for an entity.
+
+    The translation helper is used first. Empty or undefined values
+    are rejected so that 'Undefined', 'None', or empty labels do not
+    reach the UI.
+    """
+
+    entity_id_str = str(entity_id or "").strip()
+    raw_name_str = str(raw_name or "").strip()
+
+    invalid_values = {
+        "",
+        "none",
+        "null",
+        "undefined",
+        "nan",
+        "unknown",
+        "dimension",
+        "sub-dimension",
+    }
+
+    if raw_name_str.lower() in invalid_values:
+        raw_name_str = ""
+
+    translated = translate_entity_name(
+        entity_id_str,
+        raw_name_str,
+    )
+
+    translated = str(translated or "").strip()
+
+    if translated.lower() in invalid_values:
+        translated = ""
+
+    if translated:
+        return translated
+
+    if raw_name_str:
+        return raw_name_str
+
+    if entity_id_str:
+        return entity_id_str
+
+    return fallback
+
+
+def _build_dimension_lookup(
+    dimensions: list[dict],
+) -> dict[str, str]:
+    """Build a dimension ID -> English parent dimension name lookup."""
+
+    lookup: dict[str, str] = {}
+
+    for dimension in dimensions:
+        dimension_id = str(
+            dimension.get("id", "")
+        ).strip()
+
+        if not dimension_id:
+            continue
+
+        dimension_name = _english_name(
+            dimension_id,
+            dimension.get("name", ""),
+        )
+
+        if dimension_name:
+            lookup[dimension_id] = dimension_name
+
+    return lookup
+
+
+def _get_largest_gap(
+    dimensions: list[dict],
+) -> dict | None:
     """Return the dimension with the largest negative gap."""
 
     negative_gaps = [
         dimension
         for dimension in dimensions
-        if float(dimension.get("gap", 0)) < 0
+        if _safe_float(dimension.get("gap", 0)) < 0
     ]
 
     if not negative_gaps:
@@ -483,7 +578,9 @@ def _get_largest_gap(dimensions: list[dict]) -> dict | None:
 
     return min(
         negative_gaps,
-        key=lambda dimension: float(dimension.get("gap", 0)),
+        key=lambda dimension: _safe_float(
+            dimension.get("gap", 0)
+        ),
     )
 
 
@@ -496,7 +593,7 @@ def _count_attention_areas(
     return sum(
         1
         for dimension in dimensions
-        if float(dimension.get("gap", 0)) < threshold
+        if _safe_float(dimension.get("gap", 0)) < threshold
     )
 
 
@@ -523,15 +620,55 @@ def _insight_icon(insight_type: str) -> str:
 
 
 def _gap_width(gap: float) -> float:
+    """Convert a negative gap into a capped visual percentage."""
+
+    return min(
+        100.0,
+        abs(_safe_float(gap)),
+    )
+
+
+def _clean_label(value: Any, fallback: str = "") -> str:
+    """Return a clean non-empty display label."""
+
+    if value is None:
+        return fallback
+
+    value = str(value).strip()
+
+    if not value:
+        return fallback
+
+    return value
+
+
+def _get_english_entity_name(
+    entity_id: Any,
+    fallback: str = "",
+) -> str:
     """
-    Convert a negative gap into a visual percentage.
+    Return the English entity name.
 
-    The visual bar is intentionally capped at 100%.
+    The translation helper is used first. If no translation exists,
+    the original name is preserved instead of displaying
+    'Undefined', 'Dimension', or another generic placeholder.
     """
 
-    magnitude = abs(float(gap))
+    entity_id = _clean_label(entity_id)
+    fallback = _clean_label(fallback)
 
-    return min(100.0, magnitude)
+    if entity_id:
+        translated = translate_entity_name(
+            entity_id,
+            fallback,
+        )
+
+        translated = _clean_label(translated)
+
+        if translated:
+            return translated
+
+    return fallback
 
 
 # ==============================================================================
@@ -547,6 +684,17 @@ if not st.session_state.get("dashboard_data"):
 
 
 data = st.session_state["dashboard_data"]
+
+dimensions = data.get("dimensions", [])
+pillars = data.get("pillars", [])
+sub_dims_data = data.get("sub_dimensions", [])
+
+
+# ==============================================================================
+# BUILD MASTER DIMENSION LOOKUP
+# ==============================================================================
+
+dimension_lookup = _build_dimension_lookup(dimensions)
 
 
 # ==============================================================================
@@ -568,34 +716,59 @@ render_header(
 st.html(
     """
     <div class="dmat-dashboard-section">
-        <div class="dmat-section-heading">Executive Snapshot</div>
+        <div class="dmat-section-heading">
+            Executive Snapshot
+        </div>
+
         <div class="dmat-section-line"></div>
     </div>
     """
 )
 
 
-dimensions = data.get("dimensions", [])
-
 largest_gap_dim = _get_largest_gap(dimensions)
 attention_count = _count_attention_areas(dimensions)
 
-dmi = float(data.get("dmi", 0))
-target_dmi = float(data.get("target_dmi", 0))
-dmi_gap = float(data.get("dmi_gap", dmi - target_dmi))
+dmi = _safe_float(data.get("dmi", 0))
+target_dmi = _safe_float(data.get("target_dmi", 0))
 
-maturity_level = str(data.get("maturity_level", "N/A"))
+dmi_gap = _safe_float(
+    data.get(
+        "dmi_gap",
+        dmi - target_dmi,
+    )
+)
+
+maturity_level = str(
+    data.get("maturity_level", "N/A")
+).strip()
+
+if not maturity_level or maturity_level.lower() in {
+    "undefined",
+    "none",
+    "null",
+}:
+    maturity_level = "N/A"
+
 maturity_color = _maturity_color(dmi)
 
 
 kpi_col1, kpi_col2, kpi_col3, kpi_col4 = st.columns(4)
 
 
+# ------------------------------------------------------------------------------
+# KPI 1
+# ------------------------------------------------------------------------------
+
 with kpi_col1:
+
     st.html(
         f"""
         <div class="dmat-kpi-card">
-            <div class="dmat-kpi-label">Digital Maturity Index</div>
+
+            <div class="dmat-kpi-label">
+                Digital Maturity Index
+            </div>
 
             <div class="dmat-kpi-value">
                 {dmi:.1f}%
@@ -604,16 +777,25 @@ with kpi_col1:
             <div class="dmat-kpi-description">
                 Current maturity score
             </div>
+
         </div>
         """
     )
 
 
+# ------------------------------------------------------------------------------
+# KPI 2
+# ------------------------------------------------------------------------------
+
 with kpi_col2:
+
     st.html(
         f"""
         <div class="dmat-kpi-card">
-            <div class="dmat-kpi-label">Maturity Level</div>
+
+            <div class="dmat-kpi-label">
+                Maturity Level
+            </div>
 
             <div
                 class="dmat-kpi-value maturity"
@@ -625,18 +807,28 @@ with kpi_col2:
             <div class="dmat-kpi-description">
                 Current maturity stage
             </div>
+
         </div>
         """
     )
 
 
+# ------------------------------------------------------------------------------
+# KPI 3
+# ------------------------------------------------------------------------------
+
 with kpi_col3:
+
     gap_class = "negative" if dmi_gap < 0 else "positive"
+    card_class = "danger" if dmi_gap < 0 else "success"
 
     st.html(
         f"""
-        <div class="dmat-kpi-card {'danger' if dmi_gap < 0 else 'success'}">
-            <div class="dmat-kpi-label">Overall Gap</div>
+        <div class="dmat-kpi-card {card_class}">
+
+            <div class="dmat-kpi-label">
+                Overall Gap
+            </div>
 
             <div class="dmat-kpi-value {gap_class}">
                 {dmi_gap:+.1f} pts
@@ -645,16 +837,27 @@ with kpi_col3:
             <div class="dmat-kpi-description">
                 Current maturity versus target
             </div>
+
         </div>
         """
     )
 
 
+# ------------------------------------------------------------------------------
+# KPI 4
+# ------------------------------------------------------------------------------
+
 with kpi_col4:
+
+    card_class = "danger" if attention_count else "success"
+
     st.html(
         f"""
-        <div class="dmat-kpi-card {'danger' if attention_count else 'success'}">
-            <div class="dmat-kpi-label">Attention Areas</div>
+        <div class="dmat-kpi-card {card_class}">
+
+            <div class="dmat-kpi-label">
+                Attention Areas
+            </div>
 
             <div class="dmat-kpi-value">
                 {attention_count}
@@ -663,6 +866,7 @@ with kpi_col4:
             <div class="dmat-kpi-description">
                 Dimensions requiring attention
             </div>
+
         </div>
         """
     )
@@ -675,6 +879,7 @@ with kpi_col4:
 st.html(
     """
     <div class="dmat-dashboard-section">
+
         <div class="dmat-section-heading">
             Overall Maturity Position
         </div>
@@ -684,6 +889,7 @@ st.html(
         <div class="dmat-section-subtitle">
             Current maturity against the strategic target.
         </div>
+
     </div>
     """
 )
@@ -780,12 +986,97 @@ with position_col2:
 
 
 # ==============================================================================
-# MATURITY PROFILE — CURRENT VS TARGET
+# PILLAR PERFORMANCE
 # ==============================================================================
 
 st.html(
     """
     <div class="dmat-dashboard-section">
+
+        <div class="dmat-section-heading">
+            Pillar Performance
+        </div>
+
+        <div class="dmat-section-line"></div>
+
+        <div class="dmat-section-subtitle">
+            Performance of the main digital transformation pillars.
+        </div>
+
+    </div>
+    """
+)
+
+
+sorted_pillars = sorted(
+    pillars,
+    key=lambda pillar: _safe_float(pillar.get("score", 0)),
+    reverse=True,
+)
+
+pillar_names = [
+    _english_name(
+        pillar.get("id", ""),
+        pillar.get("name", ""),
+        fallback="Unknown",
+    )
+    for pillar in sorted_pillars
+]
+
+pillar_scores = [
+    _safe_float(pillar.get("score", 0))
+    for pillar in sorted_pillars
+]
+
+
+if pillar_names:
+
+    pillar_chart = BarChart(
+        categories=pillar_names,
+        values=pillar_scores,
+        title="Pillar Performance Scores",
+        orientation="horizontal",
+        show_values=True,
+        text_position="outside",
+        text_template="%{x:.1f}%",
+        show_grid=True,
+        show_legend=False,
+        colors=[PRIMARY],
+        background_color=SURFACE,
+        paper_color=BACKGROUND,
+        font_family="Century Gothic",
+        font_size=12,
+        width=1100,
+        height=420,
+    )
+
+    pillar_fig = pillar_chart.create()
+
+    pillar_fig.update_xaxes(title_text="")
+    pillar_fig.update_yaxes(title_text="")
+
+    st.plotly_chart(
+        pillar_fig,
+        width="stretch",
+        config={
+            "displayModeBar": False,
+            "responsive": True,
+        },
+    )
+
+else:
+
+    st.info("No pillar data available for visualization.")
+
+
+# ==============================================================================
+# MATURITY PROFILE
+# ==============================================================================
+
+st.html(
+    """
+    <div class="dmat-dashboard-section">
+
         <div class="dmat-section-heading">
             Maturity Profile
         </div>
@@ -793,27 +1084,33 @@ st.html(
         <div class="dmat-section-line"></div>
 
         <div class="dmat-section-subtitle">
-            Compare the current digital maturity profile with the strategic target.
+            Current versus target maturity scores across all dimensions.
         </div>
+
     </div>
     """
 )
 
 
-dim_names = [
-    str(dimension.get("name", "Unknown"))
-    for dimension in dimensions
-]
+radar_dim_names = []
+radar_current_scores = []
+radar_target_scores = []
 
-current_scores = [
-    float(dimension.get("current", 0))
-    for dimension in dimensions
-]
 
-target_scores = [
-    float(dimension.get("target", 0))
-    for dimension in dimensions
-]
+for dim in dimensions:
+
+    dim_name = _english_name(
+        dim.get("id", ""),
+        dim.get("name", ""),
+        fallback="Unknown",
+    )
+
+    if not dim_name:
+        continue
+
+    radar_dim_names.append(dim_name)
+    radar_current_scores.append(_safe_float(dim.get("current", 0)))
+    radar_target_scores.append(_safe_float(dim.get("target", 0)))
 
 
 radar_col1, radar_col2 = st.columns(2)
@@ -832,15 +1129,15 @@ with radar_col1:
             <div class="dmat-radar-header">
 
                 <div class="dmat-radar-title">
-                    Current Maturity
+                    Current Dimension Scores
                 </div>
 
                 <div class="dmat-radar-subtitle">
-                    Current performance across all digital dimensions.
+                    Current maturity per dimension
                 </div>
 
                 <span class="dmat-radar-badge current">
-                    CURRENT
+                    Current
                 </span>
 
             </div>
@@ -849,37 +1146,41 @@ with radar_col1:
         """
     )
 
-    current_radar = RadarChart(
-        categories=dim_names,
-        values=current_scores,
+    if radar_dim_names:
 
-        # CORRECTION : utiliser None au lieu d'une chaîne vide
-        title=None,
+        radar_current_chart = RadarChart(
+            categories=radar_dim_names,
+            values=radar_current_scores,
+            title="Current Maturity",
+            max_value=100,
+            fill=True,
+            line_color=PRIMARY,
+            fill_color=PRIMARY_LIGHT,
+            background_color=SURFACE,
+            paper_color=BACKGROUND,
+            font_family="Century Gothic",
+            font_size=12,
+            height=380,
+        )
 
-        fill=True,
-        fill_color="rgba(37, 99, 235, 0.16)",
-        line_color=PRIMARY,
-        marker_color=PRIMARY,
-        marker_size=7,
-        line_width=2,
-        min_value=0,
-        max_value=100,
-        background_color=SURFACE,
-        paper_color=SURFACE,
-        font_family="Century Gothic",
-        font_size=12,
-        width=700,
-        height=430,
-    )
+        current_fig = radar_current_chart.create()
+        current_fig.update_xaxes(title_text="")
+        current_fig.update_yaxes(title_text="")
 
-    st.plotly_chart(
-        current_radar.create(),
-        width="stretch",
-        config={
-            "displayModeBar": False,
-            "responsive": True,
-        },
-    )
+        st.plotly_chart(
+            current_fig,
+            width="stretch",
+            config={
+                "displayModeBar": False,
+                "responsive": True,
+            },
+        )
+
+    else:
+
+        st.info(
+            "No dimension data available for the current maturity profile."
+        )
 
 
 # ------------------------------------------------------------------------------
@@ -895,15 +1196,15 @@ with radar_col2:
             <div class="dmat-radar-header">
 
                 <div class="dmat-radar-title">
-                    Target Maturity
+                    Target Dimension Scores
                 </div>
 
                 <div class="dmat-radar-subtitle">
-                    Strategic target across all digital dimensions.
+                    Target maturity per dimension
                 </div>
 
                 <span class="dmat-radar-badge target">
-                    TARGET
+                    Target
                 </span>
 
             </div>
@@ -912,31 +1213,345 @@ with radar_col2:
         """
     )
 
-    target_radar = RadarChart(
-        categories=dim_names,
-        values=target_scores,
+    if radar_dim_names:
 
-        # CORRECTION : utiliser None au lieu d'une chaîne vide
-        title=None,
+        radar_target_chart = RadarChart(
+            categories=radar_dim_names,
+            values=radar_target_scores,
+            title="Target Maturity",
+            max_value=100,
+            fill=True,
+            line_color=TEAL,
+            fill_color=TEAL_LIGHT,
+            background_color=SURFACE,
+            paper_color=BACKGROUND,
+            font_family="Century Gothic",
+            font_size=12,
+            height=380,
+        )
 
-        fill=True,
-        fill_color="rgba(15, 157, 148, 0.12)",
-        line_color=TEAL,
-        marker_color=TEAL,
-        marker_size=7,
-        line_width=2,
-        min_value=0,
-        max_value=100,
-        background_color=SURFACE,
-        paper_color=SURFACE,
+        target_fig = radar_target_chart.create()
+        target_fig.update_xaxes(title_text="")
+        target_fig.update_yaxes(title_text="")
+
+        st.plotly_chart(
+            target_fig,
+            width="stretch",
+            config={
+                "displayModeBar": False,
+                "responsive": True,
+            },
+        )
+
+    else:
+
+        st.info(
+            "No dimension data available for the target maturity profile."
+        )
+
+
+# ==============================================================================
+# SUB-DIMENSION HEATMAP
+# ==============================================================================
+
+st.html(
+    """
+    <div class="dmat-dashboard-section">
+        <div class="dmat-section-heading">
+            Sub-Dimension Heatmap
+        </div>
+
+        <div class="dmat-section-line"></div>
+
+        <div class="dmat-section-subtitle">
+            Detailed maturity scores by parent dimension and sub-dimension.
+        </div>
+    </div>
+    """
+)
+
+
+# ------------------------------------------------------------------------------
+# EXTRACT SUB-DIMENSION DATA
+# ------------------------------------------------------------------------------
+
+sub_dims_data = []
+
+
+# CASE 1 — top-level sub_dimensions key
+top_level_sub_dimensions = data.get("sub_dimensions")
+
+if isinstance(top_level_sub_dimensions, list):
+    sub_dims_data.extend(top_level_sub_dimensions)
+
+
+# CASE 2 — sub-dimensions nested inside each dimension
+if not sub_dims_data:
+
+    for dimension in data.get("dimensions", []):
+
+        if not isinstance(dimension, dict):
+            continue
+
+        parent_dimension_id = (
+            dimension.get("id")
+            or dimension.get("dimension_id")
+            or ""
+        )
+
+        parent_dimension_name = (
+            dimension.get("name")
+            or dimension.get("dimension_name")
+            or ""
+        )
+
+        nested_sub_dimensions = (
+            dimension.get("sub_dimensions")
+            or dimension.get("subdimensions")
+            or dimension.get("sub_dimensions_data")
+            or []
+        )
+
+        if not isinstance(nested_sub_dimensions, list):
+            continue
+
+        for sub_dimension in nested_sub_dimensions:
+
+            if not isinstance(sub_dimension, dict):
+                continue
+
+            sd = dict(sub_dimension)
+            sd.setdefault("dimension_id", parent_dimension_id)
+            sd.setdefault("dimension_name", parent_dimension_name)
+            sub_dims_data.append(sd)
+
+
+# CASE 3 — other common backend key names
+if not sub_dims_data:
+
+    for key in (
+        "subDimensions",
+        "sub_dimension_scores",
+        "subdimension_scores",
+        "subdimension_data",
+    ):
+        candidate = data.get(key)
+
+        if isinstance(candidate, list):
+            sub_dims_data.extend(candidate)
+            break
+
+
+# ------------------------------------------------------------------------------
+# BUILD HEATMAP DATA
+# ------------------------------------------------------------------------------
+
+heatmap_entries = []
+
+for sd in sub_dims_data:
+
+    if not isinstance(sd, dict):
+        continue
+
+    sub_dimension_id = (
+        sd.get("id")
+        or sd.get("sub_dimension_id")
+        or sd.get("subdimension_id")
+        or ""
+    )
+
+    sub_dimension_raw_name = (
+        sd.get("name")
+        or sd.get("sub_dimension_name")
+        or sd.get("subdimension_name")
+        or ""
+    )
+
+    sub_dimension_name = _get_english_entity_name(
+        sub_dimension_id,
+        sub_dimension_raw_name,
+    )
+
+    if not sub_dimension_name:
+        continue
+
+    if sub_dimension_name.lower() in {
+        "undefined",
+        "unknown",
+        "unknown dimension",
+        "sub-dimension",
+        "subdimension",
+    }:
+        continue
+
+    dimension_id = (
+        sd.get("dimension_id")
+        or sd.get("parent_dimension_id")
+        or sd.get("parent_id")
+        or ""
+    )
+
+    dimension_raw_name = (
+        sd.get("dimension_name")
+        or sd.get("parent_dimension_name")
+        or sd.get("parent_name")
+        or ""
+    )
+
+    if not dimension_raw_name and dimension_id:
+
+        for dimension in data.get("dimensions", []):
+
+            if not isinstance(dimension, dict):
+                continue
+
+            current_dimension_id = str(
+                dimension.get("id")
+                or dimension.get("dimension_id")
+                or ""
+            )
+
+            if current_dimension_id == str(dimension_id):
+
+                dimension_raw_name = (
+                    dimension.get("name")
+                    or dimension.get("dimension_name")
+                    or ""
+                )
+
+                break
+
+    parent_dimension_name = _get_english_entity_name(
+        dimension_id,
+        dimension_raw_name,
+    )
+
+    if not parent_dimension_name:
+        continue
+
+    if parent_dimension_name.lower() in {
+        "undefined",
+        "unknown",
+        "unknown dimension",
+        "dimension",
+    }:
+        continue
+
+    score = (
+        sd.get("score")
+        if sd.get("score") is not None
+        else sd.get("current")
+    )
+
+    if score is None:
+        score = sd.get("value")
+
+    if score is None:
+        continue
+
+    score = _safe_float(score)
+
+    heatmap_entries.append(
+        {
+            "parent_dimension": parent_dimension_name,
+            "sub_dimension": sub_dimension_name,
+            "score": score,
+        }
+    )
+
+
+# ------------------------------------------------------------------------------
+# REMOVE DUPLICATES
+# ------------------------------------------------------------------------------
+
+unique_entries = {}
+
+for entry in heatmap_entries:
+    key = (entry["parent_dimension"], entry["sub_dimension"])
+    unique_entries[key] = entry
+
+heatmap_entries = list(unique_entries.values())
+
+
+# ------------------------------------------------------------------------------
+# RENDER HEATMAP
+# ------------------------------------------------------------------------------
+
+if heatmap_entries:
+
+    parent_dimensions = sorted(
+        {entry["parent_dimension"] for entry in heatmap_entries}
+    )
+
+    sub_dimensions = sorted(
+        {entry["sub_dimension"] for entry in heatmap_entries}
+    )
+
+    score_lookup = {
+        (entry["parent_dimension"], entry["sub_dimension"]): entry["score"]
+        for entry in heatmap_entries
+    }
+
+    heatmap_matrix = []
+
+    for parent_dimension in parent_dimensions:
+
+        row = []
+
+        for sub_dimension in sub_dimensions:
+
+            value = score_lookup.get(
+                (parent_dimension, sub_dimension),
+                None,
+            )
+
+            row.append(value)
+
+        heatmap_matrix.append(row)
+
+    hover_template = (
+        "<b>Parent Dimension:</b> %{y}<br>"
+        "<b>Sub-Dimension:</b> %{x}<br>"
+        "<b>Maturity Score:</b> %{z:.1f}%"
+        "<extra></extra>"
+    )
+
+    heatmap_chart = HeatmapChart(
+        matrix=heatmap_matrix,
+        row_labels=parent_dimensions,
+        col_labels=sub_dimensions,
+        # FIX: pass a single space so the chart component never
+        # falls back to a default "undefined" or generic title.
+        # The title is fully removed via update_layout below.
+        title=" ",
+        yaxis_title="",
+        colorscale="RdYlGn",
+        show_values=True,
+        text_format=".1f",
+        zmin=0,
+        zmax=100,
+        width=1100,
+        height=max(420, len(parent_dimensions) * 70),
         font_family="Century Gothic",
         font_size=12,
-        width=700,
-        height=430,
+        hover_template=hover_template,
+    )
+
+    fig = heatmap_chart.create()
+
+    fig.update_xaxes(title_text="")
+    fig.update_yaxes(title_text="")
+
+    # FIX: explicitly wipe the title text and collapse its font size
+    # so nothing is rendered even if the component set a default.
+    fig.update_layout(
+        title=dict(
+            text="",
+        ),
     )
 
     st.plotly_chart(
-        target_radar.create(),
+        fig,
         width="stretch",
         config={
             "displayModeBar": False,
@@ -944,79 +1559,11 @@ with radar_col2:
         },
     )
 
+else:
 
-# ==============================================================================
-# PILLAR PERFORMANCE
-# ==============================================================================
-
-st.html(
-    """
-    <div class="dmat-dashboard-section">
-        <div class="dmat-section-heading">
-            Pillar Performance
-        </div>
-
-        <div class="dmat-section-line"></div>
-
-        <div class="dmat-section-subtitle">
-            Performance of the main digital transformation pillars.
-        </div>
-    </div>
-    """
-)
-
-
-pillars = data.get("pillars", [])
-
-sorted_pillars = sorted(
-    pillars,
-    key=lambda pillar: float(pillar.get("score", 0)),
-    reverse=True,
-)
-
-
-pillar_names = [
-    str(pillar.get("name", "Unknown"))
-    for pillar in sorted_pillars
-]
-
-pillar_scores = [
-    float(pillar.get("score", 0))
-    for pillar in sorted_pillars
-]
-
-
-pillar_chart = BarChart(
-    categories=pillar_names,
-    values=pillar_scores,
-
-    # CORRECTION : utiliser None au lieu d'une chaîne vide
-    title=None,
-
-    orientation="horizontal",
-    show_values=True,
-    text_position="outside",
-    text_template="%{x:.1f}%",
-    show_grid=True,
-    show_legend=False,
-    colors=[PRIMARY],
-    background_color=SURFACE,
-    paper_color=BACKGROUND,
-    font_family="Century Gothic",
-    font_size=12,
-    width=1100,
-    height=420,
-)
-
-
-st.plotly_chart(
-    pillar_chart.create(),
-    width="stretch",
-    config={
-        "displayModeBar": False,
-        "responsive": True,
-    },
-)
+    st.warning(
+        "Sub-dimension scores are not available in the current assessment results."
+    )
 
 
 # ==============================================================================
@@ -1026,6 +1573,7 @@ st.plotly_chart(
 st.html(
     """
     <div class="dmat-dashboard-section">
+
         <div class="dmat-section-heading">
             Transformation Gaps
         </div>
@@ -1035,6 +1583,7 @@ st.html(
         <div class="dmat-section-subtitle">
             Dimensions with the largest distance from the strategic target.
         </div>
+
     </div>
     """
 )
@@ -1042,22 +1591,24 @@ st.html(
 
 gap_dimensions = sorted(
     dimensions,
-    key=lambda dimension: float(dimension.get("gap", 0)),
+    key=lambda dimension: _safe_float(dimension.get("gap", 0)),
 )
-
 
 gap_col1, gap_col2 = st.columns(2)
 
-
 for index, dimension in enumerate(gap_dimensions[:6]):
 
-    name = str(dimension.get("name", "Unknown"))
-    current = float(dimension.get("current", 0))
-    target = float(dimension.get("target", 0))
-    gap = float(dimension.get("gap", 0))
+    name = _english_name(
+        dimension.get("id", ""),
+        dimension.get("name", ""),
+        fallback="Unknown",
+    )
+
+    current = _safe_float(dimension.get("current", 0))
+    target = _safe_float(dimension.get("target", 0))
+    gap = _safe_float(dimension.get("gap", 0))
 
     gap_class = "negative" if gap < 0 else "neutral"
-
     fill_width = _gap_width(gap)
 
     card_html = f"""
@@ -1100,12 +1651,9 @@ for index, dimension in enumerate(gap_dimensions[:6]):
     """
 
     if index % 2 == 0:
-
         with gap_col1:
             st.html(card_html)
-
     else:
-
         with gap_col2:
             st.html(card_html)
 
@@ -1135,7 +1683,6 @@ st.html(
 
 insights = data.get("insights", [])
 
-
 if insights:
 
     insight_col1, insight_col2 = st.columns(2)
@@ -1144,34 +1691,33 @@ if insights:
 
         insight_type = str(
             insight.get("type", "warning")
-        )
+        ).lower()
 
-        if insight_type not in {
-            "danger",
-            "warning",
-            "success",
-        }:
+        if insight_type not in {"danger", "warning", "success"}:
             insight_type = "warning"
 
         icon = _insight_icon(insight_type)
 
-        title = escape(
-            str(
-                insight.get(
-                    "title",
-                    "Insight",
-                )
-            )
-        )
+        title = str(insight.get("title", "Insight")).strip()
 
-        text = escape(
-            str(
-                insight.get(
-                    "text",
-                    "",
+        if not title or title.lower() in {"undefined", "none", "null"}:
+            title = "Diagnostic Insight"
+
+        raw_text = str(insight.get("text", ""))
+
+        translated_text = raw_text
+
+        for entity_id, english_name in ENTITY_ENGLISH_NAMES.items():
+
+            entity_id_str = str(entity_id)
+
+            if entity_id_str in translated_text:
+                translated_text = translated_text.replace(
+                    entity_id_str,
+                    str(english_name),
                 )
-            )
-        )
+
+        text = escape(translated_text)
 
         insight_html = f"""
             <div class="dmat-insight-card">
@@ -1183,7 +1729,7 @@ if insights:
                 <div>
 
                     <div class="dmat-insight-title">
-                        {title}
+                        {escape(title)}
                     </div>
 
                     <div class="dmat-insight-text">
@@ -1196,12 +1742,9 @@ if insights:
         """
 
         if index % 2 == 0:
-
             with insight_col1:
                 st.html(insight_html)
-
         else:
-
             with insight_col2:
                 st.html(insight_html)
 
@@ -1269,14 +1812,9 @@ st.html(
     """
 )
 
-
 st.html("<div style='height:0.7rem;'></div>")
 
-
-button_col1, button_col2, button_col3 = st.columns(
-    [1, 2, 1]
-)
-
+button_col1, button_col2, button_col3 = st.columns([1, 2, 1])
 
 with button_col2:
 
@@ -1286,10 +1824,7 @@ with button_col2:
         use_container_width=True,
         type="primary",
     ):
-
-        st.switch_page(
-            "pages/4_Decision_analysis.py"
-        )
+        st.switch_page("pages/4_Decision_analysis.py")
 
 
 # ==============================================================================
@@ -1304,11 +1839,11 @@ render_footer(
     links=[
         {
             "label": "JESA",
-            "url": "https://www.jesa.ma",
+            "url": "https://www.jesagroup.com/",
         },
         {
             "label": "ENSAM Casablanca",
-            "url": "https://ensam-casablanca.ma",
+            "url": "https://ensam-casa.ma/",
         },
     ],
     align="center",

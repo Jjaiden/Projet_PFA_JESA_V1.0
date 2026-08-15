@@ -222,6 +222,7 @@ class HeatmapChart:
 
     # -- textual metadata ----------------------------------------------
     title: str = ""
+    yaxis_title: str = ""
 
     # -- colour scale --------------------------------------------------
     colorscale: str | Sequence[tuple[float, str]] | None = None
@@ -279,6 +280,8 @@ class HeatmapChart:
             fig.add_trace(missing_trace)
         self._build_annotations(fig)
         self._build_layout(fig)
+        # Force no title (Plotly sometimes adds default when None)
+        fig.update_layout(title=None)
         return fig
 
     # ------------------------------------------------------------------
@@ -415,7 +418,7 @@ class HeatmapChart:
         _validate_positive_int("font_size", self.font_size)
 
         # -- string types ------------------------------------------------
-        _validate_str("title", self.title)
+        _validate_str_or_none("title", self.title)
         _validate_str("text_format", self.text_format)
         _validate_str_or_none("hover_template", self.hover_template)
         _validate_str("colorbar_title", self.colorbar_title)
@@ -648,6 +651,22 @@ class HeatmapChart:
         """
         grid_color = GRID if self.show_cell_borders else "rgba(0,0,0,0)"
 
+        # Determine if we should show a title
+        title_value = None
+        if self.title is not None:
+            title_str = str(self.title).strip()
+            if title_str and title_str.lower() != "undefined":
+                title_value = {
+                    "text": title_str,
+                    "font": {
+                        "family": self.font_family,
+                        "size": self.font_size + 4,
+                        "color": self.title_color,
+                    },
+                    "x": 0.5,
+                    "xanchor": "center",
+                }
+
         fig.update_layout(
             width=self.width,
             height=self.height,
@@ -658,16 +677,7 @@ class HeatmapChart:
                 size=self.font_size,
                 color=self.title_color,
             ),
-            title={
-                "text": self.title,
-                "font": {
-                    "family": self.font_family,
-                    "size": self.font_size + 4,
-                    "color": self.title_color,
-                },
-                "x": 0.5,
-                "xanchor": "center",
-            } if self.title else None,
+            title=title_value,
             margin=dict(l=80, r=80, t=80, b=80),
         )
 

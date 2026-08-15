@@ -140,21 +140,40 @@ with col3:
 # EXPORT FORMAT SELECTION
 # =============================================================================
 
-st.markdown("### Export")
+st.markdown("### Select files to export")
 
-formats = st.multiselect(
-    "Select export formats",
-    options=[
-        "pdf_score",
-        "pdf_full",
-        "excel",
-        "json",
-    ],
-    default=[
-        "pdf_score",
-        "excel",
-    ],
-)
+# Three specific export options
+col_format1, col_format2, col_format3 = st.columns(3)
+
+with col_format1:
+    export_pdf_score = st.checkbox(
+        "📊 Score Summary",
+        value=True,
+        help="2-page PDF score summary",
+    )
+
+with col_format2:
+    export_pdf_full = st.checkbox(
+        "📄 Full Report",
+        value=True,
+        help="Complete PDF report",
+    )
+
+with col_format3:
+    export_excel = st.checkbox(
+        "📈 Excel Workbook",
+        value=True,
+        help="Full Excel workbook",
+    )
+
+# Build formats list from checkboxes
+formats = []
+if export_pdf_score:
+    formats.append("pdf_score")
+if export_pdf_full:
+    formats.append("pdf_full")
+if export_excel:
+    formats.append("excel")
 
 
 # =============================================================================
@@ -296,11 +315,16 @@ if export_paths:
 
             continue
 
-        suffix = (
-            "xlsx"
-            if format_name == "excel"
-            else format_name
-        )
+        # Use the actual file extension from the path
+        file_extension = path.suffix.lstrip(".")
+        
+        # Map format name to display label
+        label_map = {
+            "pdf_score": "Score Summary",
+            "pdf_full": "Full Report",
+            "excel": "Excel Workbook",
+        }
+        display_name = label_map.get(format_name, format_name.replace('_', ' ').title())
 
         with open(
             path,
@@ -308,9 +332,9 @@ if export_paths:
         ) as file:
 
             st.download_button(
-                label=(f"DOWNLOAD {format_name.replace('_', ' ').upper()}"),
+                label=(f"DOWNLOAD {display_name}"),
                 data=file.read(),
-                file_name=(f"JESA_DMAT_{assessment_id}.{suffix}"),
+                file_name=(f"JESA_DMAT_{assessment_id}.{file_extension}"),
                 mime=mime_types.get(
                     format_name,
                     "application/octet-stream",
@@ -385,11 +409,11 @@ render_footer(
     links=[
         {
             "label": "JESA",
-            "url": "https://www.jesa.ma",
+            "url": "https://www.jesagroup.com/",
         },
         {
             "label": "ENSAM Casablanca",
-            "url": "https://ensam-casablanca.ma",
+            "url": "https://ensam-casa.ma/",
         },
     ],
     align="center",

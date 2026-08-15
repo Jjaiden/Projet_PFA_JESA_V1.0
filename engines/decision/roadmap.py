@@ -380,18 +380,40 @@ class RoadmapEngine:
     # HELPERS
     # ========================================================================
 
+    _PRIORITY_NORMALIZATION = {
+        "critique": "Critical",
+        "haute": "High",
+        "moyenne": "Medium",
+        "moyen": "Medium",
+        "faible": "Low",
+        "très faible": "Very Low",
+        "tres faible": "Very Low",
+        "critical": "Critical",
+        "high": "High",
+        "medium": "Medium",
+        "low": "Low",
+        "very low": "Very Low",
+    }
+
     def _resolve_phase(
         self,
         priority: str,
     ) -> tuple[str, str]:
 
-        if priority in self.phase_mapping:
+        normalized = self._PRIORITY_NORMALIZATION.get(
+            str(priority)
+            .strip()
+            .lower(),
+            str(priority).strip(),
+        )
+
+        if normalized in self.phase_mapping:
             return self.phase_mapping[
-                priority
+                normalized
             ]
 
-        normalized = (
-            str(priority)
+        normalized_lower = (
+            str(normalized)
             .strip()
             .lower()
         )
@@ -401,7 +423,7 @@ class RoadmapEngine:
         ):
             if (
                 key.lower()
-                == normalized
+                == normalized_lower
             ):
                 return value
 
@@ -453,6 +475,19 @@ class RoadmapEngine:
             ),
         )
 
+    _DIMENSION_ENGLISH_NAMES = {
+        "D1": "OT/IT Infrastructure",
+        "D2": "Connectivity & Networks",
+        "D3": "Automation & Control",
+        "D4": "Supervision & Monitoring",
+        "D5": "Data Management",
+        "D6": "Analytics & Artificial Intelligence",
+        "D7": "OT/IT Security",
+        "D8": "Digital Governance",
+        "D9": "Digital Skills",
+        "D10": "Digital Culture",
+    }
+
     @staticmethod
     def _create_placeholder_item(
         tpi: TPIResult,
@@ -460,13 +495,18 @@ class RoadmapEngine:
         horizon: str,
     ) -> RoadmapItem:
 
+        english_name = RoadmapEngine._DIMENSION_ENGLISH_NAMES.get(
+            tpi.dimension_id,
+            tpi.dimension_name,
+        )
+
         return RoadmapItem(
             recommendation_id=(
                 f"NO-REC-{tpi.dimension_id}"
             ),
             title=(
                 f"Define an action "
-                f"for {tpi.dimension_name}"
+                f"for {english_name}"
             ),
             dimension_id=tpi.dimension_id,
             pillar_id="",

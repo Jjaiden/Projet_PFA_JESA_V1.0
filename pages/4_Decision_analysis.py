@@ -492,11 +492,11 @@ render_footer(
     links=[
         {
             "label": "JESA",
-            "url": "https://www.jesa.ma",
+            "url": "https://www.jesagroup.com/",
         },
         {
             "label": "ENSAM Casablanca",
-            "url": "https://ensam-casablanca.ma",
+            "url": "https://ensam-casa.ma/",
         },
     ],
     align="center",
