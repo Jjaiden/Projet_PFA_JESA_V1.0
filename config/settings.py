@@ -256,9 +256,9 @@ class FrontendSettings:
     """Web page title displayed in the browser tab."""
 
     PAGE_ICON: str = str(
-        _ROOT_DIR / "assets" / "logo" / "jesa_logo.png"
+        _ROOT_DIR / "assets" / "logos" / "logo_jesa.png"
     )
-    """Page icon (path to the logo). An emoji can also be used."""
+    """Page icon (path to the logos). An emoji can also be used."""
 
     LAYOUT: str = "wide"
     """Streamlit layout: 'centered' or 'wide'."""
@@ -292,7 +292,7 @@ class FrontendSettings:
     ASSETS_DIR: Path = _ROOT_DIR / "assets"
     """Directory containing static resources."""
 
-    LOGO_DIR: Path = _ROOT_DIR / "assets" / "logo"
+    LOGO_DIR: Path = _ROOT_DIR / "assets" / "logos"
     """Directory containing logos."""
 
     IMAGES_DIR: Path = _ROOT_DIR / "assets" / "images"

@@ -12,7 +12,7 @@ maxUploadSize = 50
 
 [browser]
 gatherUsageStats = false
-serverAddress = "localhost"
+
 
 [runner]
 fastReruns = true
