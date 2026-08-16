@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any, Mapping
 
 import streamlit as st
 
 
 _HISTORY_KEY = "assessment_history"
+DB_PATH = Path("data/runtime/assessment_history.sqlite3")
 
 
 def _history_store() -> dict[str, dict[str, Any]]:
@@ -20,8 +22,15 @@ def _history_store() -> dict[str, dict[str, Any]]:
     return history
 
 
-def save_assessment_history(payload: Mapping[str, Any]) -> None:
-    """Save an assessment only in the current Streamlit session."""
+def save_assessment_history(
+    payload: Mapping[str, Any],
+    db_path: Path = DB_PATH,
+) -> None:
+    """Save an assessment only in the current Streamlit session.
+
+    ``db_path`` is retained for backward compatibility and intentionally ignored.
+    """
+    del db_path
     assessment_id = str(payload.get("assessment_id") or "")
     if not assessment_id:
         raise ValueError("assessment_id is required for history persistence.")
@@ -29,8 +38,14 @@ def save_assessment_history(payload: Mapping[str, Any]) -> None:
     _history_store()[assessment_id] = dict(payload)
 
 
-def list_assessment_history() -> list[dict[str, Any]]:
-    """List assessments saved by the current Streamlit session."""
+def list_assessment_history(
+    db_path: Path = DB_PATH,
+) -> list[dict[str, Any]]:
+    """List assessments saved by the current Streamlit session.
+
+    ``db_path`` is retained for backward compatibility and intentionally ignored.
+    """
+    del db_path
     records: list[dict[str, Any]] = []
 
     for payload in _history_store().values():
@@ -57,8 +72,15 @@ def list_assessment_history() -> list[dict[str, Any]]:
     return records
 
 
-def load_assessment_history(assessment_id: str) -> dict[str, Any] | None:
-    """Load an assessment saved by the current Streamlit session."""
+def load_assessment_history(
+    assessment_id: str,
+    db_path: Path = DB_PATH,
+) -> dict[str, Any] | None:
+    """Load an assessment saved by the current Streamlit session.
+
+    ``db_path`` is retained for backward compatibility and intentionally ignored.
+    """
+    del db_path
     payload = _history_store().get(str(assessment_id))
     return dict(payload) if payload is not None else None
 
