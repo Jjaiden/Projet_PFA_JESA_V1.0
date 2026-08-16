@@ -197,10 +197,11 @@ if st.button(
             formats,
         )
 
-        if not export_paths:
-            raise RuntimeError(
-                "No export file was generated."
-            )
+        # The export service keeps successful files in its result mapping.
+        # Compare that mapping with the requested formats so partial failures
+        # are visible instead of being reported as generic success.
+        succeeded_formats = [fmt for fmt in formats if fmt in export_paths]
+        failed_formats = [fmt for fmt in formats if fmt not in export_paths]
 
         # -------------------------------------------------------------
         # Store generated files in session state
@@ -224,7 +225,7 @@ if st.button(
         )
 
         # -------------------------------------------------------------
-        # Create complete ZIP report
+        # Create complete ZIP report from successful exports only
         # -------------------------------------------------------------
 
         valid_paths = []
@@ -267,9 +268,24 @@ if st.button(
                 "latest_report_path"
             ] = str(report_path)
 
-        st.success(
-            "Export generated successfully."
-        )
+        labels = {
+            "pdf_score": "PDF Score Summary",
+            "pdf_full": "PDF Full Report",
+            "excel": "Excel Workbook",
+        }
+
+        if succeeded_formats and not failed_formats:
+            st.success("All requested exports were generated successfully.")
+        elif succeeded_formats:
+            succeeded_text = ", ".join(labels.get(fmt, fmt) for fmt in succeeded_formats)
+            failed_text = ", ".join(labels.get(fmt, fmt) for fmt in failed_formats)
+            st.warning(
+                f"Partial export result — succeeded: {succeeded_text}; "
+                f"failed: {failed_text}."
+            )
+        else:
+            failed_text = ", ".join(labels.get(fmt, fmt) for fmt in failed_formats)
+            st.error(f"All requested exports failed: {failed_text}.")
 
     except Exception as exc:
 
