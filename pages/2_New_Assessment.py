@@ -459,7 +459,7 @@ uploaded_file = st.file_uploader(
 
 st.markdown("""
 <div class="dmat-upload-help">
-    Excel workbook (.xlsx) · Maximum 200 MB per file ·
+    Excel workbook (.xlsx) · Maximum 50 MB per file ·
     Use the official assessment template for compatibility.
 </div>
 """, unsafe_allow_html=True)
