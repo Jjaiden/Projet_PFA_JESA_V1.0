@@ -1,117 +1,97 @@
-"""SQLite persistence for JESA DMAT assessment history."""
+"""Session-scoped assessment history for JESA DMAT."""
 
 from __future__ import annotations
 
-import json
-import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Mapping
 
-from config import settings
+import streamlit as st
 
 
-DB_PATH = settings.DATA_DIR / "runtime" / "assessment_history.sqlite3"
+_HISTORY_KEY = "assessment_history"
+DB_PATH = Path("data/runtime/assessment_history.sqlite3")
 
 
-def init_history_store(db_path: Path = DB_PATH) -> None:
-    db_path.parent.mkdir(parents=True, exist_ok=True)
-    with sqlite3.connect(db_path) as conn:
-        conn.execute(
-            """
-            CREATE TABLE IF NOT EXISTS assessments (
-                assessment_id TEXT PRIMARY KEY,
-                created_at TEXT NOT NULL,
-                updated_at TEXT NOT NULL,
-                assessment_name TEXT,
-                site_name TEXT,
-                source_filename TEXT,
-                dmi REAL,
-                maturity_level TEXT,
-                status TEXT,
-                payload_json TEXT NOT NULL
-            )
-            """
-        )
-        conn.commit()
+def _history_store() -> dict[str, dict[str, Any]]:
+    """Return the current browser session's assessment history store."""
+    history = st.session_state.get(_HISTORY_KEY)
+    if not isinstance(history, dict):
+        history = {}
+        st.session_state[_HISTORY_KEY] = history
+    return history
 
 
-def save_assessment_history(payload: Mapping[str, Any], db_path: Path = DB_PATH) -> None:
-    init_history_store(db_path)
+def save_assessment_history(
+    payload: Mapping[str, Any],
+    db_path: Path = DB_PATH,
+) -> None:
+    """Save an assessment only in the current Streamlit session.
+
+    ``db_path`` is retained for backward compatibility and intentionally ignored.
+    """
+    del db_path
     assessment_id = str(payload.get("assessment_id") or "")
     if not assessment_id:
         raise ValueError("assessment_id is required for history persistence.")
 
-    metadata = payload.get("metadata", {})
-    aggregation = payload.get("aggregation", {})
-    dmi_payload = aggregation.get("dmi") or {}
-    now = datetime.now(timezone.utc).isoformat()
+    _history_store()[assessment_id] = dict(payload)
 
-    with sqlite3.connect(db_path) as conn:
-        existing = conn.execute(
-            "SELECT created_at FROM assessments WHERE assessment_id = ?",
-            (assessment_id,),
-        ).fetchone()
-        created_at = existing[0] if existing else now
-        conn.execute(
-            """
-            INSERT INTO assessments (
-                assessment_id, created_at, updated_at, assessment_name,
-                site_name, source_filename, dmi, maturity_level, status,
-                payload_json
-            )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ON CONFLICT(assessment_id) DO UPDATE SET
-                updated_at = excluded.updated_at,
-                assessment_name = excluded.assessment_name,
-                site_name = excluded.site_name,
-                source_filename = excluded.source_filename,
-                dmi = excluded.dmi,
-                maturity_level = excluded.maturity_level,
-                status = excluded.status,
-                payload_json = excluded.payload_json
-            """,
-            (
-                assessment_id,
-                created_at,
-                now,
-                metadata.get("assessment_name") or assessment_id,
-                metadata.get("site_name"),
-                metadata.get("source_filename"),
-                dmi_payload.get("score"),
-                dmi_payload.get("level_name"),
-                _status(payload),
-                json.dumps(payload, ensure_ascii=False),
-            ),
+
+def list_assessment_history(
+    db_path: Path = DB_PATH,
+) -> list[dict[str, Any]]:
+    """List assessments saved by the current Streamlit session.
+
+    ``db_path`` is retained for backward compatibility and intentionally ignored.
+    """
+    del db_path
+    records: list[dict[str, Any]] = []
+
+    for payload in _history_store().values():
+        metadata = payload.get("metadata", {}) or {}
+        aggregation = payload.get("aggregation", {}) or {}
+        dmi_payload = aggregation.get("dmi") or {}
+
+        records.append(
+            {
+                "created_at": payload.get("created_at") or _created_at(payload),
+                "updated_at": payload.get("updated_at") or _created_at(payload),
+                "assessment_name": metadata.get("assessment_name")
+                or payload.get("assessment_id"),
+                "site_name": metadata.get("site_name") or metadata.get("plant"),
+                "source_filename": metadata.get("source_filename"),
+                "dmi": dmi_payload.get("score"),
+                "maturity_level": dmi_payload.get("level_name"),
+                "status": _status(payload),
+                "assessment_id": payload.get("assessment_id"),
+            }
         )
-        conn.commit()
+
+    records.sort(key=lambda item: item.get("created_at") or "", reverse=True)
+    return records
 
 
-def list_assessment_history(db_path: Path = DB_PATH) -> list[dict[str, Any]]:
-    init_history_store(db_path)
-    with sqlite3.connect(db_path) as conn:
-        conn.row_factory = sqlite3.Row
-        rows = conn.execute(
-            """
-            SELECT assessment_id, created_at, updated_at, assessment_name,
-                   site_name, source_filename, dmi, maturity_level, status
-            FROM assessments
-            ORDER BY datetime(created_at) DESC
-            """
-        ).fetchall()
-    return [dict(row) for row in rows]
+def load_assessment_history(
+    assessment_id: str,
+    db_path: Path = DB_PATH,
+) -> dict[str, Any] | None:
+    """Load an assessment saved by the current Streamlit session.
+
+    ``db_path`` is retained for backward compatibility and intentionally ignored.
+    """
+    del db_path
+    payload = _history_store().get(str(assessment_id))
+    return dict(payload) if payload is not None else None
 
 
-def load_assessment_history(assessment_id: str, db_path: Path = DB_PATH) -> dict[str, Any] | None:
-    init_history_store(db_path)
-    with sqlite3.connect(db_path) as conn:
-        row = conn.execute(
-            "SELECT payload_json FROM assessments WHERE assessment_id = ?",
-            (assessment_id,),
-        ).fetchone()
-    if row is None:
-        return None
-    return json.loads(row[0])
+def _created_at(payload: Mapping[str, Any]) -> str:
+    """Provide a stable display timestamp for session-scoped history."""
+    metadata = payload.get("metadata", {}) or {}
+    value = metadata.get("assessment_date")
+    if value:
+        return str(value)
+    return datetime.now(timezone.utc).isoformat()
 
 
 def _status(payload: Mapping[str, Any]) -> str:
