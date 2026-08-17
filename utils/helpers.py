@@ -625,7 +625,18 @@ ENTITY_ENGLISH_NAMES = {
     "SD9.1": "Digital Skills Levels",
     "SD9.2": "Training & Development",
     "SD10.1": "Digital Tool Adoption",
-    "SD10.2": "Innovation & Continuous Improvement"
+    "SD10.2": "Innovation & Continuous Improvement",
+    # ------- INDICATORS -------
+    "I-D1-01": "OT Network Coverage", "I-D1-02": "OT Network Redundancy", "I-D1-03": "Measured OT Network Availability", "I-D1-04": "OT Server Virtualization", "I-D1-05": "Server Reserve Capacity", "I-D1-06": "OT Disaster Recovery Plan",
+    "I-D2-01": "Industrial Protocol Standardization", "I-D2-02": "OPC UA Deployment", "I-D2-03": "Inter-System Interface Documentation", "I-D2-04": "Bidirectional OT/IT Integration", "I-D2-05": "OT/IT Data Flow Monitoring", "I-D2-06": "Measured Exchange Latency and Reliability",
+    "I-D3-01": "DCS/PLC Coverage of Critical Loops", "I-D3-02": "DCS Documentation and Configuration", "I-D3-03": "DCS Alarm Management and Rationalization", "I-D3-04": "MES Deployment and Production Traceability", "I-D3-05": "Automated Production Scheduling", "I-D3-06": "Planned-versus-Actual Variances Analyzed and Documented",
+    "I-D4-01": "Process SCADA Coverage", "I-D4-02": "Operator Interface (HMI) Standardization", "I-D4-03": "SCADA Alarm Management (Nuisance Alarm Rate)", "I-D4-04": "Condition Sensor Deployment on Critical Equipment", "I-D4-05": "Operational CBMS/Condition-Based Maintenance System", "I-D4-06": "Operational Predictive Failure Models",
+    "I-D5-01": "Operational Industrial Historian and Coverage", "I-D5-02": "Historical Data Retention Period", "I-D5-03": "Data Traceability Back to the Sensor", "I-D5-04": "Formalized Data Quality Policy", "I-D5-05": "Defined Industrial Data Repository", "I-D5-06": "Automated Data Quality Measurement",
+    "I-D6-01": "Automated Operational KPI Dashboards", "I-D6-02": "Operational Industrial BI Platform", "I-D6-03": "Structured and Documented Root Cause Analysis", "I-D6-04": "Operational Machine Learning (ML) Models", "I-D6-05": "Documented Data Pipeline to ML Models", "I-D6-06": "Measured AI Model Improvement on Operational KPIs",
+    "I-D7-01": "OT/IT Network Segmentation (Inter-Zone Firewall)", "I-D7-02": "Operational OT Demilitarized Zone (Level 3.5 DMZ)", "I-D7-03": "Documented and Applied OT Patch Management Policy", "I-D7-04": "Deployed and Operational OT Active Directory", "I-D7-05": "OT Remote Access Control (MFA/Jump Host)", "I-D7-06": "Periodic Review of OT Access Rights",
+    "I-D8-01": "Formalized and Approved Digital Transformation Policy", "I-D8-02": "Documented Digital Change Management Process", "I-D8-03": "Active Digital Steering Committee", "I-D8-04": "Planned and Executed OT/IT Audit Plan", "I-D8-05": "Tracked and Resolved Digital Non-Conformities", "I-D8-06": "Documented Digital Regulatory Compliance",
+    "I-D9-01": "Digital Skills Mapping Completed", "I-D9-02": "Digital Skills Gaps Identified and Prioritized", "I-D9-03": "Digital Skills Included in Job Descriptions", "I-D9-04": "Formalized and Approved Digital Training Plan", "I-D9-05": "Measured Training Plan Completion Rate", "I-D9-06": "Post-Training Assessments Completed and Documented",
+    "I-D10-01": "Measured Digital Tool Adoption Rate", "I-D10-02": "Identified and Active Digital Champion", "I-D10-03": "Digital Feedback Collection and Processing Process", "I-D10-04": "Planned and Documented Digital Pilot Projects (POCs)", "I-D10-05": "Documented and Replicated Digital Successes", "I-D10-06": "Active Technology Watch and Innovation Partnerships"
 }
 
 def translate_entity_name(entity_id: str, fallback: str = "Unknown") -> str:
