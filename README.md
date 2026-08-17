@@ -1,123 +1,243 @@
-# JESA DMAT - Digital Maturity Assessment Tool
+Yes — and since you specifically want the **team emails** in the README, I’ll keep the contact section professional and use the two team emails you provided earlier.
 
-**JESA Digital Maturity Assessment Tool** is a comprehensive web application designed to assess, analyze, and visualize the digital maturity of industrial organizations. Developed as an internship project for JESA in partnership with ENSAM Casablanca, this tool implements the Industry 5.0 digital transformation framework.
+One important point first: **making the GitHub repository private is not the same thing as keeping the Streamlit app publicly accessible.** Streamlit says a deployed app inherits the repository’s permissions by default: a private repository makes the app private by default, although you can separately change the app’s sharing setting. 
+
+So **do not make the repository private yet** if your goal is to keep `jesa-dmat-pfa.streamlit.app` freely accessible to anyone. Your current public deployment is working, and there is no reason to change that now.
+
+Here is the complete README, ready to paste into `README.md`:
+
+# JESA DMAT — Digital Maturity Assessment Tool
+
+**JESA Digital Maturity Assessment Tool (JESA DMAT)** is a web-based platform designed to assess, analyze, and visualize the digital maturity of industrial organizations.
+
+Developed as an internship project for **JESA Group** in partnership with **ENSAM Casablanca**, the platform provides a structured and data-driven approach to digital transformation assessment in industrial environments.
+
+JESA DMAT implements an **Industry 5.0-oriented digital maturity assessment framework** and guides users from assessment data collection through maturity analysis, transformation prioritization, roadmap generation, and reporting.
 
 ---
 
-## Table of Contents
+## Live Application
 
-- Overview
-- Purpose
-- Key Features
-- Technology Stack
-- Project Architecture
-- Installation and Setup
-- Usage Guide
-- Assessment Workflow
-- Export Options
-- Configuration
-- Development
-- Contributors
+The application is deployed using **Streamlit Community Cloud**.
+
+**JESA DMAT:**  
+https://jesa-dmat-pfa.streamlit.app/
+
+The deployed application provides the complete assessment workflow directly through a web interface.
 
 ---
 
 ## Overview
 
-JESA DMAT is a full-stack digital maturity assessment platform that guides organizations through their digital transformation journey. The tool follows a structured approach:
+JESA DMAT follows a structured digital transformation workflow:
 
-1. Assess — Collect maturity data via Excel-based questionnaires
-2. Identify — Reveal transformation gaps against strategic targets
-3. Prioritize — Focus on high-value initiatives using TPI (Transformation Priority Index)
-4. Transform — Turn priorities into actionable roadmaps
+**Assess → Identify → Prioritize → Transform**
 
-The tool enables industrial organizations to evaluate their current digital maturity across multiple dimensions, set strategic targets, identify gaps, prioritize transformation initiatives based on impact and feasibility, generate comprehensive reports and roadmaps, and track progress over time through historical assessments.
+1. **Assess** — Collect digital maturity data through an Excel-based questionnaire.
+2. **Identify** — Analyze the current maturity level and reveal gaps against strategic targets.
+3. **Prioritize** — Rank transformation opportunities using the Transformation Priority Index (TPI).
+4. **Transform** — Convert priorities into actionable transformation roadmaps and reports.
+
+The platform allows industrial organizations to evaluate their digital maturity across multiple dimensions, identify areas requiring improvement, prioritize transformation initiatives, and develop structured action plans.
 
 ---
 
 ## Purpose
 
-The primary purpose of JESA DMAT is to provide a structured, data-driven approach to digital transformation assessment for industrial organizations. By leveraging a comprehensive reference framework, the tool helps organizations understand their current digital maturity level, identify areas requiring attention, and develop a prioritized action plan for transformation.
+The primary objective of JESA DMAT is to provide a structured and practical tool for evaluating digital maturity within industrial organizations.
 
-The tool is designed to be used by digital transformation engineers, consultants, and decision-makers in industrial settings who need to assess and plan digital transformation initiatives across their organizations.
+The platform helps users:
+
+- Assess the current digital maturity of an industrial site.
+- Visualize maturity across different pillars and dimensions.
+- Compare current maturity against target maturity levels.
+- Identify digital transformation gaps.
+- Prioritize transformation opportunities.
+- Evaluate initiatives using site-specific decision criteria.
+- Calculate the Transformation Priority Index (TPI).
+- Generate a transformation roadmap.
+- Generate professional reports and analytical exports.
+- Maintain a history of previous assessments.
+
+The tool is intended for use by:
+
+- Digital transformation engineers.
+- Industrial engineers.
+- Consultants.
+- Plant and site managers.
+- Digital transformation teams.
+- Decision-makers involved in Industry 4.0 and Industry 5.0 initiatives.
 
 ---
 
 ## Key Features
 
 ### Assessment Management
-- Upload Excel-based assessment questionnaires
-- Multi-step assessment workflow with validation
-- Session persistence and state management
-- Historical assessment storage and retrieval
+
+- Create a new digital maturity assessment.
+- Define assessment identity and site information.
+- Download the official Excel assessment template.
+- Upload completed assessment workbooks.
+- Validate assessment data before processing.
+- Process and score assessment results.
+- Maintain assessment session state.
+- Store and retrieve historical assessments.
 
 ### Interactive Dashboard
-- Digital Maturity Index (DMI) gauge visualization
-- Pillar performance bar charts
-- Dimension radar charts comparing current and target scores
-- Sub-dimension heatmaps for detailed analysis
-- Gap analysis with visual indicators
-- Diagnostic insights derived from assessment data
+
+The dashboard provides a visual representation of the assessment results, including:
+
+- Digital Maturity Index (DMI).
+- Overall maturity level.
+- Current versus target maturity.
+- Overall transformation gap.
+- Pillar performance.
+- Dimension maturity profile.
+- Radar charts.
+- Sub-dimension heatmaps.
+- Transformation gaps.
+- Diagnostic insights.
+- Attention areas.
 
 ### Decision Analysis
-- Site-specific decision parameter collection
-- Multi-criteria scoring including Business Impact, Strategic Importance, ROI, Cost, and Difficulty
-- Transformation Priority Index calculation
-- Priority ranking and visualization
+
+The Decision Analysis module supports transformation prioritization through site-specific decision criteria.
+
+The platform evaluates:
+
+- Business Impact.
+- Strategic Importance.
+- Expected ROI.
+- Implementation Cost.
+- Implementation Difficulty.
+
+Each criterion is evaluated on a **1–5 scale**.
+
+The collected decision parameters are used to calculate the **Transformation Priority Index (TPI)** and establish transformation priorities.
 
 ### Transformation Roadmap
-- Prioritized action items with TPI scores
-- Phase-based implementation planning
-- Action details with objectives and expected benefits
-- Strategic synthesis
+
+The Roadmap module transforms prioritized opportunities into an actionable implementation plan.
+
+It provides:
+
+- Ranked transformation actions.
+- TPI scores.
+- Priority levels.
+- Implementation phases.
+- Action descriptions.
+- Objectives.
+- Expected benefits.
+- Implementation information.
+- Strategic synthesis.
+
+### History
+
+The History module allows users to:
+
+- View previous assessments.
+- Review historical assessment information.
+- Restore previous assessments.
+- Continue working with stored assessment results.
+- Start a new assessment.
 
 ### Export Capabilities
-- PDF Score Summary for quick stakeholder overview
-- PDF Full Report for comprehensive documentation
-- Excel Workbook for further analysis
-- JSON data export for integration with other systems
-- ZIP bundle containing all generated reports
+
+JESA DMAT provides several export formats:
+
+- **PDF Score Summary**
+- **PDF Full Report**
+- **Excel Workbook**
+- **JSON**
+- **ZIP Bundle**
+
+The Score Summary is designed for concise stakeholder communication, while the Full Report provides comprehensive assessment documentation.
 
 ---
 
 ## Technology Stack
 
 ### Frontend
-- **Streamlit** (1.40+) – Web application framework
-- **Plotly** (5.24+) – Interactive visualizations
-- **Kaleido** (1.0+) – Static image export for charts
-- **HTML/CSS** – Custom styling and theming
+
+- **Streamlit** — Web application framework
+- **Plotly** — Interactive data visualization
+- **Kaleido** — Static chart export
+- **HTML/CSS** — Custom interface styling and theming
 
 ### Backend
-- **Python** (3.9+) – Core application logic
-- **Pandas** (2.2+) – Data manipulation
-- **OpenPyXL** (3.1+) – Excel file processing
-- **NumPy** (1.24+) – Numerical computations
-- **ReportLab** (4.0+) – PDF generation
-- **Matplotlib** (3.7+) – Chart generation for PDFs
+
+- **Python** — Core application logic
+- **Pandas** — Data processing
+- **OpenPyXL** — Excel processing
+- **NumPy** — Numerical computation
+- **ReportLab** — PDF generation
+- **Matplotlib** — PDF chart generation
 
 ### Testing
-- **Pytest** (8.0+) – Unit and integration testing
+
+- **Pytest** — Unit and integration testing
 
 ---
 
 ## Project Architecture
 
-The project is organized into the following main directories:
+The project follows a modular architecture separating the user interface, data management, assessment engines, decision engines, visualization, and export layers.
 
-- **assets** – Static resources including logos, stylesheets, and templates
-- **charts** – Visualization components for charts and graphs
-- **components** – Reusable UI components
-- **config** – Application constants and settings
-- **data** – Data loading, models, and runtime storage
-- **engines** – Business logic for assessment scoring and decision analysis
-- **exports** – Report generation in various formats
-- **outputs** – Generated assessment outputs organized by assessment ID
-- **pages** – Streamlit multi-page application
-- **streamlit** – Streamlit configuration
-- **tests** – Unit and integration test suite
-- **utils** – Utility modules for various functionality
-
-This modular architecture separates concerns and makes the codebase maintainable and extensible.
+```text
+Projet_PFA_JESA_V1.0/
+│
+├── app.py
+├── requirements.txt
+├── README.md
+│
+├── assets/
+│   ├── logos/
+│   ├── styles/
+│   └── templates/
+│
+├── charts/
+│   ├── radar_chart.py
+│   ├── bar_chart.py
+│   ├── gauge_chart.py
+│   └── ...
+│
+├── components/
+│   └── ...
+│
+├── config/
+│   ├── settings.py
+│   └── ...
+│
+├── data/
+│   ├── loader.py
+│   ├── models.py
+│   ├── knowledge_base/
+│   └── ...
+│
+├── engines/
+│   ├── assessment/
+│   └── decision/
+│
+├── exports/
+│   ├── report.py
+│   ├── pdf.py
+│   └── ...
+│
+├── pages/
+│   ├── 1_Home.py
+│   ├── 2_New_Assessment.py
+│   ├── 3_Dashboard.py
+│   ├── 4_Decision_analysis.py
+│   ├── 5_Roadmap.py
+│   ├── 6_History.py
+│   └── 6_Export.py
+│
+├── tests/
+│   └── ...
+│
+└── utils/
+    └── ...
+```
 
 ---
 
@@ -127,276 +247,324 @@ This modular architecture separates concerns and makes the codebase maintainable
 
 - Python 3.9 or higher
 - Git
-- pip (Python package manager)
+- pip
 
-### Step 1: Clone the Repository
+### Clone the Repository
 
-```
-git clone <repository-url>
+```bash
+git clone https://github.com/Jjaiden/Projet_PFA_JESA_V1.0.git
 cd Projet_PFA_JESA_V1.0
 ```
 
-### Step 2: Create a Virtual Environment
+### Create a Virtual Environment
 
-**Windows**
-```
+#### Windows
+
+```bash
 python -m venv venv
 venv\Scripts\activate
 ```
 
-**macOS/Linux**
-```
+#### macOS / Linux
+
+```bash
 python3 -m venv venv
 source venv/bin/activate
 ```
 
-### Step 3: Install Dependencies
+### Install Dependencies
 
-```
+```bash
 pip install -r requirements.txt
 ```
 
-### Step 4: Verify Installation
+### Run the Application
 
-```
-pip list
+```bash
+streamlit run app.py
 ```
 
-Ensure all required packages are present:
-- streamlit >= 1.40
-- pandas >= 2.2
-- plotly >= 5.24
-- openpyxl >= 3.1
-- reportlab >= 4.0
-- pytest >= 8.0 (optional, for testing)
+The application will normally be available at:
+
+```text
+http://localhost:8501
+```
 
 ---
 
 ## Usage Guide
 
-### Starting the Application
+### 1. Home
 
-**Option 1: Streamlit Frontend (Recommended)**
+The Home page provides:
 
-```
-streamlit run app.py
-```
+- An overview of JESA DMAT.
+- Access to the assessment workflow.
+- Institutional branding.
+- Information about the digital transformation assessment process.
+- Engineering team information.
 
-The application will open in your browser at http://localhost:8501.
+### 2. New Assessment
 
-**Option 2: Backend CLI**
+The New Assessment workflow consists of three main steps.
 
-```
-python app.py --assessment-file path/to/assessment.xlsx [OPTIONS]
-```
+#### Step 1 — Assessment Identity
 
-CLI Options:
+The user provides:
 
-| Option | Description |
-|--------|-------------|
-| --assessment-file PATH | Path to the Assessment.xlsx file (required) |
-| --assessment-id TEXT | Custom assessment identifier |
-| --output-dir PATH | Output directory (default: ./outputs) |
-| --formats [json|excel|pdf] | Export formats (default: json) |
-| --no-gap | Skip gap analysis |
-| --no-tpi | Skip TPI calculation |
-| --no-recommendations | Skip recommendations |
-| --no-roadmap | Skip roadmap generation |
-| --verbose | Enable verbose logging |
+- Assessment name or reference.
+- Company or business unit.
+- Industrial site or plant.
+- Assessor name.
+- Assessor role.
+- Assessment date.
+- Contact email.
 
-### Step-by-Step Workflow
+#### Step 2 — Assessment Data
 
-**1. Home Page**
+The user:
 
-The landing page provides an overview of the digital transformation journey, quick access to start a new assessment, institutional branding, and engineering team credit.
+1. Downloads the official Excel template.
+2. Completes the questionnaire.
+3. Uploads the completed workbook.
+4. Submits the assessment for validation.
 
-**2. New Assessment**
+#### Step 3 — Review and Launch
 
-Step 1: Assessment Identity
-- Assessment Name or Reference
-- Company or Business Unit
-- Industrial Site or Plant
-- Assessor Name and Role
-- Assessment Date
-- Contact Email (optional)
+The user reviews the assessment information and launches the assessment processing.
 
-Step 2: Assessment Data
-- Download the official Excel template
-- Complete the questionnaire
-- Upload the completed workbook
-
-Step 3: Review and Launch
-- Review all assessment details
-- Start the assessment processing
-
-**3. Dashboard**
-
-The dashboard provides comprehensive visualization of assessment results:
-
-Executive Snapshot
-- Digital Maturity Index (DMI) score
-- Maturity Level
-- Overall Gap (current versus target)
-- Attention Areas count
-
-Overall Maturity Position
-- Gauge chart showing DMI
-- Current and Target scores
-- Remaining gap
-
-Pillar Performance
-- Horizontal bar chart showing performance by pillar
-
-Maturity Profile
-- Radar charts comparing current versus target maturity across dimensions
-
-Sub-Dimension Heatmap
-- Detailed score matrix by dimension and sub-dimension
-
-Transformation Gaps
-- List of dimensions with the largest gaps
-- Visual progress bars showing gap severity
-
-Diagnostic Insights
-- Key observations derived from the assessment
-
-**4. Decision Analysis**
-
-Purpose: Prioritize transformation actions based on site-specific criteria.
-
-Decision Criteria:
-- Business Impact (1-5)
-- Strategic Importance (1-5)
-- Expected ROI (1-5)
-- Implementation Cost (1-5)
-- Implementation Difficulty (1-5)
-
-Process:
-1. Review transformation opportunities (dimensions with positive gaps)
-2. Complete all criteria for each dimension
-3. Click the button to run TPI calculation
-
-**5. Transformation Roadmap**
-
-Summary KPIs:
-- DMI score
-- Maturity Level
-- Number of transformation actions
-- Top priority level
-
-Prioritization Overview:
-- Ranked list of actions with TPI scores
-- Priority badges (Critical, High, Medium, etc.)
-- Visual TPI progress bars
-
-Action Details:
-- Expandable sections for each action
-- Description, objective, expected benefit
-- Implementation notes
-
-Export Section:
-- Select export formats (PDF Score Summary, PDF Full Report, Excel)
-- Generate and download files
-
-**6. History**
-
-- View all historical assessments in a table
-- Select and restore previous assessments
-- Start new assessments
-
-**7. Export**
-
-- Select from available export formats
-- Generate individual files or complete ZIP bundle
-- Download generated files
+The system validates the workbook before calculating the maturity results.
 
 ---
 
 ## Assessment Workflow
 
-The typical assessment workflow follows these steps:
+The complete assessment process follows this sequence:
 
-1. Start — User begins a new assessment
-2. Download Template — User downloads the official Excel template
-3. Complete Assessment — User fills out the questionnaire
-4. Upload — User uploads the completed workbook
-5. Validation and Processing — System validates and processes the data
-6. If invalid, error message is shown and user returns to upload step
-7. View Dashboard — User reviews the assessment results
-8. Decision Analysis — User enters decision criteria
-9. TPI Calculation — System calculates Transformation Priority Index
-10. View Roadmap — User reviews the prioritized action plan
-11. Generate Reports — User selects and generates export files
-12. Export or Share — User downloads or shares the assessment outputs
+```text
+Start
+  ↓
+Create Assessment
+  ↓
+Download Excel Template
+  ↓
+Complete Questionnaire
+  ↓
+Upload Assessment
+  ↓
+Validate Data
+  ↓
+Calculate Maturity
+  ↓
+Dashboard
+  ↓
+Identify Transformation Gaps
+  ↓
+Decision Analysis
+  ↓
+TPI Calculation
+  ↓
+Transformation Roadmap
+  ↓
+Generate Reports
+  ↓
+Export / Share Results
+```
+
+---
+
+## Dashboard
+
+The Dashboard provides a comprehensive view of assessment results.
+
+### Executive Snapshot
+
+Displays:
+
+- Digital Maturity Index (DMI).
+- Maturity level.
+- Overall gap.
+- Number of attention areas.
+
+### Overall Maturity Position
+
+Provides:
+
+- Current maturity score.
+- Target maturity score.
+- Remaining transformation gap.
+- Maturity gauge.
+
+### Pillar Performance
+
+Displays maturity performance across the main pillars of the assessment framework.
+
+### Maturity Profile
+
+Provides radar visualizations comparing:
+
+- Current maturity.
+- Target maturity.
+
+### Sub-Dimension Analysis
+
+Provides detailed maturity information at the sub-dimension level through visual matrices and heatmaps.
+
+### Transformation Gaps
+
+Highlights dimensions where the current maturity is below the desired target.
+
+### Diagnostic Insights
+
+Provides automatically derived observations based on the assessment results.
+
+---
+
+## Decision Analysis
+
+The Decision Analysis module transforms assessment gaps into prioritized transformation opportunities.
+
+For each relevant dimension, users provide values from **1 to 5** for:
+
+| Criterion | Description |
+|---|---|
+| Business Impact | Expected impact on business performance |
+| Strategic Importance | Importance to the organization's strategy |
+| Expected ROI | Expected return on investment |
+| Implementation Cost | Estimated implementation cost |
+| Implementation Difficulty | Expected implementation complexity |
+
+The system uses these criteria to calculate the **Transformation Priority Index (TPI)**.
+
+The resulting analysis provides a ranked view of transformation opportunities.
+
+---
+
+## Transformation Roadmap
+
+The Roadmap module converts the prioritized transformation opportunities into an implementation plan.
+
+It provides:
+
+### Summary KPIs
+
+- DMI score.
+- Maturity level.
+- Number of transformation actions.
+- Highest priority level.
+
+### Prioritization Overview
+
+- Ranked transformation actions.
+- TPI scores.
+- Priority levels.
+- Visual priority indicators.
+
+### Action Details
+
+Each transformation action may include:
+
+- Description.
+- Objective.
+- Expected benefits.
+- Implementation information.
+- Recommended actions.
+
+### Implementation Phases
+
+Transformation initiatives are organized into implementation phases to support progressive digital transformation planning.
+
+---
+
+## History
+
+The History module provides access to previous assessments.
+
+Users can:
+
+- View assessment history.
+- Review assessment information.
+- Restore previous assessments.
+- Continue analysis from historical results.
+- Start new assessments.
 
 ---
 
 ## Export Options
 
 ### PDF Score Summary
-- Format: 2-page PDF
-- Content: Executive summary, DMI, maturity level, key metrics
-- Usage: Quick overview for stakeholders
+
+A concise **two-page PDF** designed for quick stakeholder communication.
+
+Includes:
+
+- Executive summary.
+- DMI score.
+- Maturity level.
+- Key metrics.
+- Main assessment results.
 
 ### PDF Full Report
-- Format: Comprehensive PDF
-- Content: Complete assessment details, all charts, gaps, insights, recommendations, roadmap
-- Usage: Detailed analysis and documentation
+
+A comprehensive report containing detailed assessment information, visualizations, gaps, insights, recommendations, and roadmap information.
 
 ### Excel Workbook
-- Format: Multi-sheet Excel
-- Content: All assessment data, scores, gaps, recommendations
-- Usage: Further analysis and data manipulation
 
-### JSON Export
-- Format: JSON data dump
-- Content: Complete structured data
-- Usage: API integration or custom analysis
+Provides structured assessment and analytical data for further processing.
+
+### JSON
+
+Provides structured machine-readable assessment data suitable for:
+
+- Integration.
+- Data processing.
+- Custom analysis.
+- Future API integration.
 
 ### ZIP Bundle
-- Format: ZIP archive
-- Content: All generated report files
-- Usage: Complete package delivery
+
+Packages the generated reports and export files into a single downloadable archive.
 
 ---
 
 ## Configuration
 
-### Backend Configuration
+The backend configuration is centralized in:
 
-The backend configuration is centralized in config/settings.py. Key settings include:
-
-| Setting | Description | Default |
-|---------|-------------|---------|
-| REFERENTIEL_FILE | Path to reference framework | data/knowledge_base/REFERENTIEL_*.xlsx |
-| RECOMMENDATIONS_FILE | Path to recommendations knowledge base | data/knowledge_base/BASE_*.xlsx |
-| OUTPUT_DIR | Output directory for generated files | ./outputs |
-| SCORE_DECIMAL_PRECISION | Score decimal precision | 3 |
-| DMI_DECIMAL_PRECISION | DMI decimal precision | 1 |
-| TPI_DECIMAL_PRECISION | TPI decimal precision | 3 |
-| STRICT_WEIGHT_VALIDATION | Enforce weight validation | True |
-| ALLOW_MISSING_SCORE_ON_APPLICABLE | Allow missing scores | False |
-
-### Frontend Configuration
-
-| Setting | Description | Default |
-|---------|-------------|---------|
-| APP_NAME | Application name | JESA DMAT |
-| APP_VERSION | Application version | 1.0.0 |
-| PAGE_TITLE | Browser page title | JESA DMAT |
-| LAYOUT | Streamlit layout | wide |
-| PDF_PAGE_SIZE | PDF page size | A4 |
-| PDF_ORIENTATION | PDF orientation | portrait |
-
-### Environment Variables
-
+```text
+config/settings.py
 ```
-JDMAF_REFERENTIEL_FILE=path/to/referentiel.xlsx
-JDMAF_RECOMMENDATIONS_FILE=path/to/recommendations.xlsx
-JDMAF_ASSESSMENT_FILE=path/to/assessment.xlsx
-JDMAF_OUTPUT_DIR=path/to/outputs
-JDMAF_LOG_LEVEL=DEBUG
 
+Important configuration elements include:
+
+| Setting | Description |
+|---|---|
+| `REFERENTIEL_FILE` | Reference digital maturity framework |
+| `RECOMMENDATIONS_FILE` | Recommendations knowledge base |
+| `OUTPUT_DIR` | Generated output directory |
+| `SCORE_DECIMAL_PRECISION` | Score precision |
+| `DMI_DECIMAL_PRECISION` | DMI precision |
+| `TPI_DECIMAL_PRECISION` | TPI precision |
+| `STRICT_WEIGHT_VALIDATION` | Weight validation |
+| `ALLOW_MISSING_SCORE_ON_APPLICABLE` | Missing-score handling |
+
+---
+
+## Environment Variables
+
+The application can use environment variables for configuration, including:
+
+```text
+JDMAF_REFERENTIEL_FILE
+JDMAF_RECOMMENDATIONS_FILE
+JDMAF_ASSESSMENT_FILE
+JDMAF_OUTPUT_DIR
+JDMAF_LOG_LEVEL
+```
+
+For local Streamlit execution, the application can also use:
+
+```text
 STREAMLIT_SERVER_PORT=8501
 STREAMLIT_SERVER_ADDRESS=0.0.0.0
 ```
@@ -405,80 +573,138 @@ STREAMLIT_SERVER_ADDRESS=0.0.0.0
 
 ## Development
 
-### Running Tests
+### Run Tests
 
-```
-# Run all tests
+Run the complete test suite:
+
+```bash
 pytest
+```
 
-# Run frontend tests
+Run frontend tests:
+
+```bash
 pytest tests/tests_frontend/
+```
 
-# Run chart tests
+Run chart tests:
+
+```bash
 pytest tests/tests_charts/
+```
 
-# Run with coverage
+Run tests with coverage:
+
+```bash
 pytest --cov=. --cov-report=html
 ```
 
 ### Code Style
 
-The project follows PEP 8 guidelines with the following conventions:
+The project follows standard Python development practices, including:
 
-- Type hints are required for all functions
-- Google-style docstrings for all modules and functions
-- Imports are grouped into standard library, third-party, and local
-- Maximum line length is 100 characters
+- Type hints.
+- Structured module organization.
+- Google-style docstrings.
+- Separation between frontend and backend logic.
+- Modular business engines.
+- Reusable visualization components.
+
+---
+
+## Deployment
+
+JESA DMAT is deployed using **Streamlit Community Cloud**.
+
+The production application is connected to the GitHub repository and automatically reflects committed changes after deployment processing.
+
+**Production application:**
+
+https://jesa-dmat-pfa.streamlit.app/
+
+Streamlit Community Cloud supports deployment directly from GitHub repositories and automatically processes subsequent code changes. 
+
+---
+
+## Version
+
+**Current release: 1.0.0**
+
+**Status: Stable Deployment Version**
+
+The `v1.0.0-deployed` Git tag marks the verified deployment state of the application.
+
+This version represents the stable baseline following deployment and end-to-end functional testing.
 
 ---
 
 ## Contributors
 
-This project was developed as an internship project at JESA in partnership with ENSAM Casablanca.
+This project was developed as an internship project at **JESA Group** in partnership with **ENSAM Casablanca**.
 
-**Engineering Team**
-- IGOURZAL Fatima Ezzahrae — Digital Transformation Engineer
-- EL BALJOURI Boutayna — Digital Transformation Engineer
+### Engineering Team
 
-**Affiliation**
-- JESA Group — Industry Partner
-- ENSAM Casablanca — Academic Partner
-- ELECTRICAL ENGENERING - MSEI(Management of Intelligent Electrical System) — Engineering Program
+**IGOURZAL Fatima Ezzahrae**  
+Digital Transformation Engineer
 
----
+**EL BALJOURI Boutayna**  
+Digital Transformation Engineer
 
-## License
+### Academic / Industrial Affiliation
 
-This project is proprietary and confidential. Unauthorized copying, distribution, or use of this software is strictly prohibited.
+**JESA Group** — Industry Partner
+
+**ENSAM Casablanca** — Academic Partner
+
+**Electrical Engineering — MSEI**  
+Management of Intelligent Electrical Systems
 
 ---
 
 ## Contact
 
-For any questions, feedback, or support regarding the JESA DMAT tool, please reach out to the engineering team:
+For questions, feedback, collaboration, or information regarding JESA DMAT, please contact the engineering team.
 
-**Engineering Team**
-- IGOURZAL Fatima Ezzahrae
-  - Email: fatimaezzahraeigourzal91@gmail.com
-  - Phone: +212 6 49 28 66 72
+### Engineering Team
 
-- EL BALJOURI Boutayna
-  - Email: boutaynael917@gmail.com
-  - Phone: +212 6 06 16 44 48
+**IGOURZAL Fatima Ezzahrae**   
+Email: **fatimaezzahraeigourzal91@gmail.com**  
+Phone: **+212 6 49 28 66 72**
 
-**Institutional Contacts**
-- JESA Group: https://www.jesagroup.com/
-- ENSAM Casablanca: https://ensam-casa.ma/
+**EL BALJOURI Boutayna**   
+Email: **boutaynael917@gmail.com**  
+Phone: **+212 6 06 16 44 48**
+
+### Institutional Contacts
+
+**JESA Group**  
+https://www.jesagroup.com/
+
+**ENSAM Casablanca**  
+https://ensam-casa.ma/
 
 ---
 
 ## Acknowledgments
 
-- JESA Management for supporting this project
-- ENSAM Casablanca for academic guidance
+The development of JESA DMAT was made possible through the support and guidance of:
 
+- JESA Management.
+- JESA Digital Transformation teams.
+- ENSAM Casablanca.
+- Academic and industrial supervisors.
+- All contributors involved in the development and validation of the platform.
 
 ---
 
-*Last Updated: August 2026*
-*Version: 1.0.0*
+## License
+
+This project was developed as an internship project and is considered **proprietary and confidential**.
+
+Unauthorized copying, redistribution, modification, or commercial use of this software is prohibited without appropriate authorization.
+
+---
+
+*Last Updated: August 2026*  
+*Version: 1.0.0*  
+*JESA DMAT — Digital Maturity Assessment Tool*
