@@ -5,7 +5,6 @@
 developmentMode = false
 
 [server]
-headless = false
 enableXsrfProtection = true
 maxUploadSize = 50
 
