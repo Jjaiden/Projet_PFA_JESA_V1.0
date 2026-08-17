@@ -648,6 +648,9 @@ class ExcelExporter:
         ws["A2"].alignment = Alignment(horizontal="left", vertical="center")
         ws.row_dimensions[2].height = 22
         ws.row_dimensions[3].height = 55
+        ws.column_dimensions["F"].width = 20
+        ws.column_dimensions["G"].width = 4
+        ws.column_dimensions["H"].width = 20
 
         # Metadata labels
         for cell in ("A4", "D4", "A5", "D5", "A6", "D6"):
@@ -767,28 +770,24 @@ class ExcelExporter:
         ensam_path = self._find_logo(logo_dir, ensam_candidates)
 
         if jesa_path:
-            try:
-                img = XLImage(str(jesa_path))
-                target_height = 55
-                if img.height:
-                    ratio = target_height / img.height
-                    img.height = target_height
-                    img.width = int(img.width * ratio)
-                ws.add_image(img, "G3")
-            except Exception as exc:
-                logger.warning("Unable to insert JESA logo: %s", exc)
+            self._add_logo(ws, jesa_path, "F3", "JESA")
 
         if ensam_path:
-            try:
-                img = XLImage(str(ensam_path))
-                target_height = 55
-                if img.height:
-                    ratio = target_height / img.height
-                    img.height = target_height
-                    img.width = int(img.width * ratio)
-                ws.add_image(img, "H3")
-            except Exception as exc:
-                logger.warning("Unable to insert ENSAM logo: %s", exc)
+            self._add_logo(ws, ensam_path, "H3", "ENSAM")
+
+    @staticmethod
+    def _add_logo(ws, logo_path: Path, anchor: str, name: str) -> None:
+        try:
+            image = XLImage(str(logo_path))
+            if not image.width or not image.height:
+                raise ValueError("logo image has invalid dimensions")
+
+            scale = min(120 / image.width, 40 / image.height, 1)
+            image.width = max(1, int(image.width * scale))
+            image.height = max(1, int(image.height * scale))
+            ws.add_image(image, anchor)
+        except Exception as exc:
+            logger.warning("Unable to insert %s logo: %s", name, exc)
 
     @staticmethod
     def _find_logo(directory: Path, candidates: List[str]) -> Optional[Path]:
