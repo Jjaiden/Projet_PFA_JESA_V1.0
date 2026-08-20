@@ -1,11 +1,3 @@
-Yes — and since you specifically want the **team emails** in the README, I’ll keep the contact section professional and use the two team emails you provided earlier.
-
-One important point first: **making the GitHub repository private is not the same thing as keeping the Streamlit app publicly accessible.** Streamlit says a deployed app inherits the repository’s permissions by default: a private repository makes the app private by default, although you can separately change the app’s sharing setting. 
-
-So **do not make the repository private yet** if your goal is to keep `jesa-dmat-pfa.streamlit.app` freely accessible to anyone. Your current public deployment is working, and there is no reason to change that now.
-
-Here is the complete README, ready to paste into `README.md`:
-
 # JESA DMAT — Digital Maturity Assessment Tool
 
 **JESA Digital Maturity Assessment Tool (JESA DMAT)** is a web-based platform designed to assess, analyze, and visualize the digital maturity of industrial organizations.
